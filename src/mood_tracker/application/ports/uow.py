@@ -1,11 +1,25 @@
+"""Transactional persistence boundary for application use cases."""
+
 from __future__ import annotations
 
 from types import TracebackType
 from typing import Protocol, Self
 
+from mood_tracker.application.ports.repositories import (
+    DayRepository,
+    FieldRepository,
+    ReferenceDaysRepository,
+    UserRepository,
+)
+
 
 class UnitOfWork(Protocol):
-    """Atomic persistence boundary for a single application use case."""
+    """Coordinate repositories and one atomic persistence transaction."""
+
+    users: UserRepository
+    fields: FieldRepository
+    days: DayRepository
+    reference_days: ReferenceDaysRepository
 
     async def __aenter__(self) -> Self: ...
 

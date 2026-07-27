@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from collections.abc import Callable
 from dataclasses import dataclass, field
 from datetime import datetime
 from uuid import UUID
@@ -36,6 +37,11 @@ class ReferenceDays:
     def is_initialized(self) -> bool:
         """Whether the first state value established both reference points."""
         return self.best_day_id is not None and self.worst_day_id is not None
+
+    @property
+    def has_history(self) -> bool:
+        """Whether the user has ever had a confirmed reference point."""
+        return bool(self.history)
 
     def initialize(
         self,
@@ -97,6 +103,65 @@ class ReferenceDays:
             self.worst_day_id = day_id
         self.history.append(reference)
         return reference
+
+    def establish_baseline(
+        self,
+        reference_id: UUID,
+        day_id: UUID,
+        type: ReferenceType,
+        created_at: datetime,
+    ) -> ReferenceDay:
+        """Set a missing directional reference without affecting the other one."""
+        previous_reference_day_id = (
+            self.best_day_id if type is ReferenceType.BEST else self.worst_day_id
+        )
+        if previous_reference_day_id is not None:
+            msg = "A baseline can only be established for a missing direction"
+            raise ReferenceDayViolation(msg)
+        reference = ReferenceDay(
+            id=reference_id,
+            user_id=self.user_id,
+            day_id=day_id,
+            type=type,
+            previous_reference_day_id=None,
+            created_at=created_at,
+        )
+        if type is ReferenceType.BEST:
+            self.best_day_id = day_id
+        else:
+            self.worst_day_id = day_id
+        self.history.append(reference)
+        return reference
+
+    def rollback_current(
+        self, type: ReferenceType, is_valid: Callable[[UUID], bool]
+    ) -> UUID | None:
+        """Move a current pointer back to the nearest valid prior reference."""
+        current_day_id = (
+            self.best_day_id if type is ReferenceType.BEST else self.worst_day_id
+        )
+        candidate_day_id = self._previous_day_id(current_day_id, type)
+        while candidate_day_id is not None:
+            if is_valid(candidate_day_id):
+                if type is ReferenceType.BEST:
+                    self.best_day_id = candidate_day_id
+                else:
+                    self.worst_day_id = candidate_day_id
+                return candidate_day_id
+            candidate_day_id = self._previous_day_id(candidate_day_id, type)
+        if type is ReferenceType.BEST:
+            self.best_day_id = None
+        else:
+            self.worst_day_id = None
+        return None
+
+    def _previous_day_id(self, day_id: UUID | None, type: ReferenceType) -> UUID | None:
+        if day_id is None:
+            return None
+        for reference in reversed(self.history):
+            if reference.type is type and reference.day_id == day_id:
+                return reference.previous_reference_day_id
+        return None
 
 
 def boundary_reference_candidate(

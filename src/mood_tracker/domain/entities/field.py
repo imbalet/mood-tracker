@@ -212,6 +212,9 @@ class Field:
 
     def __post_init__(self) -> None:
         _require_non_empty(self.name, "Field name")
+        if self.sort_order < 0:
+            msg = "Field sort order cannot be negative"
+            raise InvalidFieldVersion(msg)
         if self.current_version.field_id != self.id:
             msg = "Current field version belongs to another field"
             raise InvalidFieldVersion(msg)
@@ -250,6 +253,13 @@ class Field:
         """Replace current presentation without changing any semantic version."""
         self.display_config = display_config
 
+    def set_sort_order(self, sort_order: int) -> None:
+        """Change the field's position in the questionnaire and cards."""
+        if sort_order < 0:
+            msg = "Field sort order cannot be negative"
+            raise InvalidFieldVersion(msg)
+        self.sort_order = sort_order
+
     def add_version(self, version: FieldVersion) -> None:
         """Append a new immutable meaning and make it current."""
         if version.field_id != self.id:
@@ -260,3 +270,9 @@ class Field:
             raise InvalidFieldVersion(msg)
         self.versions.append(version)
         self.current_version = version
+
+    def get_version(self, version_id: UUID) -> FieldVersion | None:
+        """Return one retained semantic version by its identifier."""
+        return next(
+            (version for version in self.versions if version.id == version_id), None
+        )

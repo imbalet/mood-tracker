@@ -1,4 +1,4 @@
-from datetime import datetime
+from datetime import UTC, datetime
 from uuid import uuid7
 
 from mood_tracker.domain.entities.field import ScaleConfig
@@ -35,3 +35,21 @@ def test_boundary_reference_candidate_only_exists_at_scale_edges(
     assert boundary_reference_candidate(0, config) is ReferenceType.WORST
     assert boundary_reference_candidate(10, config) is ReferenceType.BEST
     assert boundary_reference_candidate(5, config) is None
+
+
+def test_rollback_keeps_history_and_restores_previous_reference() -> None:
+    reference_days = ReferenceDays(user_id=uuid7())
+    first_day_id = uuid7()
+    current_day_id = uuid7()
+    reference_days.initialize(first_day_id, uuid7(), uuid7(), datetime.now(UTC))
+    reference_days.apply_confirmed_change(
+        uuid7(), current_day_id, ReferenceType.WORST, datetime.now(UTC)
+    )
+
+    restored_day_id = reference_days.rollback_current(
+        ReferenceType.WORST, lambda day_id: day_id == first_day_id
+    )
+
+    assert restored_day_id == first_day_id
+    assert reference_days.worst_day_id == first_day_id
+    assert any(event.day_id == current_day_id for event in reference_days.history)
