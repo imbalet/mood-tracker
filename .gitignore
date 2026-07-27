@@ -1,0 +1,27 @@
+# Python-generated files
+__pycache__/
+*.py[oc]
+build/
+dist/
+wheels/
+*.egg-info
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.coverage
+coverage.xml
+htmlcov/
+
+# Virtual environments
+.venv
+
+# Local configuration and Docker artifacts
+.env
+.env.*
+!.env.example
+*.log
+postgres-data/
+
+# Editors
+.idea/
+.vscode/

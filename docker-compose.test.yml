@@ -1,0 +1,14 @@
+services:
+  db:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_DB: mood_tracker_test
+      POSTGRES_USER: mood_tracker_test
+      POSTGRES_PASSWORD: mood_tracker_test
+    ports:
+      - "54329:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U mood_tracker_test -d mood_tracker_test"]
+      interval: 2s
+      timeout: 2s
+      retries: 15

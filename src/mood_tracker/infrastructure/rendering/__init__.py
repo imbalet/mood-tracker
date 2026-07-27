@@ -1,0 +1,1 @@
+"""Calendar rendering adapters."""

@@ -1,0 +1,1 @@
+"""Typed Telegram callback payloads."""
