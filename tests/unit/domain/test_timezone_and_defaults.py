@@ -1,4 +1,4 @@
-from datetime import UTC, datetime
+from datetime import datetime
 from uuid import uuid7
 
 import pytest
@@ -19,11 +19,13 @@ def test_timezone_requires_iana_identifier() -> None:
         UserTimezone("+03:00")
 
 
-def test_default_field_factory_creates_expected_core_and_order() -> None:
+def test_default_field_factory_creates_expected_core_and_order(
+    fixed_now: datetime,
+) -> None:
     fields = create_default_fields(
         user_id=uuid7(),
         ids=DefaultFieldIds(*(uuid7() for _ in range(8))),
-        created_at=datetime.now(UTC),
+        created_at=fixed_now,
     )
 
     assert [field.name for field in fields] == [

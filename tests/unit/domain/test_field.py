@@ -4,8 +4,6 @@ from uuid import uuid7
 import pytest
 
 from mood_tracker.domain.entities.field import (
-    Field,
-    FieldDisplayConfig,
     FieldVersion,
     OrdinalConfig,
     OrdinalOption,
@@ -13,6 +11,7 @@ from mood_tracker.domain.entities.field import (
 )
 from mood_tracker.domain.enums import FieldStatus, FieldType
 from mood_tracker.domain.errors import CoreFieldViolation, InvalidFieldVersion
+from tests.factories import FieldFactory
 
 
 def test_ordinal_config_accepts_sequential_values_without_zero() -> None:
@@ -27,14 +26,8 @@ def test_ordinal_config_rejects_non_sequential_values() -> None:
         OrdinalConfig((OrdinalOption(0, "Нет"), OrdinalOption(2, "Много")))
 
 
-def test_field_version_is_immutable() -> None:
-    version = FieldVersion(
-        id=uuid7(),
-        field_id=uuid7(),
-        type=FieldType.SCALE,
-        config=ScaleConfig(0, 10),
-        created_at=datetime.now(UTC),
-    )
+def test_field_version_is_immutable(field_factory: FieldFactory) -> None:
+    version = field_factory.scale().current_version
 
     with pytest.raises(AttributeError):
         version.config = ScaleConfig(0, 5)  # type: ignore[misc]
@@ -51,25 +44,8 @@ def test_field_version_rejects_config_of_another_type() -> None:
         )
 
 
-def test_core_field_cannot_be_hidden() -> None:
-    field_id = uuid7()
-    version = FieldVersion(
-        id=uuid7(),
-        field_id=field_id,
-        type=FieldType.SCALE,
-        config=ScaleConfig(0, 10),
-        created_at=datetime.now(UTC),
-    )
-    field = Field(
-        id=field_id,
-        user_id=uuid7(),
-        name="Состояние",
-        status=FieldStatus.ACTIVE,
-        is_core=True,
-        sort_order=0,
-        display_config=FieldDisplayConfig(),
-        current_version=version,
-    )
+def test_core_field_cannot_be_hidden(field_factory: FieldFactory) -> None:
+    field = field_factory.scale(is_core=True)
 
     with pytest.raises(CoreFieldViolation):
         field.set_status(FieldStatus.HIDDEN)

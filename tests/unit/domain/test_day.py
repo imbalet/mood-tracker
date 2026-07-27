@@ -1,43 +1,19 @@
-from datetime import UTC, date, datetime
-from uuid import uuid7
+from datetime import datetime
 
 import pytest
 
-from mood_tracker.domain.entities.day import Day
-from mood_tracker.domain.entities.field import (
-    Field,
-    FieldDisplayConfig,
-    FieldVersion,
-    ScaleConfig,
-    TextConfig,
-)
-from mood_tracker.domain.enums import DayStatus, FieldStatus, FieldType
+from mood_tracker.domain.enums import DayStatus
 from mood_tracker.domain.errors import IncompleteDay
 from mood_tracker.domain.policies.completion import CompletionPolicy
+from tests.factories import DayFactory, FieldFactory
 
 
-def _field(version: FieldVersion) -> Field:
-    return Field(
-        id=version.field_id,
-        user_id=uuid7(),
-        name="Поле",
-        status=FieldStatus.ACTIVE,
-        is_core=version.type is FieldType.SCALE,
-        sort_order=0,
-        display_config=FieldDisplayConfig(),
-        current_version=version,
-    )
-
-
-def test_skipped_text_completes_step_without_creating_value() -> None:
-    day = Day(id=uuid7(), user_id=uuid7(), date=date(2026, 7, 27))
-    text_version = FieldVersion(
-        id=uuid7(),
-        field_id=uuid7(),
-        type=FieldType.TEXT,
-        config=TextConfig(),
-        created_at=datetime.now(UTC),
-    )
+def test_skipped_text_completes_step_without_creating_value(
+    day_factory: DayFactory,
+    field_factory: FieldFactory,
+) -> None:
+    day = day_factory.build()
+    text_version = field_factory.text(user_id=day.user_id).current_version
 
     day.skip_text(text_version)
 
@@ -45,29 +21,21 @@ def test_skipped_text_completes_step_without_creating_value() -> None:
     assert text_version.field_id not in day.values
 
 
-def test_completion_requires_each_active_field_step() -> None:
-    day = Day(id=uuid7(), user_id=uuid7(), date=date(2026, 7, 27))
-    state_version = FieldVersion(
-        id=uuid7(),
-        field_id=uuid7(),
-        type=FieldType.SCALE,
-        config=ScaleConfig(0, 10),
-        created_at=datetime.now(UTC),
-    )
-    text_version = FieldVersion(
-        id=uuid7(),
-        field_id=uuid7(),
-        type=FieldType.TEXT,
-        config=TextConfig(),
-        created_at=datetime.now(UTC),
-    )
-    fields = (_field(state_version), _field(text_version))
+def test_completion_requires_each_active_field_step(
+    day_factory: DayFactory,
+    field_factory: FieldFactory,
+    fixed_now: datetime,
+) -> None:
+    day = day_factory.build()
+    state_field = field_factory.scale(user_id=day.user_id, is_core=True)
+    text_field = field_factory.text(user_id=day.user_id)
+    fields = (state_field, text_field)
 
-    day.save_value(state_version, 5)
+    day.save_value(state_field.current_version, 5)
     with pytest.raises(IncompleteDay):
-        CompletionPolicy().complete(day, fields, datetime.now(UTC))
+        CompletionPolicy().complete(day, fields, fixed_now)
 
-    day.skip_text(text_version)
-    CompletionPolicy().complete(day, fields, datetime.now(UTC))
+    day.skip_text(text_field.current_version)
+    CompletionPolicy().complete(day, fields, fixed_now)
 
     assert day.status is DayStatus.COMPLETE
