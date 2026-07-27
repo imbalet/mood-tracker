@@ -1,1 +1,0 @@
-"""Russian Telegram message formatters."""
