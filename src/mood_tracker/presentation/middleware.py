@@ -10,6 +10,7 @@ from aiogram.types import CallbackQuery, InaccessibleMessage, TelegramObject, Up
 from mood_tracker.presentation.callback_query import CallbackQueryWithMessage
 from mood_tracker.presentation.sender import Sender
 from mood_tracker.presentation.services import ApplicationServices
+from mood_tracker.presentation.state import PresentationData
 from mood_tracker.presentation.utils import update_main_message
 
 
@@ -37,6 +38,7 @@ class ApplicationMiddleware(BaseMiddleware):
             return None
         data["telegram_id"] = telegram_id
         data["services"] = self._services
+        data["presentation_data"] = PresentationData(data["state"])
         data["update_main_message"] = partial(update_main_message, self._sender)
         return await handler(event, data)
 

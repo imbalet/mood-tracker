@@ -46,9 +46,6 @@ def ordinal_base_keyboard() -> InlineKeyboardMarkup:
 def ordinal_draft_keyboard(label_count: int) -> InlineKeyboardMarkup:
     """Build controls for a staged ordinal-options editor."""
     builder = KeyboardBuilder()
-    builder.row_buttons_tuple(
-        (TextKey.ORDINAL_ADD, OrdinalDraftCallback(action=OrdinalDraftAction.ADD))
-    )
     if label_count:
         builder.row_buttons_tuple(
             (

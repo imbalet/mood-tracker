@@ -74,7 +74,6 @@ class FieldMoveCallback(CallbackData, prefix="field_move"):
 class OrdinalDraftAction(StrEnum):
     """Actions available while composing ordinal labels."""
 
-    ADD = "add"
     REMOVE = "remove"
     RESET = "reset"
     FINISH = "finish"

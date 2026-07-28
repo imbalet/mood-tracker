@@ -2,12 +2,12 @@
 
 from typing import Protocol, cast
 
-from aiogram.fsm.context import FSMContext
 from aiogram.types import InlineKeyboardMarkup, InputRichMessage, Message
 
 from mood_tracker.presentation.callback_query import CallbackQueryWithMessage
 from mood_tracker.presentation.screens.screen import Screen, ScreenContent
 from mood_tracker.presentation.sender import Sender
+from mood_tracker.presentation.state import PresentationData
 
 
 class UpdateMainMessage(Protocol):
@@ -15,7 +15,7 @@ class UpdateMainMessage(Protocol):
 
     async def __call__(
         self,
-        state: FSMContext,
+        presentation_data: PresentationData,
         event: Message | CallbackQueryWithMessage,
         content: Screen | ScreenContent,
         reply_markup: InlineKeyboardMarkup | None = None,
@@ -26,7 +26,7 @@ class UpdateMainMessage(Protocol):
 
 async def update_main_message(
     sender: Sender,
-    state: FSMContext,
+    presentation_data: PresentationData,
     event: Message | CallbackQueryWithMessage,
     content: Screen | ScreenContent,
     reply_markup: InlineKeyboardMarkup | None = None,
@@ -42,7 +42,7 @@ async def update_main_message(
     is_user_message = isinstance(event, Message)
     if not is_user_message:
         await cast(CallbackQueryWithMessage, event).answer()
-    main_message_id = (await state.get_data()).get("main_message_id")
+    main_message_id = await presentation_data.main_message_id()
     target_message_id = main_message_id
     if not is_user_message and source.message_id != main_message_id:
         target_message_id = source.message_id
@@ -58,7 +58,7 @@ async def update_main_message(
         if updated:
             if is_user_message:
                 await sender.delete(source)
-            await state.update_data(main_message_id=target_message_id)
+            await presentation_data.set_main_message_id(target_message_id)
             return
     if isinstance(content, InputRichMessage):
         created = await sender.answer_rich(source, content, reply_markup)
@@ -67,4 +67,4 @@ async def update_main_message(
     if created is not None:
         if not create_new and isinstance(target_message_id, int):
             await sender.delete_by_id(source.chat.id, target_message_id)
-        await state.update_data(main_message_id=created.message_id)
+        await presentation_data.set_main_message_id(created.message_id)

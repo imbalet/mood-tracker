@@ -8,13 +8,21 @@ import contextlib
 from aiogram import Bot, Dispatcher
 from aiogram.client.default import DefaultBotProperties
 from aiogram.enums import ParseMode
+from aiogram.filters import ExceptionTypeFilter
 from aiogram.methods import DeleteWebhook
 from aiogram.types import BotCommand
 
+from mood_tracker.application.errors import ApplicationError
 from mood_tracker.config import get_settings
 from mood_tracker.healthcheck import start_healthcheck_server
 from mood_tracker.infrastructure.db.session import create_session_factory
 from mood_tracker.logger import setup_logging
+from mood_tracker.presentation.error_handler import (
+    handle_application_error,
+    handle_stale_callback,
+    handle_unexpected_error,
+)
+from mood_tracker.presentation.errors import StaleCallback
 from mood_tracker.presentation.handlers import (
     fields_router,
     menu_router,
@@ -39,6 +47,13 @@ async def run() -> None:
     setup_logging(settings.LOG_LEVEL)
 
     dispatcher = Dispatcher()
+    dispatcher.errors.register(
+        handle_stale_callback, ExceptionTypeFilter(StaleCallback)
+    )
+    dispatcher.errors.register(
+        handle_application_error, ExceptionTypeFilter(ApplicationError)
+    )
+    dispatcher.errors.register(handle_unexpected_error, ExceptionTypeFilter(Exception))
     bot = Bot(
         token=settings.BOT_TOKEN,
         default=DefaultBotProperties(parse_mode=ParseMode.HTML),

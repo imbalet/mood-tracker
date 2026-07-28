@@ -11,6 +11,7 @@ from mood_tracker.presentation.screens.fields import (
     fields_list_screen,
     palette_screen,
 )
+from mood_tracker.presentation.screens.menu import main_menu_screen
 from mood_tracker.presentation.screens.screen import Screen, ScreenContent
 
 __all__ = [
@@ -21,6 +22,7 @@ __all__ = [
     "field_card_screen",
     "field_order_screen",
     "fields_list_screen",
+    "main_menu_screen",
     "palette_screen",
     "reference_review_screen",
 ]

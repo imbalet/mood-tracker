@@ -26,10 +26,12 @@ class TextKey(StrEnum):
     INVALID_TIMEZONE = "invalid_timezone"
     TIMEZONE_SAVED = "timezone_saved"
     STALE_BUTTON = "stale_button"
+    OPERATION_FAILED = "operation_failed"
     FIELD_VALUE_UNAVAILABLE = "field_value_unavailable"
     FIELD_UNAVAILABLE = "field_unavailable"
     DAY_UNAVAILABLE = "day_unavailable"
     TEXT_NOT_SAVED = "text_not_saved"
+    TEXT_SAVE_FAILED = "text_save_failed"
     OPEN_TODAY_AGAIN = "open_today_again"
     SELECT_VALUE = "select_value"
     ENTER_TEXT = "enter_text"
@@ -57,7 +59,6 @@ class TextKey(StrEnum):
     ORDINAL_FIRST_PROMPT = "ordinal_first_prompt"
     ORDINAL_NEXT_PROMPT = "ordinal_next_prompt"
     ORDINAL_DRAFT = "ordinal_draft"
-    ORDINAL_ADD = "ordinal_add"
     ORDINAL_REMOVE = "ordinal_remove"
     ORDINAL_RESET = "ordinal_reset"
     ORDINAL_FINISH = "ordinal_finish"
@@ -119,6 +120,7 @@ _TEXTS: dict[TextKey, str] = {
     ),
     TextKey.TIMEZONE_SAVED: "Готово! Часовой пояс: <b>{timezone}</b>.",
     TextKey.STALE_BUTTON: "Кнопка устарела.",
+    TextKey.OPERATION_FAILED: "Не удалось выполнить действие. Попробуй ещё раз позже.",
     TextKey.FIELD_VALUE_UNAVAILABLE: (
         "Это значение больше недоступно. Открой /today заново."
     ),
@@ -126,6 +128,9 @@ _TEXTS: dict[TextKey, str] = {
     TextKey.DAY_UNAVAILABLE: "Запись больше недоступна.",
     TextKey.TEXT_NOT_SAVED: (
         "Текст не сохранён. Отправь непустой текст или нажми «Пропустить»."
+    ),
+    TextKey.TEXT_SAVE_FAILED: (
+        "Не удалось сохранить текст. Открой /today и попробуй ещё раз."
     ),
     TextKey.OPEN_TODAY_AGAIN: "Открой /today и попробуй ещё раз.",
     TextKey.SELECT_VALUE: "<b>{name}</b>\nВыбери значение.",
@@ -156,7 +161,6 @@ _TEXTS: dict[TextKey, str] = {
     TextKey.ORDINAL_FIRST_PROMPT: "Напиши первый вариант.",
     TextKey.ORDINAL_NEXT_PROMPT: "Напиши следующий вариант.",
     TextKey.ORDINAL_DRAFT: "<b>Варианты</b>\n{options}",
-    TextKey.ORDINAL_ADD: "Добавить вариант",
     TextKey.ORDINAL_REMOVE: "Удалить последний",
     TextKey.ORDINAL_RESET: "Начать заново",
     TextKey.ORDINAL_FINISH: "Готово",
