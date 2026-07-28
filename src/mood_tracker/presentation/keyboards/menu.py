@@ -8,10 +8,13 @@ from mood_tracker.presentation.utils import KeyboardBuilder
 
 
 def main_menu_keyboard() -> InlineKeyboardMarkup:
-    """Build the current minimal main menu."""
+    """Build the current top-level menu."""
     builder = KeyboardBuilder()
     builder.row_buttons_tuple(
         (TextKey.MENU_TODAY, MenuCallback(section=MenuSection.TODAY))
+    )
+    builder.row_buttons_tuple(
+        (TextKey.MENU_FIELDS, MenuCallback(section=MenuSection.FIELDS))
     )
     return builder.as_markup()
 

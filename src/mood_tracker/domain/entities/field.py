@@ -5,7 +5,7 @@ from __future__ import annotations
 from abc import ABC, abstractmethod
 from dataclasses import dataclass, field
 from datetime import datetime
-from typing import ClassVar
+from typing import ClassVar, override
 from uuid import UUID
 
 from mood_tracker.domain.enums import FieldStatus, FieldType
@@ -66,6 +66,7 @@ class ScaleConfig(FieldConfig):
             raise InvalidFieldVersion(msg)
         return (value - self.minimum) / (self.maximum - self.minimum)
 
+    @override
     def validate_value(self, value: int | str) -> float:
         """Validate raw input and return its normalized scale value."""
         if not isinstance(value, int) or isinstance(value, bool):
@@ -125,6 +126,7 @@ class OrdinalConfig(FieldConfig):
             raise InvalidFieldVersion(msg)
         return (value - self.minimum) / (self.maximum - self.minimum)
 
+    @override
     def validate_value(self, value: int | str) -> float:
         """Validate raw input and return its normalized ordinal value."""
         if not isinstance(value, int) or isinstance(value, bool):
@@ -142,6 +144,7 @@ class TextConfig(FieldConfig):
 
     field_type: ClassVar[FieldType] = FieldType.TEXT
 
+    @override
     def validate_value(self, value: int | str) -> None:
         """Validate non-empty text input with no numeric normalization."""
         if not isinstance(value, str) or not value.strip():

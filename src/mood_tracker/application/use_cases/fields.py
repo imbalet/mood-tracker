@@ -6,6 +6,8 @@ from mood_tracker.application.commands import (
     AddFieldVersion,
     CreateField,
     ListFields,
+    MoveDirection,
+    MoveField,
     RenameField,
     SetFieldDisplay,
     SetFieldSortOrder,
@@ -19,6 +21,7 @@ from mood_tracker.application.use_cases._transactions import (
 )
 from mood_tracker.domain.entities import Field, FieldVersion
 from mood_tracker.domain.enums import FieldStatus
+from mood_tracker.domain.errors import InvalidFieldVersion
 
 
 async def _get_owned_field(uow: UnitOfWork, user_id: UUID, field_id: UUID) -> Field:
@@ -162,6 +165,50 @@ class SetFieldSortOrderUseCase:
         return await execute_transaction(self._uow, operation)
 
 
+class MoveFieldUseCase:
+    """Move a field while keeping every user order unique and contiguous."""
+
+    def __init__(self, uow: UnitOfWork) -> None:
+        self._uow = uow
+
+    async def execute(self, command: MoveField) -> tuple[Field, ...]:
+        """Swap one field with its neighbour and persist normalized positions."""
+
+        async def operation() -> tuple[Field, ...]:
+            await _ensure_user_exists(self._uow, command.user_id)
+            fields = list(
+                sorted(
+                    await self._uow.fields.list_for_user(command.user_id),
+                    key=lambda field: (field.sort_order, str(field.id)),
+                )
+            )
+            current_index = next(
+                (
+                    index
+                    for index, field in enumerate(fields)
+                    if field.id == command.field_id
+                ),
+                None,
+            )
+            if current_index is None:
+                raise FieldNotFound
+            target_index = current_index + (
+                -1 if command.direction is MoveDirection.UP else 1
+            )
+            if 0 <= target_index < len(fields):
+                fields[current_index], fields[target_index] = (
+                    fields[target_index],
+                    fields[current_index],
+                )
+            for index, field in enumerate(fields):
+                if field.sort_order != index:
+                    field.set_sort_order(index)
+                    await self._uow.fields.save(field)
+            return tuple(fields)
+
+        return await execute_transaction(self._uow, operation)
+
+
 class AddFieldVersionUseCase:
     """Append a semantic version to an existing field."""
 
@@ -177,6 +224,9 @@ class AddFieldVersionUseCase:
 
         async def operation() -> Field:
             field = await _get_owned_field(self._uow, command.user_id, command.field_id)
+            if command.config.field_type is not field.current_version.type:
+                msg = "A new field version must retain the original field type"
+                raise InvalidFieldVersion(msg)
             version = FieldVersion(
                 id=self._id_generator.new(),
                 field_id=field.id,

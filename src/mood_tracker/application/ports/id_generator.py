@@ -9,3 +9,4 @@ class IdGenerator(Protocol):
 
     def new(self) -> UUID:
         """Return a fresh identifier."""
+        ...

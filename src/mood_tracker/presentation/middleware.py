@@ -2,7 +2,7 @@
 
 from collections.abc import Awaitable, Callable
 from functools import partial
-from typing import Any, cast
+from typing import Any, cast, override
 
 from aiogram import BaseMiddleware
 from aiogram.types import CallbackQuery, InaccessibleMessage, TelegramObject, Update
@@ -20,6 +20,7 @@ class ApplicationMiddleware(BaseMiddleware):
         self._services = services
         self._sender = sender
 
+    @override
     async def __call__[ResultT](
         self,
         handler: Callable[[TelegramObject, dict[str, Any]], Awaitable[ResultT]],
@@ -43,6 +44,7 @@ class ApplicationMiddleware(BaseMiddleware):
 class CallbackMessageMiddleware(BaseMiddleware):
     """Reject callbacks whose source message is no longer accessible."""
 
+    @override
     async def __call__[ResultT](
         self,
         handler: Callable[[TelegramObject, dict[str, Any]], Awaitable[ResultT]],

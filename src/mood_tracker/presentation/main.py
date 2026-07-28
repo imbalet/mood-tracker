@@ -16,6 +16,7 @@ from mood_tracker.healthcheck import start_healthcheck_server
 from mood_tracker.infrastructure.db.session import create_session_factory
 from mood_tracker.logger import setup_logging
 from mood_tracker.presentation.handlers import (
+    fields_router,
     menu_router,
     onboarding_router,
     today_router,
@@ -44,7 +45,9 @@ async def run() -> None:
     )
     engine, session_factory = create_session_factory(settings.DB_URL)
     services = ApplicationServices(session_factory)
-    dispatcher.include_routers(menu_router, onboarding_router, today_router)
+    dispatcher.include_routers(
+        menu_router, onboarding_router, today_router, fields_router
+    )
     dispatcher.update.middleware(ApplicationMiddleware(services, Sender(bot)))
     dispatcher.callback_query.middleware(CallbackMessageMiddleware())
     health_task = asyncio.create_task(

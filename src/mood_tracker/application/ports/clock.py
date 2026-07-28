@@ -9,3 +9,4 @@ class Clock(Protocol):
 
     def now(self) -> datetime:
         """Return the current instant."""
+        ...

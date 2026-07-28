@@ -2,6 +2,7 @@
 
 from dataclasses import dataclass
 from datetime import date
+from enum import StrEnum
 from uuid import UUID
 
 from mood_tracker.domain.entities import (
@@ -13,6 +14,13 @@ from mood_tracker.domain.entities import (
 )
 from mood_tracker.domain.enums import FieldStatus, ReferenceType
 from mood_tracker.domain.value_objects import UserTimezone
+
+
+class MoveDirection(StrEnum):
+    """One-step direction in a user's field order."""
+
+    UP = "up"
+    DOWN = "down"
 
 
 @dataclass(frozen=True, slots=True)
@@ -83,6 +91,15 @@ class SetFieldSortOrder:
     user_id: UUID
     field_id: UUID
     sort_order: int
+
+
+@dataclass(frozen=True, slots=True)
+class MoveField:
+    """Move one field by one place and normalize the complete ordering."""
+
+    user_id: UUID
+    field_id: UUID
+    direction: MoveDirection
 
 
 @dataclass(frozen=True, slots=True)

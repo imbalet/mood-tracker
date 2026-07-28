@@ -5,11 +5,18 @@ from dataclasses import dataclass
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 
 from mood_tracker.application.use_cases import (
+    AddFieldVersionUseCase,
     ConfirmReferenceUseCase,
+    CreateFieldUseCase,
     GetDayUseCase,
     GetUserByTelegramIdUseCase,
+    ListFieldsUseCase,
+    MoveFieldUseCase,
     RegisterUserUseCase,
+    RenameFieldUseCase,
     SaveDayValueUseCase,
+    SetFieldDisplayUseCase,
+    SetFieldStatusUseCase,
     SkipDayTextUseCase,
 )
 from mood_tracker.infrastructure.clock import SystemClock
@@ -40,6 +47,27 @@ class ApplicationServices:
 
     def confirm_reference(self) -> ConfirmReferenceUseCase:
         return ConfirmReferenceUseCase(self._uow(), SystemClock(), Uuid7IdGenerator())
+
+    def list_fields(self) -> ListFieldsUseCase:
+        return ListFieldsUseCase(self._uow())
+
+    def create_field(self) -> CreateFieldUseCase:
+        return CreateFieldUseCase(self._uow(), SystemClock(), Uuid7IdGenerator())
+
+    def rename_field(self) -> RenameFieldUseCase:
+        return RenameFieldUseCase(self._uow())
+
+    def set_field_status(self) -> SetFieldStatusUseCase:
+        return SetFieldStatusUseCase(self._uow())
+
+    def set_field_display(self) -> SetFieldDisplayUseCase:
+        return SetFieldDisplayUseCase(self._uow())
+
+    def move_field(self) -> MoveFieldUseCase:
+        return MoveFieldUseCase(self._uow())
+
+    def add_field_version(self) -> AddFieldVersionUseCase:
+        return AddFieldVersionUseCase(self._uow(), SystemClock(), Uuid7IdGenerator())
 
     def _uow(self) -> SqlAlchemyUnitOfWork:
         return SqlAlchemyUnitOfWork(self.session_factory)

@@ -3,7 +3,7 @@
 from typing import Protocol, cast
 
 from aiogram.fsm.context import FSMContext
-from aiogram.types import InlineKeyboardMarkup, Message
+from aiogram.types import InlineKeyboardMarkup, InputRichMessage, Message
 
 from mood_tracker.presentation.callback_query import CallbackQueryWithMessage
 from mood_tracker.presentation.sender import Sender
@@ -16,7 +16,7 @@ class UpdateMainMessage(Protocol):
         self,
         state: FSMContext,
         event: Message | CallbackQueryWithMessage,
-        text: str,
+        content: str | InputRichMessage,
         reply_markup: InlineKeyboardMarkup | None = None,
         *,
         create_new: bool = False,
@@ -27,7 +27,7 @@ async def update_main_message(
     sender: Sender,
     state: FSMContext,
     event: Message | CallbackQueryWithMessage,
-    text: str,
+    content: str | InputRichMessage,
     reply_markup: InlineKeyboardMarkup | None = None,
     *,
     create_new: bool = False,
@@ -42,14 +42,24 @@ async def update_main_message(
     if not is_user_message and source.message_id != main_message_id:
         target_message_id = source.message_id
     if not create_new and isinstance(target_message_id, int):
-        updated = await sender.edit_by_id(
-            source.chat.id, target_message_id, text, reply_markup
-        )
+        if isinstance(content, InputRichMessage):
+            updated = await sender.edit_rich_by_id(
+                source.chat.id, target_message_id, content, reply_markup
+            )
+        else:
+            updated = await sender.edit_by_id(
+                source.chat.id, target_message_id, content, reply_markup
+            )
         if updated:
             if is_user_message:
                 await sender.delete(source)
             await state.update_data(main_message_id=target_message_id)
             return
-    created = await sender.answer(source, text, reply_markup)
+    if isinstance(content, InputRichMessage):
+        created = await sender.answer_rich(source, content, reply_markup)
+    else:
+        created = await sender.answer(source, content, reply_markup)
     if created is not None:
+        if not create_new and isinstance(target_message_id, int):
+            await sender.delete_by_id(source.chat.id, target_message_id)
         await state.update_data(main_message_id=created.message_id)

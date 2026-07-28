@@ -10,6 +10,7 @@ dependencies = [
     "aiohttp>=3.14.3",
     "alembic>=1.18.5",
     "asyncpg>=0.31.0",
+    "pillow>=12.3.0",
     "pydantic>=2.13.4",
     "pydantic-settings>=2.14.2",
     "sqlalchemy>=2.0.51",
@@ -70,7 +71,16 @@ exclude = "tests/.*|build/.*|dist/.*|node_modules/.*|__pycache__/.*|venv/.*"
 incremental = true
 cache_dir = ".mypy_cache"
 strict = true
-enable_error_code = ["possibly-undefined", "redundant-expr", "truthy-bool"]
+enable_error_code = [
+    "exhaustive-match",
+    "explicit-override",
+    "ignore-without-code",
+    "mutable-override",
+    "possibly-undefined",
+    "redundant-expr",
+    "truthy-bool",
+    "unused-awaitable",
+]
 warn_unused_configs = true
 warn_unused_ignores = true
 warn_redundant_casts = true
@@ -84,6 +94,11 @@ ignore_missing_imports = true
 namespace_packages = true
 explicit_package_bases = true
 plugins = ["pydantic.mypy"]
+
+[tool.pydantic-mypy]
+init_typed = true
+init_forbid_extra = true
+warn_required_dynamic_aliases = true
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
