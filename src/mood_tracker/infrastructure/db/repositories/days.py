@@ -45,6 +45,27 @@ class SqlAlchemyDayRepository:
         ).all()
         return [await self._to_domain(row) for row in rows]
 
+    async def list_for_month(self, user_id: UUID, month: date) -> Sequence[Day]:
+        """Load all owned days in the calendar month containing ``month``."""
+        first_day = month.replace(day=1)
+        next_month = (
+            first_day.replace(year=first_day.year + 1, month=1)
+            if first_day.month == 12
+            else first_day.replace(month=first_day.month + 1)
+        )
+        rows = (
+            await self._session.scalars(
+                select(DayOrm)
+                .where(
+                    DayOrm.user_id == user_id,
+                    DayOrm.date >= first_day,
+                    DayOrm.date < next_month,
+                )
+                .order_by(DayOrm.date)
+            )
+        ).all()
+        return [await self._to_domain(row) for row in rows]
+
     async def add(self, day: Day) -> None:
         self._session.add(
             DayOrm(

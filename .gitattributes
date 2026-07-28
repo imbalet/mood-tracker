@@ -1,0 +1,2 @@
+src/mood_tracker/presentation/assets/fonts/NotoColorEmoji.ttf filter=lfs diff=lfs merge=lfs -text
+src/mood_tracker/presentation/assets/fonts/NotoSans-Regular.ttf filter=lfs diff=lfs merge=lfs -text

@@ -73,7 +73,9 @@ class Sender:
                 text=text,
                 reply_markup=reply_markup,
             )
-        except TelegramBadRequest:
+        except TelegramBadRequest as error:
+            if _is_not_modified(error):
+                return True
             return None
 
     async def edit_rich_by_id(
@@ -91,7 +93,9 @@ class Sender:
                 rich_message=rich_message,
                 reply_markup=reply_markup,
             )
-        except TelegramBadRequest:
+        except TelegramBadRequest as error:
+            if _is_not_modified(error):
+                return True
             return None
 
     async def delete(self, message: Message) -> None:
@@ -125,3 +129,8 @@ class Sender:
                 logger.exception("Telegram rejected message for chat %s", chat_id)
                 return None
         return None
+
+
+def _is_not_modified(error: TelegramBadRequest) -> bool:
+    """Whether Telegram rejected an edit solely because it was a no-op."""
+    return "message is not modified" in str(error).casefold()

@@ -9,6 +9,7 @@ from mood_tracker.application.use_cases import (
     ConfirmReferenceUseCase,
     CreateFieldUseCase,
     GetDayUseCase,
+    GetMonthCalendarUseCase,
     GetUserByTelegramIdUseCase,
     ListFieldsUseCase,
     MoveFieldUseCase,
@@ -38,6 +39,9 @@ class ApplicationServices:
 
     def get_day(self) -> GetDayUseCase:
         return GetDayUseCase(self._uow(), SystemClock())
+
+    def get_month_calendar(self) -> GetMonthCalendarUseCase:
+        return GetMonthCalendarUseCase(self._uow())
 
     def save_day_value(self) -> SaveDayValueUseCase:
         return SaveDayValueUseCase(self._uow(), SystemClock(), Uuid7IdGenerator())

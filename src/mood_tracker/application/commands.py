@@ -127,6 +127,14 @@ class GetDay:
 
 
 @dataclass(frozen=True, slots=True)
+class GetMonthCalendar:
+    """Read one user's diary data required to render a calendar month."""
+
+    user_id: UUID
+    month: date
+
+
+@dataclass(frozen=True, slots=True)
 class SaveDayValue:
     """Save a raw answer using the field's current semantic version."""
 
@@ -188,3 +196,12 @@ class ReferenceHistory:
     best_chain: tuple[ReferenceDay, ...]
     worst_chain: tuple[ReferenceDay, ...]
     all_events: tuple[ReferenceDay, ...]
+
+
+@dataclass(frozen=True, slots=True)
+class MonthCalendar:
+    """Owned days and fields used by calendar presentation."""
+
+    month: date
+    days: tuple[Day, ...]
+    fields: tuple[Field, ...]

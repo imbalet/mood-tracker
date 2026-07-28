@@ -15,6 +15,15 @@ class MenuSection(StrEnum):
     HOME = "home"
     TODAY = "today"
     FIELDS = "fields"
+    DATES = "dates"
+    CALENDAR = "calendar"
+
+
+class CalendarImageAction(StrEnum):
+    """Navigate an already rendered PNG month."""
+
+    PREVIOUS = "previous"
+    NEXT = "next"
 
 
 class FieldAction(StrEnum):
@@ -117,6 +126,14 @@ class MenuCallback(CallbackData, prefix="menu"):
     """Navigate between top-level inline screens."""
 
     section: MenuSection
+
+
+class CalendarImageCallback(CallbackData, prefix="month_calendar"):
+    """Select a neighbouring month for a PNG calendar."""
+
+    action: CalendarImageAction
+    year: int
+    month: int
 
 
 class DayValueCallback(CallbackData, prefix="value"):

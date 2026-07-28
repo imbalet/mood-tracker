@@ -14,6 +14,12 @@ def main_menu_keyboard() -> InlineKeyboardMarkup:
         (TextKey.MENU_TODAY, MenuCallback(section=MenuSection.TODAY))
     )
     builder.row_buttons_tuple(
+        (TextKey.MENU_DATES, MenuCallback(section=MenuSection.DATES))
+    )
+    builder.row_buttons_tuple(
+        (TextKey.MENU_CALENDAR, MenuCallback(section=MenuSection.CALENDAR))
+    )
+    builder.row_buttons_tuple(
         (TextKey.MENU_FIELDS, MenuCallback(section=MenuSection.FIELDS))
     )
     return builder.as_markup()

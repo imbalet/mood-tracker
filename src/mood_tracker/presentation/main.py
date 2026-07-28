@@ -24,6 +24,7 @@ from mood_tracker.presentation.error_handler import (
 )
 from mood_tracker.presentation.errors import StaleCallback
 from mood_tracker.presentation.handlers import (
+    calendar_router,
     fields_router,
     menu_router,
     onboarding_router,
@@ -61,7 +62,7 @@ async def run() -> None:
     engine, session_factory = create_session_factory(settings.DB_URL)
     services = ApplicationServices(session_factory)
     dispatcher.include_routers(
-        menu_router, onboarding_router, today_router, fields_router
+        menu_router, onboarding_router, today_router, calendar_router, fields_router
     )
     dispatcher.update.middleware(ApplicationMiddleware(services, Sender(bot)))
     dispatcher.callback_query.middleware(CallbackMessageMiddleware())
@@ -76,6 +77,8 @@ async def run() -> None:
                 BotCommand(command="start", description="Открыть дневник"),
                 BotCommand(command="menu", description="Открыть меню"),
                 BotCommand(command="today", description="Заполнить сегодняшний день"),
+                BotCommand(command="dates", description="Выбрать дату"),
+                BotCommand(command="calendar", description="Календарь месяца"),
             ]
         )
         await dispatcher.start_polling(bot)

@@ -71,7 +71,7 @@ async def open_today_from_menu(
         return
     await state.set_state(None)
     await presentation_data.clear_flow()
-    await _render(
+    await render_day(
         event,
         presentation_data,
         profile,
@@ -112,7 +112,7 @@ async def save_value(
             reference_review_screen(make_reference_review_view(review)),
         )
     else:
-        await _render(
+        await render_day(
             query, presentation_data, profile, day_date, services, update_main_message
         )
 
@@ -132,7 +132,7 @@ async def open_day_card(
     await state.set_state(None)
     await presentation_data.clear_flow()
     await query.answer()
-    await _render(
+    await render_day(
         query, presentation_data, profile, day_date, services, update_main_message
     )
 
@@ -155,7 +155,7 @@ async def skip_text(
     await state.set_state(None)
     await presentation_data.clear_flow()
     await query.answer()
-    await _render(
+    await render_day(
         query, presentation_data, profile, day_date, services, update_main_message
     )
 
@@ -188,7 +188,7 @@ async def confirm_reference(
         await query.answer(TEXTS[TextKey.DAY_UNAVAILABLE], show_alert=True)
         return
     await query.answer()
-    await _render(
+    await render_day(
         query,
         presentation_data,
         profile,
@@ -259,7 +259,7 @@ async def save_text(
         return
     await state.set_state(None)
     await presentation_data.clear_flow()
-    await _render(
+    await render_day(
         message,
         presentation_data,
         profile,
@@ -296,7 +296,7 @@ async def _get_day_context(
     return profile, day_date
 
 
-async def _render(
+async def render_day(
     event: Message | CallbackQueryWithMessage,
     presentation_data: PresentationData,
     profile: UserProfile,

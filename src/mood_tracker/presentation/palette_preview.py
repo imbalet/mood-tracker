@@ -30,7 +30,7 @@ def render_palette_preview(
         row, column = divmod(index, columns)
         left = _PADDING + column * (_CELL_SIZE + _GAP)
         top = _PADDING + row * (_CELL_SIZE + _GAP)
-        color = _interpolate_color(value, config, palette)
+        color = interpolate_state_color(value, config, palette)
         draw.rounded_rectangle(
             (left, top, left + _CELL_SIZE, top + _CELL_SIZE), radius=5, fill=color
         )
@@ -44,7 +44,9 @@ def render_palette_preview(
     return BufferedInputFile(buffer.getvalue(), filename="palette-scale.png")
 
 
-def _interpolate_color(value: int, config: ScaleConfig, palette: StatePalette) -> str:
+def interpolate_state_color(
+    value: int, config: ScaleConfig, palette: StatePalette
+) -> str:
     normalized = (value - config.minimum) / (config.maximum - config.minimum)
     if normalized <= 0.5:
         return _mix(palette.minimum, palette.middle, normalized * 2)

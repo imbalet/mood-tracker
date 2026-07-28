@@ -10,6 +10,8 @@ class TextKey(StrEnum):
 
     MENU_TITLE = "menu_title"
     MENU_TODAY = "menu_today"
+    MENU_DATES = "menu_dates"
+    MENU_CALENDAR = "menu_calendar"
     MENU_FIELDS = "menu_fields"
     MENU_RECORDS = "menu_records"
     MENU_SETTINGS = "menu_settings"
@@ -99,6 +101,8 @@ class TextKey(StrEnum):
 _TEXTS: dict[TextKey, str] = {
     TextKey.MENU_TITLE: "<b>Дневник состояния</b>\nВыбери, что хочешь сделать.",
     TextKey.MENU_TODAY: "📝 Сегодня",
+    TextKey.MENU_DATES: "📆 Даты",
+    TextKey.MENU_CALENDAR: "🗓 Календарь",
     TextKey.MENU_FIELDS: "⚙️ Поля",
     TextKey.MENU_RECORDS: "🏔️ Личные ориентиры",
     TextKey.MENU_SETTINGS: "Настройки",

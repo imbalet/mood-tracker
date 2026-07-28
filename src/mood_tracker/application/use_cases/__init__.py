@@ -1,5 +1,6 @@
 """Public core application use cases."""
 
+from mood_tracker.application.use_cases.calendar import GetMonthCalendarUseCase
 from mood_tracker.application.use_cases.days import (
     ConfirmReferenceUseCase,
     GetDayUseCase,
@@ -24,6 +25,7 @@ from mood_tracker.application.use_cases.registration import (
 )
 
 __all__ = [
+    "GetMonthCalendarUseCase",
     "AddFieldVersionUseCase",
     "ConfirmReferenceUseCase",
     "CreateFieldUseCase",

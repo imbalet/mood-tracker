@@ -1,5 +1,6 @@
 """Public builders for complete Telegram screens."""
 
+from mood_tracker.presentation.screens.calendar import month_calendar_screen
 from mood_tracker.presentation.screens.diary import (
     day_card_screen,
     day_value_prompt_screen,
@@ -23,6 +24,7 @@ __all__ = [
     "field_order_screen",
     "fields_list_screen",
     "main_menu_screen",
+    "month_calendar_screen",
     "palette_screen",
     "reference_review_screen",
 ]

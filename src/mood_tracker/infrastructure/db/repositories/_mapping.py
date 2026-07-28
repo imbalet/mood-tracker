@@ -53,11 +53,13 @@ def display_to_json(config: FieldDisplayConfig) -> dict[str, Any]:
 def display_from_json(data: dict[str, Any]) -> FieldDisplayConfig:
     palette = data.get("state_palette")
     return FieldDisplayConfig(
-        data.get("emoji"),
-        data.get("show_in_calendar", True),
-        StatePalette(palette["min"], palette["middle"], palette["max"])
-        if palette
-        else None,
+        emoji=data.get("emoji"),
+        show_in_calendar=data.get("show_in_calendar", True),
+        state_palette=(
+            StatePalette(palette["min"], palette["middle"], palette["max"])
+            if palette
+            else None
+        ),
     )
 
 
