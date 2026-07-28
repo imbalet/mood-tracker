@@ -44,7 +44,7 @@ _TEXTS: dict[TextKey, str] = {
     TextKey.MENU_FIELDS: "⚙️ Поля",
     TextKey.MENU_RECORDS: "🏔️ Личные ориентиры",
     TextKey.MENU_SETTINGS: "Настройки",
-    TextKey.BACK_TO_MENU: "⌂ В меню",
+    TextKey.BACK_TO_MENU: "🏠 В меню",
     TextKey.BACK: "← Назад",
     TextKey.SKIP: "Пропустить",
     TextKey.YES: "Да",

@@ -23,13 +23,16 @@ TIMEZONES = (
 def timezone_keyboard() -> InlineKeyboardMarkup:
     """Build buttons for common Russian timezones and manual input."""
     builder = KeyboardBuilder()
-    for timezone in TIMEZONES:
-        builder.button(
-            text=timezone.replace("Europe/", "").replace("Asia/", ""),
-            callback_data=TimezoneCallback(timezone=timezone),
+    builder.buttons_text_tuple(
+        *(
+            (
+                timezone.replace("Europe/", "").replace("Asia/", ""),
+                TimezoneCallback(timezone=timezone),
+            )
+            for timezone in TIMEZONES
         )
-    builder.button(
-        text="Другой часовой пояс", callback_data=TimezoneCallback(timezone="other")
     )
-    builder.adjust(2, 2, 2, 2, 2, 1, 1)
+    builder.row_buttons_text_tuple(
+        ("Другой часовой пояс", TimezoneCallback(timezone="other"))
+    )
     return builder.as_markup()
