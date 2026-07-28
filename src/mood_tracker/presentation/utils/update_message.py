@@ -6,6 +6,7 @@ from aiogram.fsm.context import FSMContext
 from aiogram.types import InlineKeyboardMarkup, InputRichMessage, Message
 
 from mood_tracker.presentation.callback_query import CallbackQueryWithMessage
+from mood_tracker.presentation.screens.screen import Screen, ScreenContent
 from mood_tracker.presentation.sender import Sender
 
 
@@ -16,7 +17,7 @@ class UpdateMainMessage(Protocol):
         self,
         state: FSMContext,
         event: Message | CallbackQueryWithMessage,
-        content: str | InputRichMessage,
+        content: Screen | ScreenContent,
         reply_markup: InlineKeyboardMarkup | None = None,
         *,
         create_new: bool = False,
@@ -27,12 +28,16 @@ async def update_main_message(
     sender: Sender,
     state: FSMContext,
     event: Message | CallbackQueryWithMessage,
-    content: str | InputRichMessage,
+    content: Screen | ScreenContent,
     reply_markup: InlineKeyboardMarkup | None = None,
     *,
     create_new: bool = False,
 ) -> None:
     """Edit the current screen when possible, otherwise create a replacement."""
+    if isinstance(content, Screen):
+        screen = content
+        content = screen.content
+        reply_markup = screen.reply_markup
     source = event if isinstance(event, Message) else event.message
     is_user_message = isinstance(event, Message)
     if not is_user_message:

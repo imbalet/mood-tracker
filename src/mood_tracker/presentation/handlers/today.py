@@ -1,7 +1,6 @@
 """Handlers for filling, resuming and editing a daily entry."""
 
 from datetime import UTC, date, datetime
-from html import escape
 from uuid import UUID
 from zoneinfo import ZoneInfo
 
@@ -19,7 +18,7 @@ from mood_tracker.application.commands import (
     SkipDayText,
 )
 from mood_tracker.application.errors import DayNotFound, FieldNotFound
-from mood_tracker.domain.entities import Field, OrdinalConfig, ScaleConfig, UserProfile
+from mood_tracker.domain.entities import Field, UserProfile
 from mood_tracker.domain.errors import InvalidFieldValue
 from mood_tracker.presentation.callback_query import CallbackQueryWithMessage
 from mood_tracker.presentation.callbacks import (
@@ -32,15 +31,20 @@ from mood_tracker.presentation.callbacks import (
     SkipTextCallback,
 )
 from mood_tracker.presentation.constants import TEXTS, TextKey
-from mood_tracker.presentation.formatters import format_day_card
-from mood_tracker.presentation.keyboards import (
-    day_edit_keyboard,
-    field_value_keyboard,
-    reference_keyboard,
+from mood_tracker.presentation.screens import (
+    day_card_screen,
+    day_value_prompt_screen,
+    reference_review_screen,
 )
 from mood_tracker.presentation.services import ApplicationServices
 from mood_tracker.presentation.states import Diary
 from mood_tracker.presentation.utils import UpdateMainMessage
+from mood_tracker.presentation.view_models import (
+    DayPromptKind,
+    make_day_card_view,
+    make_day_value_prompt_view,
+    make_reference_review_view,
+)
 
 router = Router(name="today")
 
@@ -109,12 +113,10 @@ async def save_value(
     await state.clear()
     await query.answer()
     if review is not None:
-        adjective = "лучше" if review.type.value == "best" else "хуже"
         await update_main_message(
             state,
             query,
-            TEXTS[TextKey.REFERENCE_QUESTION].format(adjective=adjective),
-            reply_markup=reference_keyboard(review),
+            reference_review_screen(make_reference_review_view(review)),
         )
     else:
         await _render(query, state, profile, day_date, services, update_main_message)
@@ -244,26 +246,37 @@ async def save_text(
         await update_main_message(state, message, TEXTS[TextKey.OPEN_TODAY_AGAIN])
         return
     try:
+        field_id = UUID(data["field_id"])
+    except ValueError:
+        await state.clear()
+        await update_main_message(state, message, TEXTS[TextKey.OPEN_TODAY_AGAIN])
+        return
+    try:
         review = await services.save_day_value().execute(
-            SaveDayValue(
-                profile.id, day_date, UUID(data["field_id"]), message.text or ""
-            )
+            SaveDayValue(profile.id, day_date, field_id, message.text or "")
         )
-    except ValueError, FieldNotFound, InvalidFieldValue:
-        await update_main_message(
-            state,
+    except FieldNotFound, InvalidFieldValue:
+        form = await services.get_day().execute(GetDay(profile.id, day_date))
+        field = next((item for item in form.fields if item.id == field_id), None)
+        if field is None:
+            await state.clear()
+            await update_main_message(state, message, TEXTS[TextKey.OPEN_TODAY_AGAIN])
+            return
+        await _prompt_field(
             message,
-            TEXTS[TextKey.TEXT_NOT_SAVED],
+            state,
+            form,
+            field,
+            update_main_message,
+            error=TEXTS[TextKey.TEXT_NOT_SAVED],
         )
         return
     await state.clear()
     if review is not None:
-        adjective = "лучше" if review.type.value == "best" else "хуже"
         await update_main_message(
             state,
             message,
-            TEXTS[TextKey.REFERENCE_QUESTION].format(adjective=adjective),
-            reply_markup=reference_keyboard(review),
+            reference_review_screen(make_reference_review_view(review)),
         )
     else:
         await _render(message, state, profile, day_date, services, update_main_message)
@@ -286,9 +299,7 @@ async def _render(
     update_main_message: UpdateMainMessage,
 ) -> None:
     form = await services.get_day().execute(GetDay(profile.id, day_date))
-    await update_main_message(
-        state, event, format_day_card(form), reply_markup=day_edit_keyboard(form)
-    )
+    await update_main_message(state, event, day_card_screen(make_day_card_view(form)))
 
 
 def _today(profile: UserProfile) -> date:
@@ -308,26 +319,17 @@ async def _prompt_field(
     form: DayForm,
     field: Field,
     update_main_message: UpdateMainMessage,
+    *,
+    error: str | None = None,
 ) -> None:
-    if isinstance(field.current_version.config, (ScaleConfig, OrdinalConfig)):
-        await update_main_message(
-            state,
-            event,
-            format_day_card(
-                form, TEXTS[TextKey.SELECT_VALUE].format(name=escape(field.name))
-            ),
-            reply_markup=field_value_keyboard(field, form.day_date),
+    view = make_day_value_prompt_view(form, field)
+    if view.kind is DayPromptKind.TEXT:
+        await state.set_state(Diary.waiting_text)
+        await state.update_data(
+            day=form.day_date.strftime("%Y%m%d"), field_id=str(field.id)
         )
-        return
-    await state.set_state(Diary.waiting_text)
-    await state.update_data(
-        day=form.day_date.strftime("%Y%m%d"), field_id=str(field.id)
-    )
     await update_main_message(
         state,
         event,
-        format_day_card(
-            form, TEXTS[TextKey.ENTER_TEXT].format(name=escape(field.name))
-        ),
-        reply_markup=field_value_keyboard(field, form.day_date),
+        day_value_prompt_screen(view, error=error),
     )

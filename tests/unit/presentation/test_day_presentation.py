@@ -1,8 +1,19 @@
+from uuid import uuid7
+
 from mood_tracker.application.commands import DayForm
-from mood_tracker.domain.entities import DayFieldProgress
-from mood_tracker.domain.enums import DayStatus
-from mood_tracker.presentation.formatters import format_day_card
-from mood_tracker.presentation.keyboards import day_edit_keyboard
+from mood_tracker.domain.entities import (
+    DayFieldProgress,
+    DayValue,
+    FieldVersion,
+    OrdinalConfig,
+    OrdinalOption,
+)
+from mood_tracker.domain.enums import DayStatus, FieldStatus, FieldType
+from mood_tracker.presentation.screens import day_card_screen, day_value_prompt_screen
+from mood_tracker.presentation.view_models import (
+    make_day_card_view,
+    make_day_value_prompt_view,
+)
 
 
 def test_day_card_shows_saved_values_skips_and_current_prompt(
@@ -15,12 +26,13 @@ def test_day_card_shows_saved_values_skips_and_current_prompt(
     day.skip_text(comment.current_version)
     form = DayForm(day.date, day, (state, comment), next_field=None)
 
-    rendered = format_day_card(form, "<b>Плач</b>\nВыбери значение.")
+    screen = day_value_prompt_screen(make_day_value_prompt_view(form, state))
 
-    assert "черновик" in rendered
-    assert "<b>Состояние</b>: 6/10" in rendered
-    assert "<b>Комментарий</b>: пропущено" in rendered
-    assert rendered.endswith("<b>Плач</b>\nВыбери значение.")
+    assert isinstance(screen.content, str)
+    assert "черновик" in screen.content
+    assert "<b>Состояние</b>: 6/10" in screen.content
+    assert "<b>Комментарий</b>: пропущено" in screen.content
+    assert screen.content.endswith("<b>Состояние</b>\nВыбери значение.")
 
 
 def test_day_card_keyboard_allows_editing_and_adding_current_active_fields(
@@ -40,10 +52,54 @@ def test_day_card_keyboard_allows_editing_and_adding_current_active_fields(
     )
     form = DayForm(day.date, day, (state, crying), next_field=None)
 
-    markup = day_edit_keyboard(form)
+    screen = day_card_screen(make_day_card_view(form))
 
-    assert [[button.text for button in row] for row in markup.inline_keyboard] == [
+    assert screen.reply_markup is not None
+    assert [
+        [button.text for button in row] for row in screen.reply_markup.inline_keyboard
+    ] == [
         ["Изменить: Состояние"],
         ["Добавить: Плач"],
         ["🏠 В меню"],
     ]
+
+
+def test_day_view_uses_the_saved_ordinal_version(day_factory, field_factory) -> None:
+    field = field_factory.ordinal(
+        options=(OrdinalOption(0, "Нет"), OrdinalOption(1, "Да"))
+    )
+    previous_version = field.current_version
+    field.add_version(
+        FieldVersion(
+            id=uuid7(),
+            field_id=field.id,
+            type=FieldType.ORDINAL,
+            config=OrdinalConfig(
+                (
+                    OrdinalOption(0, "Нет"),
+                    OrdinalOption(1, "Немного"),
+                    OrdinalOption(2, "Много"),
+                )
+            ),
+            created_at=field.current_version.created_at,
+        )
+    )
+    day = day_factory.build()
+    day.values[field.id] = DayValue(
+        day_id=day.id,
+        field_id=field.id,
+        field_version_id=previous_version.id,
+        value=1,
+        normalized_value=1.0,
+    )
+    day.progress[field.id] = DayFieldProgress(
+        field_id=field.id,
+        field_version_id=previous_version.id,
+        skipped=False,
+    )
+    field.set_status(FieldStatus.INACTIVE)
+
+    view = make_day_card_view(DayForm(day.date, day, (field,), next_field=None))
+
+    assert view.entries[0].rendered_value == "Да"
+    assert view.actions[0].action.value == "edit"

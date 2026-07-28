@@ -1,13 +1,20 @@
-from mood_tracker.domain.entities import ScaleConfig, StatePalette
-from mood_tracker.presentation.formatters import format_palette_message
+from mood_tracker.domain.entities import FieldDisplayConfig, StatePalette
+from mood_tracker.presentation.screens import palette_screen
+from mood_tracker.presentation.view_models import make_palette_view
 
 
-def test_palette_message_embeds_numbered_preview() -> None:
+def test_palette_screen_embeds_numbered_preview(field_factory) -> None:
     palette = StatePalette("#112233", "#445566", "#778899")
+    field = field_factory.scale(
+        is_core=True,
+        display_config=FieldDisplayConfig(state_palette=palette),
+    )
 
-    message = format_palette_message(ScaleConfig(0, 10), palette)
+    view = make_palette_view(field)
+    assert view is not None
+    screen = palette_screen(view)
 
-    assert message.html and message.media
-    assert 'src="tg://photo?id=scale"' in message.html
-    assert message.media[0].id == "scale"
-    assert "#112233 → #445566 → #778899" in message.html
+    assert screen.content.html and screen.content.media
+    assert 'src="tg://photo?id=scale"' in screen.content.html
+    assert screen.content.media[0].id == "scale"
+    assert "#112233 → #445566 → #778899" in screen.content.html

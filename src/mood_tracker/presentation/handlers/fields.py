@@ -51,24 +51,28 @@ from mood_tracker.presentation.callbacks import (
     PalettePreset,
 )
 from mood_tracker.presentation.constants import TEXTS, TextKey
-from mood_tracker.presentation.formatters import (
-    format_field_card,
-    format_fields_list,
-    format_palette_message,
-)
 from mood_tracker.presentation.keyboards import (
-    field_card_keyboard,
-    field_order_keyboard,
     field_type_keyboard,
-    fields_keyboard,
     ordinal_base_keyboard,
     ordinal_draft_keyboard,
-    palette_keyboard,
 )
 from mood_tracker.presentation.palettes import PALETTES
+from mood_tracker.presentation.screens import (
+    field_card_screen,
+    field_order_screen,
+    fields_list_screen,
+    palette_screen,
+)
 from mood_tracker.presentation.services import ApplicationServices
 from mood_tracker.presentation.states import FieldForm
 from mood_tracker.presentation.utils import UpdateMainMessage
+from mood_tracker.presentation.view_models import (
+    PaletteView,
+    make_field_card_view,
+    make_field_order_view,
+    make_fields_list_view,
+    make_palette_view,
+)
 
 router = Router(name="fields")
 
@@ -325,15 +329,14 @@ async def choose_palette(
         await query.answer(TEXTS[TextKey.FIELD_UNAVAILABLE], show_alert=True)
         return
     await state.clear()
-    palette = field.display_config.state_palette
-    if not isinstance(field.current_version.config, ScaleConfig) or palette is None:
+    view = make_palette_view(field)
+    if view is None:
         await query.answer(TEXTS[TextKey.FIELD_UNAVAILABLE], show_alert=True)
         return
     await _render_palette_selector(
         query,
         state,
-        field,
-        palette,
+        view,
         update_main_message=update_main_message,
     )
 
@@ -831,29 +834,17 @@ async def _render_order(
     update_main_message: UpdateMainMessage,
 ) -> None:
     await update_main_message(
-        state,
-        event,
-        TEXTS[TextKey.FIELD_ORDER_TITLE],
-        reply_markup=field_order_keyboard(fields, selected_id),
+        state, event, field_order_screen(make_field_order_view(fields, selected_id))
     )
 
 
 async def _render_palette_selector(
     event: Message | CallbackQueryWithMessage,
     state: FSMContext,
-    field: Field,
-    palette: StatePalette,
+    view: PaletteView,
     update_main_message: UpdateMainMessage,
 ) -> None:
-    config = field.current_version.config
-    if not isinstance(config, ScaleConfig):
-        return
-    await update_main_message(
-        state,
-        event,
-        format_palette_message(config, palette),
-        reply_markup=palette_keyboard(field.id),
-    )
+    await update_main_message(state, event, palette_screen(view))
 
 
 async def _render_fields(
@@ -865,10 +856,7 @@ async def _render_fields(
 ) -> None:
     fields = await services.list_fields().execute(ListFields(profile.id))
     await update_main_message(
-        state,
-        event,
-        format_fields_list(fields),
-        reply_markup=fields_keyboard(fields),
+        state, event, fields_list_screen(make_fields_list_view(fields))
     )
 
 
@@ -879,10 +867,7 @@ async def _render_field(
     update_main_message: UpdateMainMessage,
 ) -> None:
     await update_main_message(
-        state,
-        event,
-        format_field_card(field),
-        reply_markup=field_card_keyboard(field),
+        state, event, field_card_screen(make_field_card_view(field))
     )
 
 
