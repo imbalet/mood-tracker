@@ -1,5 +1,6 @@
 """Typed compact callback payloads for diary interactions."""
 
+from enum import StrEnum
 from uuid import UUID
 
 from aiogram.filters.callback_data import CallbackData
@@ -7,10 +8,23 @@ from aiogram.filters.callback_data import CallbackData
 from mood_tracker.domain.enums import ReferenceType
 
 
+class MenuSection(StrEnum):
+    """Top-level screens available from the inline interface."""
+
+    HOME = "home"
+    TODAY = "today"
+
+
 class TimezoneCallback(CallbackData, prefix="timezone"):
     """Choose a predefined timezone or the manual-input path."""
 
     timezone: str
+
+
+class MenuCallback(CallbackData, prefix="menu"):
+    """Navigate between top-level inline screens."""
+
+    section: MenuSection
 
 
 class DayValueCallback(CallbackData, prefix="value"):

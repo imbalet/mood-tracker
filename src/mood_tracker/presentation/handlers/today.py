@@ -1,6 +1,7 @@
 """Handlers for filling, resuming and editing a daily entry."""
 
 from datetime import UTC, date, datetime
+from html import escape
 from uuid import UUID
 from zoneinfo import ZoneInfo
 
@@ -23,9 +24,12 @@ from mood_tracker.presentation.callback_query import CallbackQueryWithMessage
 from mood_tracker.presentation.callbacks import (
     DayValueCallback,
     EditDayValueCallback,
+    MenuCallback,
+    MenuSection,
     ReferenceCallback,
     SkipTextCallback,
 )
+from mood_tracker.presentation.constants import TEXTS, TextKey
 from mood_tracker.presentation.formatters import format_day_card
 from mood_tracker.presentation.keyboards import (
     day_edit_keyboard,
@@ -50,14 +54,30 @@ async def today(
     """Open the user-local day, continuing an existing draft when present."""
     profile = await _profile(telegram_id, services)
     if profile is None:
-        await update_main_message(
-            state, message, "Сначала создай дневник командой /start."
-        )
+        await update_main_message(state, message, TEXTS[TextKey.START_FIRST])
         return
     await state.clear()
     await _render(
         message, state, profile, _today(profile), services, update_main_message
     )
+
+
+@router.callback_query(MenuCallback.filter(F.section == MenuSection.TODAY))
+async def open_today_from_menu(
+    query: CallbackQueryWithMessage,
+    state: FSMContext,
+    telegram_id: int,
+    services: ApplicationServices,
+    update_main_message: UpdateMainMessage,
+) -> None:
+    """Start today's diary flow from the inline home screen."""
+    profile = await _profile(telegram_id, services)
+    if profile is None:
+        await query.answer(TEXTS[TextKey.START_FIRST], show_alert=True)
+        return
+    await state.clear()
+    await query.answer()
+    await _render(query, state, profile, _today(profile), services, update_main_message)
 
 
 @router.callback_query(DayValueCallback.filter())
@@ -73,7 +93,7 @@ async def save_value(
     profile = await _profile(telegram_id, services)
     day_date = _parse_day(callback_data.day)
     if profile is None or day_date is None:
-        await query.answer("Кнопка устарела.", show_alert=True)
+        await query.answer(TEXTS[TextKey.STALE_BUTTON], show_alert=True)
         return
     try:
         review = await services.save_day_value().execute(
@@ -82,9 +102,7 @@ async def save_value(
             )
         )
     except FieldNotFound, InvalidFieldValue:
-        await query.answer(
-            "Это значение больше недоступно. Открой /today заново.", show_alert=True
-        )
+        await query.answer(TEXTS[TextKey.FIELD_VALUE_UNAVAILABLE], show_alert=True)
         return
     await state.clear()
     await query.answer()
@@ -93,7 +111,7 @@ async def save_value(
         await update_main_message(
             state,
             query,
-            f"Сегодня {adjective} твоего текущего рекордного дня?",
+            TEXTS[TextKey.REFERENCE_QUESTION].format(adjective=adjective),
             reply_markup=reference_keyboard(review),
         )
     else:
@@ -113,7 +131,7 @@ async def skip_text(
     profile = await _profile(telegram_id, services)
     day_date = _parse_day(callback_data.day)
     if profile is None or day_date is None:
-        await query.answer("Кнопка устарела.", show_alert=True)
+        await query.answer(TEXTS[TextKey.STALE_BUTTON], show_alert=True)
         return
     await services.skip_day_text().execute(
         SkipDayText(profile.id, day_date, callback_data.field_id)
@@ -135,7 +153,7 @@ async def confirm_reference(
     """Persist the answer to a candidate best/worst reference day."""
     profile = await _profile(telegram_id, services)
     if profile is None:
-        await query.answer("Сначала используй /start.", show_alert=True)
+        await query.answer(TEXTS[TextKey.START_FIRST], show_alert=True)
         return
     try:
         await services.confirm_reference().execute(
@@ -147,7 +165,7 @@ async def confirm_reference(
             )
         )
     except DayNotFound:
-        await query.answer("Запись больше недоступна.", show_alert=True)
+        await query.answer(TEXTS[TextKey.DAY_UNAVAILABLE], show_alert=True)
         return
     await query.answer()
     await _render(query, state, profile, _today(profile), services, update_main_message)
@@ -166,14 +184,14 @@ async def edit_value(
     profile = await _profile(telegram_id, services)
     day_date = _parse_day(callback_data.day)
     if profile is None or day_date is None:
-        await query.answer("Кнопка устарела.", show_alert=True)
+        await query.answer(TEXTS[TextKey.STALE_BUTTON], show_alert=True)
         return
     form = await services.get_day().execute(GetDay(profile.id, day_date))
     field = next(
         (item for item in form.fields if item.id == callback_data.field_id), None
     )
     if field is None:
-        await query.answer("Поле больше недоступно.", show_alert=True)
+        await query.answer(TEXTS[TextKey.FIELD_UNAVAILABLE], show_alert=True)
         return
     await query.answer()
     await _prompt_field(query, state, day_date, field, update_main_message)
@@ -196,12 +214,12 @@ async def save_text(
         or not isinstance(data.get("field_id"), str)
     ):
         await state.clear()
-        await update_main_message(state, message, "Открой /today и попробуй ещё раз.")
+        await update_main_message(state, message, TEXTS[TextKey.OPEN_TODAY_AGAIN])
         return
     day_date = _parse_day(data["day"])
     if day_date is None:
         await state.clear()
-        await update_main_message(state, message, "Открой /today и попробуй ещё раз.")
+        await update_main_message(state, message, TEXTS[TextKey.OPEN_TODAY_AGAIN])
         return
     try:
         review = await services.save_day_value().execute(
@@ -213,7 +231,7 @@ async def save_text(
         await update_main_message(
             state,
             message,
-            "Текст не сохранён. Отправь непустой текст или нажми «Пропустить».",
+            TEXTS[TextKey.TEXT_NOT_SAVED],
         )
         return
     await state.clear()
@@ -222,7 +240,7 @@ async def save_text(
         await update_main_message(
             state,
             message,
-            f"Сегодня {adjective} твоего текущего рекордного дня?",
+            TEXTS[TextKey.REFERENCE_QUESTION].format(adjective=adjective),
             reply_markup=reference_keyboard(review),
         )
     else:
@@ -278,7 +296,7 @@ async def _prompt_field(
         await update_main_message(
             state,
             event,
-            f"<b>{field.name}</b>: выберите значение.",
+            TEXTS[TextKey.SELECT_VALUE].format(name=escape(field.name)),
             reply_markup=field_value_keyboard(field, day_date),
         )
         return
@@ -287,6 +305,6 @@ async def _prompt_field(
     await update_main_message(
         state,
         event,
-        f"<b>{field.name}</b>: отправьте текст или пропустите этот шаг.",
+        TEXTS[TextKey.ENTER_TEXT].format(name=escape(field.name)),
         reply_markup=field_value_keyboard(field, day_date),
     )

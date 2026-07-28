@@ -10,7 +10,9 @@ from mood_tracker.domain.errors import InvalidTimezone
 from mood_tracker.domain.value_objects import UserTimezone
 from mood_tracker.presentation.callback_query import CallbackQueryWithMessage
 from mood_tracker.presentation.callbacks import TimezoneCallback
-from mood_tracker.presentation.keyboards import timezone_keyboard
+from mood_tracker.presentation.constants import TEXTS, TextKey
+from mood_tracker.presentation.handlers.menu import render_menu
+from mood_tracker.presentation.keyboards import main_menu_keyboard, timezone_keyboard
 from mood_tracker.presentation.services import ApplicationServices
 from mood_tracker.presentation.states import Onboarding
 from mood_tracker.presentation.utils import UpdateMainMessage
@@ -32,19 +34,13 @@ async def start(
     )
     if profile is not None:
         await state.clear()
-        await update_main_message(
-            state,
-            message,
-            "Ты уже зарегистрирован. Используй /today, чтобы открыть дневник.",
-            create_new=True,
-        )
+        await render_menu(state, message, update_main_message, create_new=True)
         return
     await state.set_state(Onboarding.waiting_timezone)
     await update_main_message(
         state,
         message,
-        "Привет! Выбери свой часовой пояс — по нему бот определяет дату "
-        "записи и время напоминаний.",
+        TEXTS[TextKey.ONBOARDING_GREETING],
         reply_markup=timezone_keyboard(),
         create_new=True,
     )
@@ -65,7 +61,7 @@ async def choose_timezone(
         await update_main_message(
             state,
             query,
-            "Отправь IANA-имя, например <code>Asia/Tokyo</code>.",
+            TEXTS[TextKey.ENTER_TIMEZONE],
         )
         return
     await _register(
@@ -101,7 +97,7 @@ async def _register(
         await update_main_message(
             state,
             event,
-            "Не удалось распознать часовой пояс. Например: <code>Europe/Moscow</code>.",
+            TEXTS[TextKey.INVALID_TIMEZONE],
         )
         return
     profile = await services.register_user().execute(
@@ -111,6 +107,11 @@ async def _register(
     await update_main_message(
         state,
         event,
-        f"Готово! Часовой пояс: <b>{profile.timezone.name}</b>.\n\n"
-        "Теперь открой сегодняшнюю запись командой /today.",
+        "\n\n".join(
+            (
+                TEXTS[TextKey.TIMEZONE_SAVED].format(timezone=profile.timezone.name),
+                TEXTS[TextKey.MENU_TITLE],
+            )
+        ),
+        reply_markup=main_menu_keyboard(),
     )

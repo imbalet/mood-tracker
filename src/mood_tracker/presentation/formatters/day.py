@@ -5,12 +5,13 @@ from html import escape
 from mood_tracker.application.commands import DayForm
 from mood_tracker.domain.entities import OrdinalConfig, ScaleConfig
 from mood_tracker.domain.enums import FieldStatus
+from mood_tracker.presentation.constants import TEXTS, TextKey
 
 
 def format_day_card(form: DayForm) -> str:
     """Render visible persisted values with their historical field versions."""
     if form.day is None:
-        return "Сегодня ещё нет записи."
+        return TEXTS[TextKey.EMPTY_DAY]
     lines = [f"<b>{form.day_date:%d.%m.%Y}</b>"]
     for field in form.fields:
         if field.status is FieldStatus.HIDDEN:

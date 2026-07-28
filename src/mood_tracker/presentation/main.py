@@ -9,12 +9,17 @@ from aiogram import Bot, Dispatcher
 from aiogram.client.default import DefaultBotProperties
 from aiogram.enums import ParseMode
 from aiogram.methods import DeleteWebhook
+from aiogram.types import BotCommand
 
 from mood_tracker.config import get_settings
 from mood_tracker.healthcheck import start_healthcheck_server
 from mood_tracker.infrastructure.db.session import create_session_factory
 from mood_tracker.logger import setup_logging
-from mood_tracker.presentation.handlers import onboarding_router, today_router
+from mood_tracker.presentation.handlers import (
+    menu_router,
+    onboarding_router,
+    today_router,
+)
 from mood_tracker.presentation.middleware import (
     ApplicationMiddleware,
     CallbackMessageMiddleware,
@@ -39,7 +44,7 @@ async def run() -> None:
     )
     engine, session_factory = create_session_factory(settings.DB_URL)
     services = ApplicationServices(session_factory)
-    dispatcher.include_routers(onboarding_router, today_router)
+    dispatcher.include_routers(menu_router, onboarding_router, today_router)
     dispatcher.update.middleware(ApplicationMiddleware(services, Sender(bot)))
     dispatcher.callback_query.middleware(CallbackMessageMiddleware())
     health_task = asyncio.create_task(
@@ -48,6 +53,13 @@ async def run() -> None:
 
     try:
         await bot(DeleteWebhook(drop_pending_updates=True))
+        await bot.set_my_commands(
+            [
+                BotCommand(command="start", description="Открыть дневник"),
+                BotCommand(command="menu", description="Открыть меню"),
+                BotCommand(command="today", description="Заполнить сегодняшний день"),
+            ]
+        )
         await dispatcher.start_polling(bot)
     finally:
         health_task.cancel()
