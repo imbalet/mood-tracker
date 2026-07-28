@@ -33,9 +33,14 @@ class TextKey(StrEnum):
     OPEN_TODAY_AGAIN = "open_today_again"
     SELECT_VALUE = "select_value"
     ENTER_TEXT = "enter_text"
+    BACK_TO_DAY = "back_to_day"
     REFERENCE_QUESTION = "reference_question"
     EMPTY_DAY = "empty_day"
     EDIT_FIELD = "edit_field"
+    ADD_FIELD_VALUE = "add_field_value"
+    DAY_DRAFT = "day_draft"
+    DAY_COMPLETE = "day_complete"
+    DAY_SKIPPED = "day_skipped"
     FIELDS_TITLE = "fields_title"
     NO_FIELDS = "no_fields"
     ADD_FIELD = "add_field"
@@ -125,9 +130,14 @@ _TEXTS: dict[TextKey, str] = {
     TextKey.OPEN_TODAY_AGAIN: "Открой /today и попробуй ещё раз.",
     TextKey.SELECT_VALUE: "<b>{name}</b>\nВыбери значение.",
     TextKey.ENTER_TEXT: "<b>{name}</b>\nОтправь текст или пропусти этот шаг.",
+    TextKey.BACK_TO_DAY: "← К записи дня",
     TextKey.REFERENCE_QUESTION: "Сегодня {adjective} твоего текущего рекордного дня?",
-    TextKey.EMPTY_DAY: "За этот день пока нет записи.",
+    TextKey.EMPTY_DAY: "Пока нет значений.",
     TextKey.EDIT_FIELD: "Изменить: {name}",
+    TextKey.ADD_FIELD_VALUE: "Добавить: {name}",
+    TextKey.DAY_DRAFT: "черновик",
+    TextKey.DAY_COMPLETE: "завершён",
+    TextKey.DAY_SKIPPED: "пропущено",
     TextKey.FIELDS_TITLE: "<b>Поля дневника</b>\nВыбери поле для настройки.",
     TextKey.NO_FIELDS: "Пока нет пользовательских полей.",
     TextKey.ADD_FIELD: "＋ Добавить поле",

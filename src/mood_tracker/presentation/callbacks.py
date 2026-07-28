@@ -128,6 +128,12 @@ class DayValueCallback(CallbackData, prefix="value"):
     value: int
 
 
+class OpenDayCallback(CallbackData, prefix="day"):
+    """Return to one day's interactive summary card."""
+
+    day: str
+
+
 class SkipTextCallback(CallbackData, prefix="skip"):
     """Skip a Text field for one date."""
 

@@ -12,6 +12,7 @@ from mood_tracker.presentation.callbacks import (
     EditDayValueCallback,
     MenuCallback,
     MenuSection,
+    OpenDayCallback,
     ReferenceCallback,
     SkipTextCallback,
 )
@@ -57,7 +58,7 @@ def field_value_keyboard(field: Field, day_date: date) -> InlineKeyboardMarkup:
             )
         )
     builder.row_buttons_tuple(
-        (TextKey.BACK_TO_MENU, MenuCallback(section=MenuSection.HOME))
+        (TextKey.BACK_TO_DAY, OpenDayCallback(day=day_date.strftime("%Y%m%d")))
     )
     return builder.as_markup()
 
@@ -88,20 +89,26 @@ def reference_keyboard(review: ReferenceReview) -> InlineKeyboardMarkup:
 
 
 def day_edit_keyboard(form: DayForm) -> InlineKeyboardMarkup:
-    """Build edit actions for visible values on a completed day."""
+    """Build add and edit actions around the currently visible day summary."""
     builder = KeyboardBuilder()
-    if form.day is not None:
-        for field in form.fields:
-            if field.status is FieldStatus.HIDDEN or field.id not in form.day.values:
-                continue
-            builder.row_buttons_text_tuple(
-                (
-                    TEXTS[TextKey.EDIT_FIELD].format(name=field.name),
-                    EditDayValueCallback(
-                        day=form.day_date.strftime("%Y%m%d"), field_id=field.id
-                    ),
-                )
+    for field in form.fields:
+        if field.status is FieldStatus.HIDDEN:
+            continue
+        is_completed = form.day is not None and form.day.has_completed_step(field.id)
+        if is_completed:
+            text = TEXTS[TextKey.EDIT_FIELD].format(name=field.name)
+        elif field.status is FieldStatus.ACTIVE:
+            text = TEXTS[TextKey.ADD_FIELD_VALUE].format(name=field.name)
+        else:
+            continue
+        builder.row_buttons_text_tuple(
+            (
+                text,
+                EditDayValueCallback(
+                    day=form.day_date.strftime("%Y%m%d"), field_id=field.id
+                ),
             )
+        )
     builder.row_buttons_tuple(
         (TextKey.BACK_TO_MENU, MenuCallback(section=MenuSection.HOME))
     )

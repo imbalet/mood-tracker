@@ -12,6 +12,7 @@ from aiogram.types import Message
 
 from mood_tracker.application.commands import (
     ConfirmReference,
+    DayForm,
     GetDay,
     GetUserByTelegramId,
     SaveDayValue,
@@ -26,6 +27,7 @@ from mood_tracker.presentation.callbacks import (
     EditDayValueCallback,
     MenuCallback,
     MenuSection,
+    OpenDayCallback,
     ReferenceCallback,
     SkipTextCallback,
 )
@@ -118,6 +120,26 @@ async def save_value(
         await _render(query, state, profile, day_date, services, update_main_message)
 
 
+@router.callback_query(OpenDayCallback.filter())
+async def open_day_card(
+    query: CallbackQueryWithMessage,
+    callback_data: OpenDayCallback,
+    state: FSMContext,
+    telegram_id: int,
+    services: ApplicationServices,
+    update_main_message: UpdateMainMessage,
+) -> None:
+    """Return from an answer prompt to the selected day summary."""
+    profile = await _profile(telegram_id, services)
+    day_date = _parse_day(callback_data.day)
+    if profile is None or day_date is None:
+        await query.answer(TEXTS[TextKey.STALE_BUTTON], show_alert=True)
+        return
+    await state.clear()
+    await query.answer()
+    await _render(query, state, profile, day_date, services, update_main_message)
+
+
 @router.callback_query(SkipTextCallback.filter())
 async def skip_text(
     query: CallbackQueryWithMessage,
@@ -194,7 +216,7 @@ async def edit_value(
         await query.answer(TEXTS[TextKey.FIELD_UNAVAILABLE], show_alert=True)
         return
     await query.answer()
-    await _prompt_field(query, state, day_date, field, update_main_message)
+    await _prompt_field(query, state, form, field, update_main_message)
 
 
 @router.message(Diary.waiting_text, F.text)
@@ -264,13 +286,8 @@ async def _render(
     update_main_message: UpdateMainMessage,
 ) -> None:
     form = await services.get_day().execute(GetDay(profile.id, day_date))
-    if form.next_field is None:
-        await update_main_message(
-            state, event, format_day_card(form), reply_markup=day_edit_keyboard(form)
-        )
-        return
-    await _prompt_field(
-        event, state, form.day_date, form.next_field, update_main_message
+    await update_main_message(
+        state, event, format_day_card(form), reply_markup=day_edit_keyboard(form)
     )
 
 
@@ -288,7 +305,7 @@ def _parse_day(value: str) -> date | None:
 async def _prompt_field(
     event: Message | CallbackQueryWithMessage,
     state: FSMContext,
-    day_date: date,
+    form: DayForm,
     field: Field,
     update_main_message: UpdateMainMessage,
 ) -> None:
@@ -296,15 +313,21 @@ async def _prompt_field(
         await update_main_message(
             state,
             event,
-            TEXTS[TextKey.SELECT_VALUE].format(name=escape(field.name)),
-            reply_markup=field_value_keyboard(field, day_date),
+            format_day_card(
+                form, TEXTS[TextKey.SELECT_VALUE].format(name=escape(field.name))
+            ),
+            reply_markup=field_value_keyboard(field, form.day_date),
         )
         return
     await state.set_state(Diary.waiting_text)
-    await state.update_data(day=day_date.strftime("%Y%m%d"), field_id=str(field.id))
+    await state.update_data(
+        day=form.day_date.strftime("%Y%m%d"), field_id=str(field.id)
+    )
     await update_main_message(
         state,
         event,
-        TEXTS[TextKey.ENTER_TEXT].format(name=escape(field.name)),
-        reply_markup=field_value_keyboard(field, day_date),
+        format_day_card(
+            form, TEXTS[TextKey.ENTER_TEXT].format(name=escape(field.name))
+        ),
+        reply_markup=field_value_keyboard(field, form.day_date),
     )
