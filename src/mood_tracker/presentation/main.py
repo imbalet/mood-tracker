@@ -12,7 +12,15 @@ from aiogram.methods import DeleteWebhook
 
 from mood_tracker.config import get_settings
 from mood_tracker.healthcheck import start_healthcheck_server
+from mood_tracker.infrastructure.db.session import create_session_factory
 from mood_tracker.logger import setup_logging
+from mood_tracker.presentation.handlers import onboarding_router, today_router
+from mood_tracker.presentation.middleware import (
+    ApplicationMiddleware,
+    CallbackMessageMiddleware,
+)
+from mood_tracker.presentation.sender import Sender
+from mood_tracker.presentation.services import ApplicationServices
 
 
 async def run() -> None:
@@ -29,6 +37,11 @@ async def run() -> None:
         token=settings.BOT_TOKEN,
         default=DefaultBotProperties(parse_mode=ParseMode.HTML),
     )
+    engine, session_factory = create_session_factory(settings.DB_URL)
+    services = ApplicationServices(session_factory)
+    dispatcher.include_routers(onboarding_router, today_router)
+    dispatcher.update.middleware(ApplicationMiddleware(services, Sender(bot)))
+    dispatcher.callback_query.middleware(CallbackMessageMiddleware())
     health_task = asyncio.create_task(
         start_healthcheck_server(settings.HEALTHCHECK_PORT)
     )
@@ -41,6 +54,7 @@ async def run() -> None:
         with contextlib.suppress(asyncio.CancelledError):
             await health_task
         await bot.session.close()
+        await engine.dispose()
 
 
 def main() -> None:

@@ -231,6 +231,17 @@ class SaveDayValueUseCase:
             return None
         if rolled_back:
             await self._uow.reference_days.save(reference_days)
+        if previous_reference_day_id == day.id:
+            return None
+        valid_boundary_ids = await _valid_day_ids(
+            self._uow, user_id, core_field, reference_days, type
+        )
+        if not valid_boundary_ids:
+            reference_days.apply_confirmed_change(
+                self._id_generator.new(), day.id, type, self._clock.now()
+            )
+            await self._uow.reference_days.save(reference_days)
+            return None
         return ReferenceReview(day.id, type, previous_reference_day_id)
 
 

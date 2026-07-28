@@ -7,6 +7,12 @@ from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 
 from mood_tracker.application.errors import IdentifierCollision
+from mood_tracker.application.ports.repositories import (
+    DayRepository,
+    FieldRepository,
+    ReferenceDaysRepository,
+    UserRepository,
+)
 from mood_tracker.infrastructure.db.repositories import (
     SqlAlchemyDayRepository,
     SqlAlchemyFieldRepository,
@@ -16,6 +22,11 @@ from mood_tracker.infrastructure.db.repositories import (
 
 
 class SqlAlchemyUnitOfWork:
+    users: UserRepository
+    fields: FieldRepository
+    days: DayRepository
+    reference_days: ReferenceDaysRepository
+
     def __init__(self, session_factory: async_sessionmaker[AsyncSession]) -> None:
         self._factory = session_factory
         self._session: AsyncSession | None = None

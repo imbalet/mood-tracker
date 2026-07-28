@@ -24,6 +24,13 @@ class RegisterUser:
 
 
 @dataclass(frozen=True, slots=True)
+class GetUserByTelegramId:
+    """Look up a profile owned by a Telegram account."""
+
+    telegram_id: int
+
+
+@dataclass(frozen=True, slots=True)
 class SetTimezone:
     """Change one user's IANA timezone."""
 

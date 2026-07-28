@@ -17,6 +17,7 @@ from mood_tracker.application.use_cases.fields import (
 )
 from mood_tracker.application.use_cases.references import GetReferenceHistoryUseCase
 from mood_tracker.application.use_cases.registration import (
+    GetUserByTelegramIdUseCase,
     RegisterUserUseCase,
     SetTimezoneUseCase,
 )
@@ -26,6 +27,7 @@ __all__ = [
     "ConfirmReferenceUseCase",
     "CreateFieldUseCase",
     "GetDayUseCase",
+    "GetUserByTelegramIdUseCase",
     "GetReferenceHistoryUseCase",
     "ListFieldsUseCase",
     "RegisterUserUseCase",

@@ -1,6 +1,10 @@
 """User registration and profile-settings use cases."""
 
-from mood_tracker.application.commands import RegisterUser, SetTimezone
+from mood_tracker.application.commands import (
+    GetUserByTelegramId,
+    RegisterUser,
+    SetTimezone,
+)
 from mood_tracker.application.errors import UserNotFound
 from mood_tracker.application.ports import Clock, IdGenerator, UnitOfWork
 from mood_tracker.application.use_cases._transactions import (
@@ -41,6 +45,18 @@ class RegisterUserUseCase:
             return user
 
         return await execute_write(self._uow, operation)
+
+
+class GetUserByTelegramIdUseCase:
+    """Read the profile associated with one Telegram account."""
+
+    def __init__(self, uow: UnitOfWork) -> None:
+        self._uow = uow
+
+    async def execute(self, command: GetUserByTelegramId) -> UserProfile | None:
+        """Return a profile without exposing any unrelated user data."""
+        async with self._uow:
+            return await self._uow.users.get_by_telegram_id(command.telegram_id)
 
 
 class SetTimezoneUseCase:
