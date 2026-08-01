@@ -39,6 +39,7 @@ def test_fields_keyboard_exposes_each_field_and_navigation(field_factory) -> Non
         ["Первое"],
         ["Второе"],
         ["＋ Добавить поле"],
+        ["Добавить из другой анкеты"],
         ["Изменить порядок"],
         ["🏠 В меню"],
     ]

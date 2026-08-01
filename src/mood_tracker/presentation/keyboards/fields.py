@@ -2,7 +2,7 @@
 
 from aiogram.types import InlineKeyboardMarkup
 
-from mood_tracker.domain.enums import FieldType
+from mood_tracker.domain.enums import FieldType, QuestionnaireKind
 from mood_tracker.presentation.callbacks import (
     FieldCreateCallback,
     MenuCallback,
@@ -15,17 +15,20 @@ from mood_tracker.presentation.constants import TextKey
 from mood_tracker.presentation.utils import KeyboardBuilder
 
 
-def field_type_keyboard() -> InlineKeyboardMarkup:
+def field_type_keyboard(kind: QuestionnaireKind) -> InlineKeyboardMarkup:
     """Build semantic-type choices for a newly created custom field."""
     builder = KeyboardBuilder()
     builder.row_buttons_tuple(
-        (TextKey.FIELD_TYPE_SCALE, FieldCreateCallback(type=FieldType.SCALE))
+        (TextKey.FIELD_TYPE_SCALE, FieldCreateCallback(type=FieldType.SCALE, kind=kind))
     )
     builder.row_buttons_tuple(
-        (TextKey.FIELD_TYPE_ORDINAL, FieldCreateCallback(type=FieldType.ORDINAL))
+        (
+            TextKey.FIELD_TYPE_ORDINAL,
+            FieldCreateCallback(type=FieldType.ORDINAL, kind=kind),
+        )
     )
     builder.row_buttons_tuple(
-        (TextKey.FIELD_TYPE_TEXT, FieldCreateCallback(type=FieldType.TEXT))
+        (TextKey.FIELD_TYPE_TEXT, FieldCreateCallback(type=FieldType.TEXT, kind=kind))
     )
     builder.row_buttons_tuple((TextKey.BACK, MenuCallback(section=MenuSection.FIELDS)))
     return builder.as_markup()

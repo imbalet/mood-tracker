@@ -44,6 +44,8 @@ class FieldCardView:
     version_count: int
     position: int
     palette_colors: tuple[str, str, str] | None
+    is_required: bool = False
+    can_detach: bool = False
     kind: QuestionnaireKind = QuestionnaireKind.DAY
 
 
@@ -64,6 +66,7 @@ class FieldOrderView:
     selected_id: UUID | None
     can_move_up: bool
     can_move_down: bool
+    kind: QuestionnaireKind = QuestionnaireKind.DAY
 
 
 @dataclass(frozen=True, slots=True)
@@ -122,12 +125,18 @@ def make_field_card_view(
         palette_colors=(palette.minimum, palette.middle, palette.maximum)
         if palette is not None
         else None,
+        is_required=placement.is_required if placement is not None else False,
+        can_detach=(
+            placement is not None and placement.role is QuestionnaireFieldRole.ORDINARY
+        ),
         kind=kind,
     )
 
 
 def make_field_order_view(
-    fields: tuple[Field, ...], selected_id: UUID | None
+    fields: tuple[Field, ...],
+    selected_id: UUID | None,
+    kind: QuestionnaireKind = QuestionnaireKind.DAY,
 ) -> FieldOrderView:
     """Map field order and selection into move-button availability."""
     selected_index = next(
@@ -141,6 +150,7 @@ def make_field_order_view(
         selected_id=selected_id if selected_index is not None else None,
         can_move_up=selected_index is not None and selected_index > 0,
         can_move_down=selected_index is not None and selected_index < len(fields) - 1,
+        kind=kind,
     )
 
 

@@ -7,7 +7,7 @@ from uuid import UUID
 
 from aiogram.fsm.context import FSMContext
 
-from mood_tracker.domain.enums import FieldType
+from mood_tracker.domain.enums import FieldType, QuestionnaireKind
 from mood_tracker.presentation.state.data import (
     CreateFieldConfigData,
     CreateFieldNameData,
@@ -84,10 +84,15 @@ class PresentationData:
 def _decode(data_type: type[FlowData], payload: Mapping[str, object]) -> FlowData:
     try:
         if data_type is CreateFieldNameData:
-            return CreateFieldNameData(FieldType(_string(payload, "field_type")))
+            return CreateFieldNameData(
+                FieldType(_string(payload, "field_type")),
+                QuestionnaireKind(_string(payload, "kind_value")),
+            )
         if data_type is CreateFieldConfigData:
             return CreateFieldConfigData(
-                FieldType(_string(payload, "field_type")), _string(payload, "name")
+                FieldType(_string(payload, "field_type")),
+                _string(payload, "name"),
+                QuestionnaireKind(_string(payload, "kind_value")),
             )
         if data_type is RenameFieldData:
             return RenameFieldData(UUID(_string(payload, "field_id")))
@@ -95,7 +100,10 @@ def _decode(data_type: type[FlowData], payload: Mapping[str, object]) -> FlowDat
             return FieldVersionData(UUID(_string(payload, "field_id")))
         if data_type is CreateOrdinalData:
             return CreateOrdinalData(
-                _string(payload, "name"), _ordinal_start(payload), _labels(payload)
+                _string(payload, "name"),
+                _ordinal_start(payload),
+                _labels(payload),
+                QuestionnaireKind(_string(payload, "kind_value")),
             )
         if data_type is VersionOrdinalData:
             return VersionOrdinalData(

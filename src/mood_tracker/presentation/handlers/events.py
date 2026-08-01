@@ -1,6 +1,5 @@
 """Fast capture and a questionnaire flow for events."""
 
-from contextlib import suppress
 from datetime import UTC, date, datetime, time
 from uuid import UUID
 from zoneinfo import ZoneInfo
@@ -75,7 +74,7 @@ async def capture_event(
         await _render_event(
             message,
             presentation_data,
-            profile.id,
+            profile,
             created.id,
             services,
             update_main_message,
@@ -158,7 +157,7 @@ async def continue_event(
         query,
         state,
         presentation_data,
-        profile.id,
+        profile,
         callback_data.event_id,
         services,
         update_main_message,
@@ -181,7 +180,7 @@ async def open_event(
     await _render_event(
         query,
         presentation_data,
-        profile.id,
+        profile,
         callback_data.event_id,
         services,
         update_main_message,
@@ -355,7 +354,7 @@ async def enter_time(
         await _render_event(
             message,
             presentation_data,
-            profile.id,
+            profile,
             data.event_id,
             services,
             update_main_message,
@@ -393,7 +392,7 @@ async def _create_and_prompt(
         event,
         state,
         presentation_data,
-        profile.id,
+        profile,
         created.id,
         services,
         update_main_message,
@@ -404,14 +403,14 @@ async def _prompt_next(
     event: EventSource,
     state: FSMContext,
     presentation_data: PresentationData,
-    user_id: UUID,
+    profile: UserProfile,
     event_id: UUID,
     services: ApplicationServices,
     update_main_message: UpdateMainMessage,
 ) -> None:
-    current = await services.get_event().execute(GetEvent(user_id, event_id))
+    current = await services.get_event().execute(GetEvent(profile.id, event_id))
     items = await services.list_questionnaire_fields().execute(
-        ListQuestionnaireFields(user_id, QuestionnaireKind.EVENT)
+        ListQuestionnaireFields(profile.id, QuestionnaireKind.EVENT)
     )
     item = next(
         (
@@ -423,12 +422,32 @@ async def _prompt_next(
         None,
     )
     if item is None:
-        with suppress(IncompleteDay):
-            await services.complete_event().execute(CompleteEvent(user_id, event_id))
+        try:
+            completed = await services.complete_event().execute(
+                CompleteEvent(profile.id, event_id)
+            )
+        except IncompleteDay:
+            # This can only happen after a questionnaire changes mid-flow.
+            await _render_event(
+                event,
+                presentation_data,
+                profile,
+                event_id,
+                services,
+                update_main_message,
+            )
+            return
+        if completed.deleted_at is not None:
+            await update_main_message(
+                presentation_data,
+                event,
+                Screen("Событие не создано: ничего не заполнено."),
+            )
+            return
         await _render_event(
             event,
             presentation_data,
-            user_id,
+            profile,
             event_id,
             services,
             update_main_message,
@@ -513,7 +532,7 @@ async def save_value(
         query,
         state,
         presentation_data,
-        profile.id,
+        profile,
         callback_data.event_id,
         services,
         update_main_message,
@@ -540,7 +559,7 @@ async def skip_value(
         query,
         state,
         presentation_data,
-        profile.id,
+        profile,
         callback_data.event_id,
         services,
         update_main_message,
@@ -573,7 +592,7 @@ async def save_text(
         await _render_event(
             message,
             presentation_data,
-            profile.id,
+            profile,
             created.id,
             services,
             update_main_message,
@@ -592,7 +611,7 @@ async def save_text(
         message,
         state,
         presentation_data,
-        profile.id,
+        profile,
         data.event_id,
         services,
         update_main_message,
@@ -602,20 +621,27 @@ async def save_text(
 async def _render_event(
     event: EventSource,
     presentation_data: PresentationData,
-    user_id: UUID,
+    profile: UserProfile,
     event_id: UUID,
     services: ApplicationServices,
     update_main_message: UpdateMainMessage,
 ) -> None:
-    current = await services.get_event().execute(GetEvent(user_id, event_id))
+    current = await services.get_event().execute(GetEvent(profile.id, event_id))
     local = current.occurred_at.astimezone(ZoneInfo(current.occurred_timezone))
     items = await services.list_questionnaire_fields().execute(
-        ListQuestionnaireFields(user_id, QuestionnaireKind.EVENT)
+        ListQuestionnaireFields(profile.id, QuestionnaireKind.EVENT)
     )
     lines = [
         "<b>Событие</b>",
-        f"{local:%d.%m.%Y %H:%M}",
-        f"Статус: {current.status.value}",
+        (
+            f"{local:%d.%m.%Y %H:%M}"
+            + (
+                f" ({current.occurred_timezone})"
+                if current.occurred_timezone != profile.timezone.name
+                else ""
+            )
+        ),
+        f"Статус: {'черновик' if current.status is EventStatus.DRAFT else 'завершено'}",
     ]
     for item in items:
         value = current.values.get(item.field.id)

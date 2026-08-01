@@ -5,7 +5,7 @@ from datetime import date
 from typing import ClassVar, override
 from uuid import UUID
 
-from mood_tracker.domain.enums import FieldType
+from mood_tracker.domain.enums import FieldType, QuestionnaireKind
 
 
 class FlowData:
@@ -24,10 +24,14 @@ class CreateFieldNameData(FlowData):
 
     kind: ClassVar[str] = "create_field_name"
     field_type: FieldType
+    kind_value: QuestionnaireKind = QuestionnaireKind.DAY
 
     @override
     def to_payload(self) -> dict[str, object]:
-        return {"field_type": self.field_type.value}
+        return {
+            "field_type": self.field_type.value,
+            "kind_value": self.kind_value.value,
+        }
 
 
 @dataclass(frozen=True, slots=True)
@@ -37,10 +41,15 @@ class CreateFieldConfigData(FlowData):
     kind: ClassVar[str] = "create_field_config"
     field_type: FieldType
     name: str
+    kind_value: QuestionnaireKind = QuestionnaireKind.DAY
 
     @override
     def to_payload(self) -> dict[str, object]:
-        return {"field_type": self.field_type.value, "name": self.name}
+        return {
+            "field_type": self.field_type.value,
+            "name": self.name,
+            "kind_value": self.kind_value.value,
+        }
 
 
 @dataclass(frozen=True, slots=True)
@@ -75,6 +84,7 @@ class CreateOrdinalData(FlowData):
     name: str
     starts_at: int
     labels: tuple[str, ...]
+    kind_value: QuestionnaireKind = QuestionnaireKind.DAY
 
     @override
     def to_payload(self) -> dict[str, object]:
@@ -82,6 +92,7 @@ class CreateOrdinalData(FlowData):
             "name": self.name,
             "starts_at": self.starts_at,
             "labels": list(self.labels),
+            "kind_value": self.kind_value.value,
         }
 
 

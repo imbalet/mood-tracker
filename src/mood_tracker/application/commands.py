@@ -61,6 +61,7 @@ class CreateField:
     config: FieldConfig
     display_config: FieldDisplayConfig
     sort_order: int
+    kind: QuestionnaireKind = QuestionnaireKind.DAY
 
 
 @dataclass(frozen=True, slots=True)

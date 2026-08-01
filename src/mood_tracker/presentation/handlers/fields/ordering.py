@@ -8,7 +8,6 @@ from mood_tracker.application.commands import (
     MoveQuestionnaireField,
 )
 from mood_tracker.application.errors import FieldNotFound
-from mood_tracker.domain.enums import QuestionnaireKind
 from mood_tracker.presentation.callback_query import CallbackQueryWithMessage
 from mood_tracker.presentation.callbacks import (
     FieldAction,
@@ -41,7 +40,7 @@ async def open_field_order(
         await query.answer(TEXTS[TextKey.START_FIRST], show_alert=True)
         return
     items = await services.list_questionnaire_fields().execute(
-        ListQuestionnaireFields(profile.id, QuestionnaireKind.DAY)
+        ListQuestionnaireFields(profile.id, callback_data.kind)
     )
     fields = tuple(item.field for item in items)
     if not any(field.id == callback_data.field_id for field in fields):
@@ -51,7 +50,12 @@ async def open_field_order(
     await presentation_data.clear_flow()
     await query.answer()
     await render_order(
-        query, presentation_data, fields, callback_data.field_id, update_main_message
+        query,
+        presentation_data,
+        fields,
+        callback_data.field_id,
+        update_main_message,
+        callback_data.kind,
     )
 
 
@@ -112,4 +116,5 @@ async def move_field(
         tuple(item.field for item in items),
         callback_data.field_id,
         update_main_message,
+        callback_data.kind,
     )

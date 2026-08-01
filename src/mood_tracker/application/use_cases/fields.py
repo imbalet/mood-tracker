@@ -97,7 +97,7 @@ class CreateFieldUseCase:
             )
             await self._uow.fields.add(field)
             questionnaire = await _get_questionnaire(
-                self._uow, command.user_id, QuestionnaireKind.DAY
+                self._uow, command.user_id, command.kind
             )
             questionnaire.fields[field.id] = QuestionnaireField(
                 field.id, command.sort_order

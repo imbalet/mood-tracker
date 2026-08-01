@@ -50,6 +50,29 @@ async def test_create_field_persists_current_semantic_version(
     uow.commit.assert_awaited_once()
 
 
+async def test_create_field_attaches_to_selected_questionnaire(
+    uow, clock, id_generator, user_factory
+) -> None:
+    user = user_factory.build()
+    questionnaire = Questionnaire(uuid7(), user.id, QuestionnaireKind.EVENT)
+    uow.users.get = AsyncMock(return_value=user)
+    uow.questionnaires.get = AsyncMock(return_value=questionnaire)
+
+    field = await CreateFieldUseCase(uow, clock, id_generator).execute(
+        CreateField(
+            user_id=user.id,
+            name="Контекст",
+            config=TextConfig(),
+            display_config=FieldDisplayConfig(),
+            sort_order=0,
+            kind=QuestionnaireKind.EVENT,
+        )
+    )
+
+    assert field.id in questionnaire.fields
+    uow.questionnaires.get.assert_awaited_once_with(user.id, QuestionnaireKind.EVENT)
+
+
 async def test_move_field_swaps_neighbours_and_normalizes_order(
     uow, clock, user_factory, field_factory
 ) -> None:

@@ -71,12 +71,13 @@ async def render_order(
     fields: tuple[Field, ...],
     selected_id: UUID | None,
     update_main_message: UpdateMainMessage,
+    kind: QuestionnaireKind = QuestionnaireKind.DAY,
 ) -> None:
     """Render the selected-field order editor."""
     await update_main_message(
         presentation_data,
         event,
-        field_order_screen(make_field_order_view(fields, selected_id)),
+        field_order_screen(make_field_order_view(fields, selected_id, kind)),
     )
 
 

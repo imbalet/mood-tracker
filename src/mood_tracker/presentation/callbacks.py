@@ -51,6 +51,7 @@ class FieldsListAction(StrEnum):
     CREATE = "create"
     ORDER = "order"
     SELECT = "select"
+    ATTACH = "attach"
 
 
 class FieldsListCallback(CallbackData, prefix="fields"):
@@ -72,6 +73,29 @@ class FieldCreateCallback(CallbackData, prefix="field_create"):
     """Start custom-field creation with a fixed semantic type."""
 
     type: FieldType
+    kind: QuestionnaireKind = QuestionnaireKind.DAY
+
+
+class AttachFieldCallback(CallbackData, prefix="field_attach"):
+    """Attach a field from the other questionnaire."""
+
+    field_id: UUID
+    kind: QuestionnaireKind
+
+
+class QuestionnaireFieldAction(StrEnum):
+    """Placement-only actions from a field card."""
+
+    TOGGLE_REQUIRED = "toggle_required"
+    DETACH = "detach"
+
+
+class QuestionnaireFieldCallback(CallbackData, prefix="questionnaire_field"):
+    """Address an existing placement in an explicit questionnaire."""
+
+    action: QuestionnaireFieldAction
+    field_id: UUID
+    kind: QuestionnaireKind
 
 
 class FieldStatusCallback(CallbackData, prefix="field_status"):

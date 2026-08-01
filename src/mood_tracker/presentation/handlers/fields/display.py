@@ -7,8 +7,11 @@ from aiogram.fsm.context import FSMContext
 from aiogram.types import Message
 
 from mood_tracker.application.commands import (
+    DetachFieldFromQuestionnaire,
+    ListQuestionnaireFields,
     SetFieldDisplay,
     SetQuestionnaireFieldEnabled,
+    SetQuestionnaireFieldRequired,
 )
 from mood_tracker.application.errors import FieldNotFound
 from mood_tracker.domain.entities import FieldDisplayConfig, StatePalette
@@ -21,11 +24,14 @@ from mood_tracker.presentation.callbacks import (
     FieldStatusCallback,
     PaletteCallback,
     PalettePreset,
+    QuestionnaireFieldAction,
+    QuestionnaireFieldCallback,
 )
 from mood_tracker.presentation.constants import TEXTS, TextKey
 from mood_tracker.presentation.handlers.fields.common import (
     invalidate_form,
     render_field,
+    render_fields,
     render_palette,
     show_input_error,
 )
@@ -201,7 +207,81 @@ async def set_status(
         await query.answer(TEXTS[TextKey.FIELD_UNAVAILABLE], show_alert=True)
         return
     await query.answer(TEXTS[TextKey.FIELD_CONFIG_SAVED])
-    await render_field(query, presentation_data, field, update_main_message)
+    await render_field(
+        query, presentation_data, field, update_main_message, kind=callback_data.kind
+    )
+
+
+@router.callback_query(QuestionnaireFieldCallback.filter())
+async def change_questionnaire_placement(
+    query: CallbackQueryWithMessage,
+    callback_data: QuestionnaireFieldCallback,
+    state: FSMContext,
+    presentation_data: PresentationData,
+    telegram_id: int,
+    services: ApplicationServices,
+    update_main_message: UpdateMainMessage,
+) -> None:
+    profile = await get_user_profile(telegram_id, services)
+    if profile is None:
+        await query.answer(TEXTS[TextKey.START_FIRST], show_alert=True)
+        return
+    try:
+        if callback_data.action is QuestionnaireFieldAction.TOGGLE_REQUIRED:
+            # Read the current placement from the explicit questionnaire.
+            items = await services.list_questionnaire_fields().execute(
+                ListQuestionnaireFields(profile.id, callback_data.kind)
+            )
+            item = next(
+                (item for item in items if item.field.id == callback_data.field_id),
+                None,
+            )
+            if item is None:
+                raise FieldNotFound
+            field = await services.questionnaire_field().set_required(
+                SetQuestionnaireFieldRequired(
+                    profile.id,
+                    callback_data.field_id,
+                    callback_data.kind,
+                    not item.placement.is_required,
+                )
+            )
+        else:
+            field = await services.questionnaire_field().detach(
+                DetachFieldFromQuestionnaire(
+                    profile.id, callback_data.field_id, callback_data.kind
+                )
+            )
+    except FieldNotFound, CoreFieldViolation, InvalidFieldVersion:
+        await query.answer(TEXTS[TextKey.FIELD_UNAVAILABLE], show_alert=True)
+        return
+    await state.set_state(None)
+    await presentation_data.clear_flow()
+    await query.answer(TEXTS[TextKey.FIELD_CONFIG_SAVED])
+    if callback_data.action is QuestionnaireFieldAction.DETACH:
+        await render_fields(
+            query,
+            presentation_data,
+            profile,
+            services,
+            update_main_message,
+            callback_data.kind,
+        )
+        return
+    items = await services.list_questionnaire_fields().execute(
+        ListQuestionnaireFields(profile.id, callback_data.kind)
+    )
+    item = next((item for item in items if item.field.id == field.id), None)
+    if item is None:
+        return
+    await render_field(
+        query,
+        presentation_data,
+        field,
+        update_main_message,
+        item.placement,
+        callback_data.kind,
+    )
 
 
 @router.message(FieldDisplayChange.waiting_emoji, F.text)

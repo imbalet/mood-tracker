@@ -3,10 +3,15 @@
 from aiogram import F, Router
 from aiogram.fsm.context import FSMContext
 
-from mood_tracker.application.commands import ListQuestionnaireFields
+from mood_tracker.application.commands import (
+    AttachFieldToQuestionnaire,
+    ListQuestionnaireFields,
+)
+from mood_tracker.application.errors import FieldNotFound
 from mood_tracker.domain.enums import QuestionnaireKind
 from mood_tracker.presentation.callback_query import CallbackQueryWithMessage
 from mood_tracker.presentation.callbacks import (
+    AttachFieldCallback,
     FieldAction,
     FieldCallback,
     FieldsListAction,
@@ -94,6 +99,7 @@ async def select_questionnaire(
 @router.callback_query(FieldsListCallback.filter(F.action == FieldsListAction.CREATE))
 async def choose_field_type(
     query: CallbackQueryWithMessage,
+    callback_data: FieldsListCallback,
     state: FSMContext,
     presentation_data: PresentationData,
     update_main_message: UpdateMainMessage,
@@ -106,13 +112,110 @@ async def choose_field_type(
         presentation_data,
         query,
         TEXTS[TextKey.CREATE_FIELD_TYPE],
-        reply_markup=field_type_keyboard(),
+        reply_markup=field_type_keyboard(callback_data.kind),
+    )
+
+
+@router.callback_query(FieldsListCallback.filter(F.action == FieldsListAction.ATTACH))
+async def choose_field_to_attach(
+    query: CallbackQueryWithMessage,
+    callback_data: FieldsListCallback,
+    state: FSMContext,
+    presentation_data: PresentationData,
+    telegram_id: int,
+    services: ApplicationServices,
+    update_main_message: UpdateMainMessage,
+) -> None:
+    """Offer fields already used by the other questionnaire."""
+    profile = await get_user_profile(telegram_id, services)
+    if profile is None:
+        await query.answer(TEXTS[TextKey.START_FIRST], show_alert=True)
+        return
+    other_kind = (
+        QuestionnaireKind.EVENT
+        if callback_data.kind is QuestionnaireKind.DAY
+        else QuestionnaireKind.DAY
+    )
+    current = await services.list_questionnaire_fields().execute(
+        ListQuestionnaireFields(profile.id, callback_data.kind)
+    )
+    current_ids = {item.field.id for item in current}
+    candidates = await services.list_questionnaire_fields().execute(
+        ListQuestionnaireFields(profile.id, other_kind)
+    )
+    builder = KeyboardBuilder()
+    for item in candidates:
+        if item.field.id not in current_ids:
+            builder.row_buttons_text_tuple(
+                (
+                    item.field.name,
+                    AttachFieldCallback(
+                        field_id=item.field.id, kind=callback_data.kind
+                    ),
+                )
+            )
+    builder.row_buttons_text_tuple(
+        (
+            "Назад",
+            FieldsListCallback(action=FieldsListAction.SELECT, kind=callback_data.kind),
+        )
+    )
+    await state.set_state(None)
+    await presentation_data.clear_flow()
+    await query.answer()
+    await update_main_message(
+        presentation_data,
+        query,
+        Screen("<b>Добавить поле из другой анкеты</b>", builder.as_markup()),
+    )
+
+
+@router.callback_query(AttachFieldCallback.filter())
+async def attach_field(
+    query: CallbackQueryWithMessage,
+    callback_data: AttachFieldCallback,
+    state: FSMContext,
+    presentation_data: PresentationData,
+    telegram_id: int,
+    services: ApplicationServices,
+    update_main_message: UpdateMainMessage,
+) -> None:
+    profile = await get_user_profile(telegram_id, services)
+    if profile is None:
+        await query.answer(TEXTS[TextKey.START_FIRST], show_alert=True)
+        return
+    items = await services.list_questionnaire_fields().execute(
+        ListQuestionnaireFields(profile.id, callback_data.kind)
+    )
+    try:
+        await services.questionnaire_field().attach(
+            AttachFieldToQuestionnaire(
+                profile.id,
+                callback_data.field_id,
+                callback_data.kind,
+                len(items),
+            )
+        )
+    except FieldNotFound:
+        await query.answer(TEXTS[TextKey.FIELD_UNAVAILABLE], show_alert=True)
+        return
+    await state.set_state(None)
+    await presentation_data.clear_flow()
+    await query.answer(TEXTS[TextKey.FIELD_CONFIG_SAVED])
+    await render_fields(
+        query,
+        presentation_data,
+        profile,
+        services,
+        update_main_message,
+        callback_data.kind,
     )
 
 
 @router.callback_query(FieldsListCallback.filter(F.action == FieldsListAction.ORDER))
 async def open_order_from_fields(
     query: CallbackQueryWithMessage,
+    callback_data: FieldsListCallback,
     state: FSMContext,
     presentation_data: PresentationData,
     telegram_id: int,
@@ -125,7 +228,7 @@ async def open_order_from_fields(
         await query.answer(TEXTS[TextKey.START_FIRST], show_alert=True)
         return
     items = await services.list_questionnaire_fields().execute(
-        ListQuestionnaireFields(profile.id, QuestionnaireKind.DAY)
+        ListQuestionnaireFields(profile.id, callback_data.kind)
     )
     await state.set_state(None)
     await presentation_data.clear_flow()
@@ -136,6 +239,7 @@ async def open_order_from_fields(
         tuple(item.field for item in items),
         None,
         update_main_message,
+        callback_data.kind,
     )
 
 

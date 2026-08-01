@@ -75,7 +75,9 @@ async def start_create_field(
 ) -> None:
     """Store the selected type and ask for a new field name."""
     await state.set_state(FieldCreation.waiting_name)
-    await presentation_data.write(CreateFieldNameData(callback_data.type))
+    await presentation_data.write(
+        CreateFieldNameData(callback_data.type, callback_data.kind)
+    )
     await query.answer()
     await update_main_message(
         presentation_data, query, TEXTS[TextKey.FIELD_NAME_PROMPT]
@@ -163,14 +165,21 @@ async def save_new_field_name(
         )
         return
     if form.field_type is FieldType.TEXT:
-        await _create_field(profile, name, TextConfig(), services)
+        await _create_field(profile, name, TextConfig(), form.kind_value, services)
         await state.set_state(None)
         await presentation_data.clear_flow()
         await render_fields(
-            message, presentation_data, profile, services, update_main_message
+            message,
+            presentation_data,
+            profile,
+            services,
+            update_main_message,
+            form.kind_value,
         )
         return
-    await presentation_data.write(CreateFieldConfigData(form.field_type, name))
+    await presentation_data.write(
+        CreateFieldConfigData(form.field_type, name, form.kind_value)
+    )
     if form.field_type is FieldType.SCALE:
         await state.set_state(FieldCreation.waiting_scale)
         await update_main_message(
@@ -259,6 +268,7 @@ async def save_scale_config(
             update_main_message,
             created.name,
             config,
+            created.kind_value,
         )
         return
     try:
@@ -294,7 +304,7 @@ async def choose_ordinal_base(
     if created is not None and created.field_type is FieldType.ORDINAL:
         await state.set_state(FieldCreation.waiting_ordinal_label)
         await presentation_data.write(
-            CreateOrdinalData(created.name, callback_data.value, ())
+            CreateOrdinalData(created.name, callback_data.value, (), created.kind_value)
         )
     else:
         try:
@@ -384,6 +394,7 @@ async def edit_ordinal_draft(
             update_main_message,
             draft.name,
             config,
+            draft.kind_value,
         )
     else:
         await _finish_version_config(
@@ -407,16 +418,17 @@ async def _finish_created_config(
     update_main_message: UpdateMainMessage,
     name: str,
     config: ScaleConfig | OrdinalConfig,
+    kind: QuestionnaireKind,
 ) -> None:
     profile = await get_user_profile(telegram_id, services)
     if profile is None:
         await invalidate_form(state, presentation_data, event, update_main_message)
         return
-    await _create_field(profile, name, config, services)
+    await _create_field(profile, name, config, kind, services)
     await state.set_state(None)
     await presentation_data.clear_flow()
     await render_fields(
-        event, presentation_data, profile, services, update_main_message
+        event, presentation_data, profile, services, update_main_message, kind
     )
 
 
@@ -450,10 +462,11 @@ async def _create_field(
     profile: UserProfile,
     name: str,
     config: ScaleConfig | OrdinalConfig | TextConfig,
+    kind: QuestionnaireKind,
     services: ApplicationServices,
 ) -> Field:
     fields = await services.list_questionnaire_fields().execute(
-        ListQuestionnaireFields(profile.id, QuestionnaireKind.DAY)
+        ListQuestionnaireFields(profile.id, kind)
     )
     return await services.create_field().execute(
         CreateField(
@@ -462,6 +475,7 @@ async def _create_field(
             config,
             FieldDisplayConfig(),
             sort_order=len(fields),
+            kind=kind,
         )
     )
 
@@ -480,7 +494,7 @@ def _with_labels(
     draft: CreateOrdinalData | VersionOrdinalData, labels: tuple[str, ...]
 ) -> CreateOrdinalData | VersionOrdinalData:
     if isinstance(draft, CreateOrdinalData):
-        return CreateOrdinalData(draft.name, draft.starts_at, labels)
+        return CreateOrdinalData(draft.name, draft.starts_at, labels, draft.kind_value)
     return VersionOrdinalData(draft.field_id, draft.starts_at, labels)
 
 

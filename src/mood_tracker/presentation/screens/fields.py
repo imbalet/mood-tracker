@@ -23,6 +23,8 @@ from mood_tracker.presentation.callbacks import (
     MenuSection,
     PaletteCallback,
     PalettePreset,
+    QuestionnaireFieldAction,
+    QuestionnaireFieldCallback,
 )
 from mood_tracker.presentation.constants import TEXTS, TextKey
 from mood_tracker.presentation.palette_preview import render_palette_preview
@@ -54,6 +56,12 @@ def fields_list_screen(view: FieldsListView) -> Screen:
             FieldsListCallback(action=FieldsListAction.CREATE, kind=view.kind),
         )
     )
+    builder.row_buttons_text_tuple(
+        (
+            "Добавить из другой анкеты",
+            FieldsListCallback(action=FieldsListAction.ATTACH, kind=view.kind),
+        )
+    )
     builder.row_buttons_tuple(
         (
             TextKey.FIELD_REORDER,
@@ -77,6 +85,11 @@ def field_card_screen(view: FieldCardView) -> Screen:
         TEXTS[TextKey.FIELD_DETAILS].format(name=escape(view.name)),
         f"Тип: {_field_type_label(view.type)}",
         f"Статус: <b>{_field_status_label(view.status)}</b>",
+        (
+            f"В анкете: {'обязательное' if view.is_required else 'необязательное'}"
+            if view.kind.value == "event"
+            else ""
+        ),
         escape(view.semantic_text),
         f"Emoji: {escape(view.emoji or '—')}",
         f"Показывать в календаре: {'да' if view.show_in_calendar else 'нет'}",
@@ -86,7 +99,7 @@ def field_card_screen(view: FieldCardView) -> Screen:
     if view.palette_colors is not None:
         minimum, middle, maximum = view.palette_colors
         lines.append(f"Палитра: <code>{minimum} → {middle} → {maximum}</code>")
-    return Screen("\n".join(lines), _field_card_keyboard(view))
+    return Screen("\n".join(line for line in lines if line), _field_card_keyboard(view))
 
 
 def field_order_screen(view: FieldOrderView) -> Screen:
@@ -99,7 +112,12 @@ def field_order_screen(view: FieldOrderView) -> Screen:
             else item.name
         )
         builder.row_buttons_text_tuple(
-            (label, FieldCallback(action=FieldAction.ORDER, field_id=item.id))
+            (
+                label,
+                FieldCallback(
+                    action=FieldAction.ORDER, field_id=item.id, kind=view.kind
+                ),
+            )
         )
     if view.selected_id is not None:
         move_buttons = []
@@ -108,7 +126,9 @@ def field_order_screen(view: FieldOrderView) -> Screen:
                 (
                     TEXTS[TextKey.FIELD_MOVE_UP],
                     FieldMoveCallback(
-                        field_id=view.selected_id, direction=MoveDirection.UP
+                        field_id=view.selected_id,
+                        direction=MoveDirection.UP,
+                        kind=view.kind,
                     ),
                 )
             )
@@ -117,7 +137,9 @@ def field_order_screen(view: FieldOrderView) -> Screen:
                 (
                     TEXTS[TextKey.FIELD_MOVE_DOWN],
                     FieldMoveCallback(
-                        field_id=view.selected_id, direction=MoveDirection.DOWN
+                        field_id=view.selected_id,
+                        direction=MoveDirection.DOWN,
+                        kind=view.kind,
                     ),
                 )
             )
@@ -183,29 +205,41 @@ def _field_card_keyboard(view: FieldCardView) -> InlineKeyboardMarkup:
     }.get(view.type)
     if version_key is not None:
         builder.row_buttons_tuple(
-            (version_key, FieldCallback(action=FieldAction.VERSION, field_id=view.id))
+            (
+                version_key,
+                FieldCallback(
+                    action=FieldAction.VERSION, field_id=view.id, kind=view.kind
+                ),
+            )
         )
     builder.row_buttons_tuple(
         (
             TextKey.FIELD_EMOJI,
-            FieldCallback(action=FieldAction.EMOJI, field_id=view.id),
+            FieldCallback(action=FieldAction.EMOJI, field_id=view.id, kind=view.kind),
         ),
         (
             TextKey.FIELD_CLEAR_EMOJI,
-            FieldCallback(action=FieldAction.CLEAR_EMOJI, field_id=view.id),
+            FieldCallback(
+                action=FieldAction.CLEAR_EMOJI, field_id=view.id, kind=view.kind
+            ),
         ),
     )
-    builder.row_buttons_tuple(
-        (
-            TextKey.FIELD_TOGGLE_CALENDAR,
-            FieldCallback(action=FieldAction.TOGGLE_CALENDAR, field_id=view.id),
+    if view.kind.value == "day":
+        builder.row_buttons_tuple(
+            (
+                TextKey.FIELD_TOGGLE_CALENDAR,
+                FieldCallback(
+                    action=FieldAction.TOGGLE_CALENDAR, field_id=view.id, kind=view.kind
+                ),
+            )
         )
-    )
     if view.is_core:
         builder.row_buttons_tuple(
             (
                 TextKey.FIELD_PALETTE,
-                FieldCallback(action=FieldAction.PALETTE, field_id=view.id),
+                FieldCallback(
+                    action=FieldAction.PALETTE, field_id=view.id, kind=view.kind
+                ),
             )
         )
     else:
@@ -213,9 +247,35 @@ def _field_card_keyboard(view: FieldCardView) -> InlineKeyboardMarkup:
             *(
                 (
                     TEXTS[_field_status_key(status)],
-                    FieldStatusCallback(field_id=view.id, status=status),
+                    FieldStatusCallback(
+                        field_id=view.id, status=status, kind=view.kind
+                    ),
                 )
                 for status in FieldStatus
+            )
+        )
+    if view.kind.value == "event":
+        builder.row_buttons_text_tuple(
+            (
+                "Сделать необязательным"
+                if view.is_required
+                else "Сделать обязательным",
+                QuestionnaireFieldCallback(
+                    action=QuestionnaireFieldAction.TOGGLE_REQUIRED,
+                    field_id=view.id,
+                    kind=view.kind,
+                ),
+            )
+        )
+    if view.can_detach:
+        builder.row_buttons_text_tuple(
+            (
+                "Убрать из анкеты",
+                QuestionnaireFieldCallback(
+                    action=QuestionnaireFieldAction.DETACH,
+                    field_id=view.id,
+                    kind=view.kind,
+                ),
             )
         )
     builder.row_buttons_tuple((TextKey.BACK, MenuCallback(section=MenuSection.FIELDS)))
