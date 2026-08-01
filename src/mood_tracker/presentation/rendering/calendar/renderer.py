@@ -169,12 +169,12 @@ def _hatched_dot(color: str, size: int) -> bytes:
 class _MemoryBackgroundImage(BackgroundImage):
     def __init__(self, image: skia.Image) -> None:
         super().__init__(path="")
-        self._image = image
+        self._skia_image = image
 
     @override
     def __deepcopy__(self, memo: dict[int, object]) -> _MemoryBackgroundImage:
         del memo
-        return _MemoryBackgroundImage(self._image)
+        return _MemoryBackgroundImage(self._skia_image)
 
 
 def _png_image(data: bytes) -> PicTexImage:

@@ -113,7 +113,7 @@ def test_renderer_keeps_day_number_and_emoji_grid_configuration() -> None:
         )
     )
     day_data = {day: DayInfo() for day in range(1, 29)}
-    day_data[1] = DayInfo(emojis=("A", "B"))
+    day_data[1] = DayInfo(dot_color="#336699", dot_style="hatched", emojis=("A", "B"))
 
     image = Image.open(
         BytesIO(renderer.render_calendar(year=2025, month=2, day_data=day_data))
