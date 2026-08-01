@@ -20,4 +20,5 @@ class GetMonthCalendarUseCase:
                 raise UserNotFound
             days = await self._uow.days.list_for_month(user.id, month)
             fields = await self._uow.fields.list_for_user(user.id)
-            return MonthCalendar(month, tuple(days), tuple(fields))
+            references = await self._uow.reference_days.get(user.id)
+            return MonthCalendar(month, tuple(days), tuple(fields), references)

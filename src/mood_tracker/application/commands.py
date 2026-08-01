@@ -11,6 +11,7 @@ from mood_tracker.domain.entities import (
     FieldConfig,
     FieldDisplayConfig,
     ReferenceDay,
+    ReferenceDays,
 )
 from mood_tracker.domain.enums import FieldStatus, ReferenceType
 from mood_tracker.domain.value_objects import UserTimezone
@@ -205,3 +206,4 @@ class MonthCalendar:
     month: date
     days: tuple[Day, ...]
     fields: tuple[Field, ...]
+    references: ReferenceDays | None

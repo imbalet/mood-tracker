@@ -10,9 +10,11 @@ dependencies = [
     "aiohttp>=3.14.3",
     "alembic>=1.18.5",
     "asyncpg>=0.31.0",
+    "pictex>=2.1.0",
     "pillow>=12.3.0",
     "pydantic>=2.13.4",
     "pydantic-settings>=2.14.2",
+    "skia-python>=144.0.post2",
     "sqlalchemy>=2.0.51",
 ]
 

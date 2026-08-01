@@ -20,8 +20,8 @@ from mood_tracker.presentation.callbacks import (
 )
 from mood_tracker.presentation.date_calendar import MoodDateCalendar
 from mood_tracker.presentation.handlers.today import render_day
-from mood_tracker.presentation.month_calendar import render_month_calendar
 from mood_tracker.presentation.queries import get_user_profile
+from mood_tracker.presentation.rendering.calendar import MonthCalendarImageService
 from mood_tracker.presentation.screens import main_menu_screen, month_calendar_screen
 from mood_tracker.presentation.screens.screen import Screen
 from mood_tracker.presentation.services import ApplicationServices
@@ -73,6 +73,14 @@ async def browse_dates(
     update_main_message: UpdateMainMessage,
 ) -> None:
     """Handle aiogram-calendar navigation and open an owned selected day."""
+    if (
+        callback_data.year is None
+        or callback_data.month is None
+        or callback_data.day is None
+    ):
+        await query.answer("Некорректная дата.", show_alert=True)
+        return
+
     profile = await get_user_profile(telegram_id, services)
     if profile is None:
         await query.answer("Сначала используй /start.", show_alert=True)
@@ -115,6 +123,7 @@ async def open_month_image(
     telegram_id: int,
     state: FSMContext,
     services: ApplicationServices,
+    calendar_images: MonthCalendarImageService,
     presentation_data: PresentationData,
     update_main_message: UpdateMainMessage,
 ) -> None:
@@ -137,6 +146,7 @@ async def open_month_image(
         month,
         False,
         services,
+        calendar_images,
         update_main_message,
     )
 
@@ -148,6 +158,7 @@ async def browse_month_image(
     *,
     telegram_id: int,
     services: ApplicationServices,
+    calendar_images: MonthCalendarImageService,
     presentation_data: PresentationData,
     update_main_message: UpdateMainMessage,
 ) -> None:
@@ -170,6 +181,7 @@ async def browse_month_image(
         month,
         month < today_month,
         services,
+        calendar_images,
         update_main_message,
     )
 
@@ -195,10 +207,13 @@ async def _render_dates(
 
 
 async def _month_image(
-    user_id: UUID, month: date, services: ApplicationServices
+    user_id: UUID,
+    month: date,
+    services: ApplicationServices,
+    calendar_images: MonthCalendarImageService,
 ) -> BufferedInputFile:
     data = await services.get_month_calendar().execute(GetMonthCalendar(user_id, month))
-    return render_month_calendar(data)
+    return calendar_images.render(data)
 
 
 async def _render_month(
@@ -208,9 +223,10 @@ async def _render_month(
     month: date,
     can_go_next: bool,
     services: ApplicationServices,
+    calendar_images: MonthCalendarImageService,
     update_main_message: UpdateMainMessage,
 ) -> None:
-    image = await _month_image(user_id, month, services)
+    image = await _month_image(user_id, month, services, calendar_images)
     await update_main_message(
         presentation_data,
         event,

@@ -34,6 +34,7 @@ from mood_tracker.presentation.middleware import (
     ApplicationMiddleware,
     CallbackMessageMiddleware,
 )
+from mood_tracker.presentation.rendering.calendar import MonthCalendarImageService
 from mood_tracker.presentation.sender import Sender
 from mood_tracker.presentation.services import ApplicationServices
 
@@ -61,10 +62,13 @@ async def run() -> None:
     )
     engine, session_factory = create_session_factory(settings.DB_URL)
     services = ApplicationServices(session_factory)
+    calendar_images = MonthCalendarImageService()
     dispatcher.include_routers(
         menu_router, onboarding_router, today_router, calendar_router, fields_router
     )
-    dispatcher.update.middleware(ApplicationMiddleware(services, Sender(bot)))
+    dispatcher.update.middleware(
+        ApplicationMiddleware(services, Sender(bot), calendar_images)
+    )
     dispatcher.callback_query.middleware(CallbackMessageMiddleware())
     health_task = asyncio.create_task(
         start_healthcheck_server(settings.HEALTHCHECK_PORT)

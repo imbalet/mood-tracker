@@ -8,6 +8,7 @@ from aiogram import BaseMiddleware
 from aiogram.types import CallbackQuery, InaccessibleMessage, TelegramObject, Update
 
 from mood_tracker.presentation.callback_query import CallbackQueryWithMessage
+from mood_tracker.presentation.rendering.calendar import MonthCalendarImageService
 from mood_tracker.presentation.sender import Sender
 from mood_tracker.presentation.services import ApplicationServices
 from mood_tracker.presentation.state import PresentationData
@@ -17,9 +18,15 @@ from mood_tracker.presentation.utils import update_main_message
 class ApplicationMiddleware(BaseMiddleware):
     """Inject the authenticated Telegram ID and use-case factory into handlers."""
 
-    def __init__(self, services: ApplicationServices, sender: Sender) -> None:
+    def __init__(
+        self,
+        services: ApplicationServices,
+        sender: Sender,
+        calendar_images: MonthCalendarImageService,
+    ) -> None:
         self._services = services
         self._sender = sender
+        self._calendar_images = calendar_images
 
     @override
     async def __call__[ResultT](
@@ -38,6 +45,7 @@ class ApplicationMiddleware(BaseMiddleware):
             return None
         data["telegram_id"] = telegram_id
         data["services"] = self._services
+        data["calendar_images"] = self._calendar_images
         data["presentation_data"] = PresentationData(data["state"])
         data["update_main_message"] = partial(update_main_message, self._sender)
         return await handler(event, data)
