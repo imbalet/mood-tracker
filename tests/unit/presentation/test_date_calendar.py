@@ -17,7 +17,7 @@ async def test_date_calendar_marks_complete_and_draft_days() -> None:
 
     assert "✅ 3" in labels
     assert "📝 4" in labels
-    assert "20" in labels
+    assert "● 20" in labels
     selected = next(
         button
         for row in markup.inline_keyboard

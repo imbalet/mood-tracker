@@ -70,7 +70,11 @@ class MoodDateCalendar(SimpleCalendar):  # type: ignore[misc]
                 target = date(year, month, day_number)
                 row.append(
                     InlineKeyboardButton(
-                        text=_label(target, self._statuses.get(target)),
+                        text=_label(
+                            target,
+                            self._statuses.get(target),
+                            today=self._today,
+                        ),
                         callback_data=SimpleCalendarCallback(
                             act=SimpleCalAct.day,
                             year=year,
@@ -100,9 +104,12 @@ class MoodDateCalendar(SimpleCalendar):  # type: ignore[misc]
         )
 
 
-def _label(target: date, status: DayStatus | None) -> str:
+def _label(target: date, status: DayStatus | None, *, today: date) -> str:
+    label: str
     if status is DayStatus.COMPLETE:
-        return f"✅ {target.day}"
-    if status is DayStatus.DRAFT:
-        return f"📝 {target.day}"
-    return str(target.day)
+        label = f"✅ {target.day}"
+    elif status is DayStatus.DRAFT:
+        label = f"📝 {target.day}"
+    else:
+        label = str(target.day)
+    return f"● {label}" if target == today else label
