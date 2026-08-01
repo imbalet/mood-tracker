@@ -41,13 +41,24 @@ def fields_list_screen(view: FieldsListView) -> Screen:
     builder = KeyboardBuilder()
     for item in view.items:
         builder.row_buttons_text_tuple(
-            (item.name, FieldCallback(action=FieldAction.OPEN, field_id=item.id))
+            (
+                item.name,
+                FieldCallback(
+                    action=FieldAction.OPEN, field_id=item.id, kind=view.kind
+                ),
+            )
         )
     builder.row_buttons_tuple(
-        (TextKey.ADD_FIELD, FieldsListCallback(action=FieldsListAction.CREATE))
+        (
+            TextKey.ADD_FIELD,
+            FieldsListCallback(action=FieldsListAction.CREATE, kind=view.kind),
+        )
     )
     builder.row_buttons_tuple(
-        (TextKey.FIELD_REORDER, FieldsListCallback(action=FieldsListAction.ORDER))
+        (
+            TextKey.FIELD_REORDER,
+            FieldsListCallback(action=FieldsListAction.ORDER, kind=view.kind),
+        )
     )
     builder.row_buttons_tuple(
         (TextKey.BACK_TO_MENU, MenuCallback(section=MenuSection.HOME))
@@ -163,7 +174,7 @@ def _field_card_keyboard(view: FieldCardView) -> InlineKeyboardMarkup:
     builder.row_buttons_tuple(
         (
             TextKey.FIELD_RENAME,
-            FieldCallback(action=FieldAction.RENAME, field_id=view.id),
+            FieldCallback(action=FieldAction.RENAME, field_id=view.id, kind=view.kind),
         )
     )
     version_key = {

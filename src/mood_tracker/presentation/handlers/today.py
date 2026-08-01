@@ -12,6 +12,7 @@ from mood_tracker.application.commands import (
     ConfirmReference,
     DayForm,
     GetDay,
+    GetEventsForDate,
     SaveDayValue,
     SkipDayText,
 )
@@ -305,8 +306,13 @@ async def render_day(
     update_main_message: UpdateMainMessage,
 ) -> None:
     form = await services.get_day().execute(GetDay(profile.id, day_date))
+    events = tuple(
+        await services.get_events_for_date().execute(
+            GetEventsForDate(profile.id, day_date)
+        )
+    )
     await update_main_message(
-        presentation_data, event, day_card_screen(make_day_card_view(form))
+        presentation_data, event, day_card_screen(make_day_card_view(form, events))
     )
 
 

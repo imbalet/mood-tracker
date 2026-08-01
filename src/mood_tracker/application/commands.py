@@ -185,6 +185,42 @@ class CreateQuickEvent:
 
 
 @dataclass(frozen=True, slots=True)
+class CreateEvent:
+    """Create a regular event at a selected instant."""
+
+    user_id: UUID
+    occurred_at: datetime
+    occurred_timezone: str
+
+
+@dataclass(frozen=True, slots=True)
+class GetEvent:
+    user_id: UUID
+    event_id: UUID
+
+
+@dataclass(frozen=True, slots=True)
+class SaveEventValue:
+    user_id: UUID
+    event_id: UUID
+    field_id: UUID
+    value: int | str
+
+
+@dataclass(frozen=True, slots=True)
+class SkipEventField:
+    user_id: UUID
+    event_id: UUID
+    field_id: UUID
+
+
+@dataclass(frozen=True, slots=True)
+class CompleteEvent:
+    user_id: UUID
+    event_id: UUID
+
+
+@dataclass(frozen=True, slots=True)
 class ChangeEventTime:
     user_id: UUID
     event_id: UUID

@@ -3,9 +3,10 @@
 from dataclasses import dataclass
 from enum import StrEnum
 from uuid import UUID
+from zoneinfo import ZoneInfo
 
 from mood_tracker.application.commands import DayForm, ReferenceReview
-from mood_tracker.domain.entities import Field, OrdinalConfig, ScaleConfig
+from mood_tracker.domain.entities import Event, Field, OrdinalConfig, ScaleConfig
 from mood_tracker.domain.enums import DayStatus, ReferenceType
 
 
@@ -51,6 +52,13 @@ class DayCardView:
     is_complete: bool
     entries: tuple[DayEntryView, ...]
     actions: tuple[DayFieldActionView, ...]
+    events: tuple[DayEventView, ...] = ()
+
+
+@dataclass(frozen=True, slots=True)
+class DayEventView:
+    event_id: UUID
+    label: str
 
 
 @dataclass(frozen=True, slots=True)
@@ -80,7 +88,7 @@ class ReferenceReviewView:
     type: ReferenceType
 
 
-def make_day_card_view(form: DayForm) -> DayCardView:
+def make_day_card_view(form: DayForm, events: tuple[Event, ...] = ()) -> DayCardView:
     """Map a day aggregate into the values needed by its Telegram card."""
     entries = tuple(_entry_views(form))
     actions = tuple(_action_views(form))
@@ -90,6 +98,16 @@ def make_day_card_view(form: DayForm) -> DayCardView:
         is_complete=form.day is not None and form.day.status is DayStatus.COMPLETE,
         entries=entries,
         actions=actions,
+        events=tuple(
+            DayEventView(
+                event.id,
+                (
+                    f"{'⏳ ' if event.status.value == 'draft' else ''}"
+                    f"{event.occurred_at.astimezone(ZoneInfo(event.occurred_timezone)):%H:%M}"
+                ),
+            )
+            for event in events
+        ),
     )
 
 

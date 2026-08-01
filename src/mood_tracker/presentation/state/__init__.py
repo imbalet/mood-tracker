@@ -5,6 +5,7 @@ from mood_tracker.presentation.state.data import (
     CreateFieldNameData,
     CreateOrdinalData,
     DiaryTextData,
+    EventInputData,
     FieldDisplayData,
     FieldVersionData,
     RenameFieldData,
@@ -12,6 +13,7 @@ from mood_tracker.presentation.state.data import (
 )
 from mood_tracker.presentation.state.groups import (
     Diary,
+    EventFlow,
     FieldCreation,
     FieldDisplayChange,
     FieldRename,
@@ -29,6 +31,8 @@ __all__ = [
     "CreateOrdinalData",
     "Diary",
     "DiaryTextData",
+    "EventFlow",
+    "EventInputData",
     "FieldCreation",
     "FieldDisplayChange",
     "FieldDisplayData",

@@ -126,3 +126,19 @@ class DiaryTextData(FlowData):
     @override
     def to_payload(self) -> dict[str, object]:
         return {"day_date": self.day_date.isoformat(), "field_id": str(self.field_id)}
+
+
+@dataclass(frozen=True, slots=True)
+class EventInputData(FlowData):
+    kind: ClassVar[str] = "event_input"
+    event_id: UUID | None
+    day_date: date
+    field_id: UUID | None = None
+
+    @override
+    def to_payload(self) -> dict[str, object]:
+        return {
+            "event_id": str(self.event_id) if self.event_id else None,
+            "day_date": self.day_date.isoformat(),
+            "field_id": str(self.field_id) if self.field_id else None,
+        }

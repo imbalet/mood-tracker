@@ -22,9 +22,10 @@ from mood_tracker.presentation.handlers.fields.common import (
 )
 from mood_tracker.presentation.keyboards import field_type_keyboard
 from mood_tracker.presentation.queries import get_user_profile
+from mood_tracker.presentation.screens import Screen
 from mood_tracker.presentation.services import ApplicationServices
 from mood_tracker.presentation.state import PresentationData
-from mood_tracker.presentation.utils import UpdateMainMessage
+from mood_tracker.presentation.utils import KeyboardBuilder, UpdateMainMessage
 
 router = Router(name="fields_overview")
 
@@ -46,8 +47,47 @@ async def open_fields(
     await state.set_state(None)
     await presentation_data.clear_flow()
     await query.answer()
+    builder = KeyboardBuilder()
+    builder.row_buttons_text_tuple(
+        (
+            "Дневник",
+            FieldsListCallback(
+                action=FieldsListAction.SELECT, kind=QuestionnaireKind.DAY
+            ),
+        ),
+        (
+            "События",
+            FieldsListCallback(
+                action=FieldsListAction.SELECT, kind=QuestionnaireKind.EVENT
+            ),
+        ),
+    )
+    await update_main_message(
+        presentation_data, query, Screen("<b>Анкеты</b>", builder.as_markup())
+    )
+
+
+@router.callback_query(FieldsListCallback.filter(F.action == FieldsListAction.SELECT))
+async def select_questionnaire(
+    query: CallbackQueryWithMessage,
+    callback_data: FieldsListCallback,
+    state: FSMContext,
+    presentation_data: PresentationData,
+    telegram_id: int,
+    services: ApplicationServices,
+    update_main_message: UpdateMainMessage,
+) -> None:
+    profile = await get_user_profile(telegram_id, services)
+    if profile is None:
+        return
+    await state.set_state(None)
     await render_fields(
-        query, presentation_data, profile, services, update_main_message
+        query,
+        presentation_data,
+        profile,
+        services,
+        update_main_message,
+        callback_data.kind,
     )
 
 
@@ -115,7 +155,7 @@ async def open_field(
         await query.answer(TEXTS[TextKey.START_FIRST], show_alert=True)
         return
     items = await services.list_questionnaire_fields().execute(
-        ListQuestionnaireFields(profile.id, QuestionnaireKind.DAY)
+        ListQuestionnaireFields(profile.id, callback_data.kind)
     )
     item = next(
         (item for item in items if item.field.id == callback_data.field_id), None
@@ -127,5 +167,10 @@ async def open_field(
     await presentation_data.clear_flow()
     await query.answer()
     await render_field(
-        query, presentation_data, item.field, update_main_message, item.placement
+        query,
+        presentation_data,
+        item.field,
+        update_main_message,
+        item.placement,
+        callback_data.kind,
     )

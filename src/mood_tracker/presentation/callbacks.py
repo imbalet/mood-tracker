@@ -50,12 +50,14 @@ class FieldsListAction(StrEnum):
 
     CREATE = "create"
     ORDER = "order"
+    SELECT = "select"
 
 
 class FieldsListCallback(CallbackData, prefix="fields"):
     """Open a list-level field-management screen."""
 
     action: FieldsListAction
+    kind: QuestionnaireKind = QuestionnaireKind.DAY
 
 
 class FieldCallback(CallbackData, prefix="field"):
@@ -63,6 +65,7 @@ class FieldCallback(CallbackData, prefix="field"):
 
     action: FieldAction
     field_id: UUID
+    kind: QuestionnaireKind = QuestionnaireKind.DAY
 
 
 class FieldCreateCallback(CallbackData, prefix="field_create"):
@@ -176,4 +179,37 @@ class EditDayValueCallback(CallbackData, prefix="edit"):
     """Open an existing field value for editing."""
 
     day: str
+    field_id: UUID
+
+
+class EventAction(StrEnum):
+    START = "start"
+    QUICK_TEXT = "quick_text"
+    OPEN = "open"
+    CONTINUE = "continue"
+    COMPLETE = "complete"
+    CHANGE_TIME = "change_time"
+    DELETE = "delete"
+    CONFIRM_DELETE = "confirm_delete"
+
+
+class EventCallback(CallbackData, prefix="event"):
+    action: EventAction
+    event_id: UUID | None = None
+    day: str | None = None
+
+
+class EventTimeCallback(CallbackData, prefix="event_time"):
+    day: str
+    now: bool
+
+
+class EventValueCallback(CallbackData, prefix="event_value"):
+    event_id: UUID
+    field_id: UUID
+    value: int
+
+
+class SkipEventFieldCallback(CallbackData, prefix="event_skip"):
+    event_id: UUID
     field_id: UUID

@@ -7,6 +7,8 @@ from aiogram.types import InlineKeyboardMarkup
 from mood_tracker.presentation.callbacks import (
     DayValueCallback,
     EditDayValueCallback,
+    EventAction,
+    EventCallback,
     MenuCallback,
     MenuSection,
     OpenDayCallback,
@@ -106,6 +108,19 @@ def _card_keyboard(view: DayCardView) -> InlineKeyboardMarkup:
                 EditDayValueCallback(day=view.day, field_id=action.field_id),
             )
         )
+    for item in view.events:
+        builder.row_buttons_text_tuple(
+            (
+                item.label,
+                EventCallback(action=EventAction.OPEN, event_id=item.event_id),
+            )
+        )
+    builder.row_buttons_text_tuple(
+        (
+            "＋ Добавить событие",
+            EventCallback(action=EventAction.START, day=view.day),
+        )
+    )
     builder.row_buttons_tuple(
         (TextKey.BACK_TO_MENU, MenuCallback(section=MenuSection.HOME))
     )

@@ -1,14 +1,28 @@
 """Read and quick-capture event use cases."""
 
 from collections.abc import Sequence
+from uuid import UUID
 
-from mood_tracker.application.commands import CreateQuickEvent, GetEventsForDate
-from mood_tracker.application.errors import UserNotFound
+from mood_tracker.application.commands import (
+    ChangeEventTime,
+    CompleteEvent,
+    CreateEvent,
+    CreateQuickEvent,
+    DeleteEvent,
+    GetEvent,
+    GetEventsForDate,
+    SaveEventValue,
+    SkipEventField,
+)
+from mood_tracker.application.errors import EventNotFound, FieldNotFound, UserNotFound
 from mood_tracker.application.ports import Clock, IdGenerator, UnitOfWork
-from mood_tracker.application.use_cases._transactions import execute_write
+from mood_tracker.application.use_cases._transactions import (
+    execute_transaction,
+    execute_write,
+)
 from mood_tracker.domain.entities import Event, Field, Questionnaire
 from mood_tracker.domain.enums import QuestionnaireFieldRole, QuestionnaireKind
-from mood_tracker.domain.errors import InvalidFieldValue
+from mood_tracker.domain.errors import IncompleteDay, InvalidFieldValue
 
 
 def _description_field(
@@ -77,3 +91,162 @@ class CreateQuickEventUseCase:
             return event
 
         return await execute_write(self._uow, operation)
+
+
+async def _event_and_fields(
+    uow: UnitOfWork, user_id: UUID, event_id: UUID
+) -> tuple[Event, dict[UUID, Field]]:
+    event = await uow.events.get(user_id, event_id)
+    if event is None:
+        raise EventNotFound
+    questionnaire = await uow.questionnaires.get(user_id, QuestionnaireKind.EVENT)
+    if questionnaire is None:
+        raise FieldNotFound
+    fields = {field.id: field for field in await uow.fields.list_for_user(user_id)}
+    return event, {
+        field_id: fields[field_id]
+        for field_id in questionnaire.fields
+        if field_id in fields
+    }
+
+
+class CreateEventUseCase:
+    def __init__(self, uow: UnitOfWork, id_generator: IdGenerator) -> None:
+        self._uow = uow
+        self._id_generator = id_generator
+
+    async def execute(self, command: CreateEvent) -> Event:
+        async def operation() -> Event:
+            if await self._uow.users.get(command.user_id) is None:
+                raise UserNotFound
+            event = Event(
+                self._id_generator.new(),
+                command.user_id,
+                command.occurred_at,
+                command.occurred_timezone,
+            )
+            await self._uow.events.add(event)
+            return event
+
+        return await execute_write(self._uow, operation)
+
+
+class GetEventUseCase:
+    def __init__(self, uow: UnitOfWork) -> None:
+        self._uow = uow
+
+    async def execute(self, command: GetEvent) -> Event:
+        async with self._uow:
+            event = await self._uow.events.get(command.user_id, command.event_id)
+            if event is None:
+                raise EventNotFound
+            return event
+
+
+class SaveEventValueUseCase:
+    def __init__(self, uow: UnitOfWork) -> None:
+        self._uow = uow
+
+    async def execute(self, command: SaveEventValue) -> Event:
+        async def operation() -> Event:
+            event, fields = await _event_and_fields(
+                self._uow, command.user_id, command.event_id
+            )
+            field = fields.get(command.field_id)
+            if field is None:
+                raise FieldNotFound
+            event.save_value(field.current_version, command.value)
+            await self._uow.events.save(event)
+            return event
+
+        return await execute_transaction(self._uow, operation)
+
+
+class SkipEventFieldUseCase:
+    def __init__(self, uow: UnitOfWork) -> None:
+        self._uow = uow
+
+    async def execute(self, command: SkipEventField) -> Event:
+        async def operation() -> Event:
+            event, fields = await _event_and_fields(
+                self._uow, command.user_id, command.event_id
+            )
+            field = fields.get(command.field_id)
+            questionnaire = await self._uow.questionnaires.get(
+                command.user_id, QuestionnaireKind.EVENT
+            )
+            if field is None or questionnaire is None:
+                raise FieldNotFound
+            placement = questionnaire.fields.get(command.field_id)
+            if placement is None or placement.is_required:
+                raise InvalidFieldValue("Required event field cannot be skipped")
+            event.skip_field(field.current_version)
+            await self._uow.events.save(event)
+            return event
+
+        return await execute_transaction(self._uow, operation)
+
+
+class CompleteEventUseCase:
+    def __init__(self, uow: UnitOfWork, clock: Clock) -> None:
+        self._uow = uow
+        self._clock = clock
+
+    async def execute(self, command: CompleteEvent) -> Event:
+        async def operation() -> Event:
+            event, fields = await _event_and_fields(
+                self._uow, command.user_id, command.event_id
+            )
+            questionnaire = await self._uow.questionnaires.get(
+                command.user_id, QuestionnaireKind.EVENT
+            )
+            if questionnaire is None:
+                raise FieldNotFound
+            required = [
+                fields[field_id]
+                for field_id, placement in questionnaire.fields.items()
+                if placement.is_enabled and placement.is_required and field_id in fields
+            ]
+            if any(not event.has_completed_step(field.id) for field in required):
+                raise IncompleteDay("Required event fields are unfinished")
+            if not event.values:
+                event.delete(self._clock.now())
+                await self._uow.events.save(event)
+                return event
+            event.complete(self._clock.now())
+            await self._uow.events.save(event)
+            return event
+
+        return await execute_transaction(self._uow, operation)
+
+
+class ChangeEventTimeUseCase:
+    def __init__(self, uow: UnitOfWork) -> None:
+        self._uow = uow
+
+    async def execute(self, command: ChangeEventTime) -> Event:
+        async def operation() -> Event:
+            event = await self._uow.events.get(command.user_id, command.event_id)
+            if event is None:
+                raise EventNotFound
+            event.change_time(command.occurred_at)
+            await self._uow.events.save(event)
+            return event
+
+        return await execute_transaction(self._uow, operation)
+
+
+class DeleteEventUseCase:
+    def __init__(self, uow: UnitOfWork, clock: Clock) -> None:
+        self._uow = uow
+        self._clock = clock
+
+    async def execute(self, command: DeleteEvent) -> None:
+        async def operation() -> None:
+            event = await self._uow.events.get(command.user_id, command.event_id)
+            if event is None:
+                raise EventNotFound
+            event.delete(self._clock.now())
+            await self._uow.events.save(event)
+
+        await execute_transaction(self._uow, operation)

@@ -17,6 +17,10 @@ class DayNotFound(ApplicationError):
     """Raised when an operation addresses no accessible day."""
 
 
+class EventNotFound(ApplicationError):
+    """Raised when an operation addresses no accessible event."""
+
+
 class IdentifierCollision(ApplicationError):
     """Raised by persistence when a generated UUID collides with an existing ID."""
 

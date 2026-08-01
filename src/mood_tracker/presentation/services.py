@@ -6,11 +6,16 @@ from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 
 from mood_tracker.application.use_cases import (
     AddFieldVersionUseCase,
+    ChangeEventTimeUseCase,
+    CompleteEventUseCase,
     ConfirmReferenceUseCase,
+    CreateEventUseCase,
     CreateFieldUseCase,
     CreateQuickEventUseCase,
+    DeleteEventUseCase,
     GetDayUseCase,
     GetEventsForDateUseCase,
+    GetEventUseCase,
     GetMonthCalendarUseCase,
     GetUserByTelegramIdUseCase,
     ListQuestionnaireFieldsUseCase,
@@ -18,8 +23,10 @@ from mood_tracker.application.use_cases import (
     RegisterUserUseCase,
     RenameFieldUseCase,
     SaveDayValueUseCase,
+    SaveEventValueUseCase,
     SetFieldDisplayUseCase,
     SkipDayTextUseCase,
+    SkipEventFieldUseCase,
 )
 from mood_tracker.infrastructure.clock import SystemClock
 from mood_tracker.infrastructure.db.uow import SqlAlchemyUnitOfWork
@@ -49,6 +56,27 @@ class ApplicationServices:
 
     def create_quick_event(self) -> CreateQuickEventUseCase:
         return CreateQuickEventUseCase(self._uow(), SystemClock(), Uuid7IdGenerator())
+
+    def create_event(self) -> CreateEventUseCase:
+        return CreateEventUseCase(self._uow(), Uuid7IdGenerator())
+
+    def get_event(self) -> GetEventUseCase:
+        return GetEventUseCase(self._uow())
+
+    def save_event_value(self) -> SaveEventValueUseCase:
+        return SaveEventValueUseCase(self._uow())
+
+    def skip_event_field(self) -> SkipEventFieldUseCase:
+        return SkipEventFieldUseCase(self._uow())
+
+    def complete_event(self) -> CompleteEventUseCase:
+        return CompleteEventUseCase(self._uow(), SystemClock())
+
+    def change_event_time(self) -> ChangeEventTimeUseCase:
+        return ChangeEventTimeUseCase(self._uow())
+
+    def delete_event(self) -> DeleteEventUseCase:
+        return DeleteEventUseCase(self._uow(), SystemClock())
 
     def save_day_value(self) -> SaveDayValueUseCase:
         return SaveDayValueUseCase(self._uow(), SystemClock(), Uuid7IdGenerator())

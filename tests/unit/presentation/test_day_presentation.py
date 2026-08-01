@@ -70,6 +70,7 @@ def test_day_card_keyboard_allows_editing_and_adding_current_active_fields(
     ] == [
         ["Изменить: Состояние"],
         ["Добавить: Плач"],
+        ["＋ Добавить событие"],
         ["🏠 В меню"],
     ]
 

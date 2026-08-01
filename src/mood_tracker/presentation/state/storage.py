@@ -13,6 +13,7 @@ from mood_tracker.presentation.state.data import (
     CreateFieldNameData,
     CreateOrdinalData,
     DiaryTextData,
+    EventInputData,
     FieldDisplayData,
     FieldVersionData,
     FlowData,
@@ -108,6 +109,14 @@ def _decode(data_type: type[FlowData], payload: Mapping[str, object]) -> FlowDat
             return DiaryTextData(
                 date.fromisoformat(_string(payload, "day_date")),
                 UUID(_string(payload, "field_id")),
+            )
+        if data_type is EventInputData:
+            event_id = payload.get("event_id")
+            field_id = payload.get("field_id")
+            return EventInputData(
+                UUID(event_id) if isinstance(event_id, str) else None,
+                date.fromisoformat(_string(payload, "day_date")),
+                UUID(field_id) if isinstance(field_id, str) else None,
             )
     except TypeError, ValueError:
         raise InvalidPresentationData from None

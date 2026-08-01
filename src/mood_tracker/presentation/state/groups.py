@@ -15,6 +15,11 @@ class Diary(StatesGroup):
     waiting_text = State()
 
 
+class EventFlow(StatesGroup):
+    waiting_time = State()
+    waiting_text = State()
+
+
 class FieldCreation(StatesGroup):
     """Create a field from its name through semantic configuration."""
 

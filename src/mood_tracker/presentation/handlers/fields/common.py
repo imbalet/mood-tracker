@@ -34,15 +34,18 @@ async def render_fields(
     profile: UserProfile,
     services: ApplicationServices,
     update_main_message: UpdateMainMessage,
+    kind: QuestionnaireKind = QuestionnaireKind.DAY,
 ) -> None:
     """Render the field settings list for an owned profile."""
     items = await services.list_questionnaire_fields().execute(
-        ListQuestionnaireFields(profile.id, QuestionnaireKind.DAY)
+        ListQuestionnaireFields(profile.id, kind)
     )
     await update_main_message(
         presentation_data,
         event,
-        fields_list_screen(make_fields_list_view(tuple(item.field for item in items))),
+        fields_list_screen(
+            make_fields_list_view(tuple(item.field for item in items), kind)
+        ),
     )
 
 
@@ -52,12 +55,13 @@ async def render_field(
     field: Field,
     update_main_message: UpdateMainMessage,
     placement: QuestionnaireField | None = None,
+    kind: QuestionnaireKind = QuestionnaireKind.DAY,
 ) -> None:
     """Render one field's settings card."""
     await update_main_message(
         presentation_data,
         event,
-        field_card_screen(make_field_card_view(field, placement)),
+        field_card_screen(make_field_card_view(field, placement, kind)),
     )
 
 

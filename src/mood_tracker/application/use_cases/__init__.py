@@ -8,8 +8,15 @@ from mood_tracker.application.use_cases.days import (
     SkipDayTextUseCase,
 )
 from mood_tracker.application.use_cases.events import (
+    ChangeEventTimeUseCase,
+    CompleteEventUseCase,
+    CreateEventUseCase,
     CreateQuickEventUseCase,
+    DeleteEventUseCase,
     GetEventsForDateUseCase,
+    GetEventUseCase,
+    SaveEventValueUseCase,
+    SkipEventFieldUseCase,
 )
 from mood_tracker.application.use_cases.fields import (
     AddFieldVersionUseCase,
@@ -31,8 +38,13 @@ __all__ = [
     "AddFieldVersionUseCase",
     "ConfirmReferenceUseCase",
     "CreateFieldUseCase",
+    "CreateEventUseCase",
     "CreateQuickEventUseCase",
+    "ChangeEventTimeUseCase",
+    "CompleteEventUseCase",
+    "DeleteEventUseCase",
     "GetDayUseCase",
+    "GetEventUseCase",
     "GetEventsForDateUseCase",
     "GetUserByTelegramIdUseCase",
     "GetReferenceHistoryUseCase",
@@ -41,7 +53,9 @@ __all__ = [
     "QuestionnaireFieldUseCase",
     "RenameFieldUseCase",
     "SaveDayValueUseCase",
+    "SaveEventValueUseCase",
     "SetFieldDisplayUseCase",
     "SetTimezoneUseCase",
     "SkipDayTextUseCase",
+    "SkipEventFieldUseCase",
 ]

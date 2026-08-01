@@ -9,6 +9,7 @@ from mood_tracker.domain.enums import (
     FieldStatus,
     FieldType,
     QuestionnaireFieldRole,
+    QuestionnaireKind,
 )
 
 
@@ -25,6 +26,7 @@ class FieldsListView:
     """A user-owned ordered field list."""
 
     items: tuple[FieldListItemView, ...]
+    kind: QuestionnaireKind = QuestionnaireKind.DAY
 
 
 @dataclass(frozen=True, slots=True)
@@ -42,6 +44,7 @@ class FieldCardView:
     version_count: int
     position: int
     palette_colors: tuple[str, str, str] | None
+    kind: QuestionnaireKind = QuestionnaireKind.DAY
 
 
 @dataclass(frozen=True, slots=True)
@@ -73,15 +76,19 @@ class PaletteView:
     colors: tuple[str, str, str]
 
 
-def make_fields_list_view(fields: tuple[Field, ...]) -> FieldsListView:
+def make_fields_list_view(
+    fields: tuple[Field, ...], kind: QuestionnaireKind = QuestionnaireKind.DAY
+) -> FieldsListView:
     """Map a field collection into a compact settings list."""
     return FieldsListView(
-        tuple(FieldListItemView(field.id, field.name) for field in fields)
+        tuple(FieldListItemView(field.id, field.name) for field in fields), kind
     )
 
 
 def make_field_card_view(
-    field: Field, placement: QuestionnaireField | None = None
+    field: Field,
+    placement: QuestionnaireField | None = None,
+    kind: QuestionnaireKind = QuestionnaireKind.DAY,
 ) -> FieldCardView:
     """Map current field semantics and display settings into one card."""
     config = field.current_version.config
@@ -115,6 +122,7 @@ def make_field_card_view(
         palette_colors=(palette.minimum, palette.middle, palette.maximum)
         if palette is not None
         else None,
+        kind=kind,
     )
 
 
