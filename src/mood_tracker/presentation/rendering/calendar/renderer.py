@@ -9,9 +9,10 @@ from pathlib import Path
 from typing import Literal, override
 
 import skia
-from pictex import Canvas, Column, Element, Row, Text
+from pictex import Column, Element, Row, Text
 from pictex import Image as PicTexImage
-from pictex.models import BackgroundImage
+from pictex.models import BackgroundImage, CropMode, FontSmoothing
+from pictex.renderer.renderer import Renderer
 from PIL import Image, ImageChops, ImageColor, ImageDraw
 
 type XYPair = tuple[int, int]
@@ -188,6 +189,22 @@ def _png_image(data: bytes) -> PicTexImage:
     return image
 
 
+class _OwnedRow(Row):
+    """PicTex row for children created exclusively for one calendar render."""
+
+    @override
+    def _parse_children(self, *children: Element | str) -> list[Element]:
+        return [Text(child) if isinstance(child, str) else child for child in children]
+
+
+class _OwnedColumn(Column):
+    """PicTex column that avoids defensive copies of one-use child builders."""
+
+    @override
+    def _parse_children(self, *children: Element | str) -> list[Element]:
+        return [Text(child) if isinstance(child, str) else child for child in children]
+
+
 class CalendarRenderer:
     def __init__(self, config: Config | None = None) -> None:
         self.config = config or Config()
@@ -209,7 +226,7 @@ class CalendarRenderer:
         size = self.config.status_dot.size
         if dot_style == "solid":
             return self._fixed_square(
-                Row().background_color(color).border_radius("50%"), size
+                _OwnedRow().background_color(color).border_radius("50%"), size
             )
         if dot_style == "hatched":
             return self._fixed_square(_png_image(_hatched_dot(color, size)), size)
@@ -219,12 +236,12 @@ class CalendarRenderer:
         self, *, year: int, month: int, day_data: Mapping[int, DayInfo]
     ) -> bytes:
         layout = self.make_calendar(year=year, month=month, day_data=day_data)
-        encoded = (
-            Canvas()  # type: ignore[no-untyped-call]
-            .background_color(self.config.background)
-            .render(layout)
-            .skia_image.encodeToData(skia.EncodedImageFormat.kPNG, 100)
+        image = Renderer().render_as_bitmap(  # type: ignore[no-untyped-call]
+            layout._to_node(),  # The layout is a fresh, owned tree.
+            CropMode.NONE,
+            FontSmoothing.SUBPIXEL,
         )
+        encoded = image.skia_image.encodeToData(skia.EncodedImageFormat.kPNG, 100)
         if encoded is None:
             raise RuntimeError("Failed to encode calendar PNG")
         return bytes(encoded.bytes())
@@ -235,7 +252,7 @@ class CalendarRenderer:
         self._validate_days(year, month, day_data)
         config = self.config
         header = (
-            Column(
+            _OwnedColumn(
                 Text(f"{config.constants.months[month]} {year}")
                 .font_family(config.header.font_path)
                 .font_size(config.header.font_size)
@@ -249,9 +266,9 @@ class CalendarRenderer:
             .background_color(config.header.background)
             .border_radius(config.header.radius)
         )
-        weekdays = Row(
+        weekdays = _OwnedRow(
             *[
-                Row(
+                _OwnedRow(
                     Text(name)
                     .font_size(config.weekday.font_size)
                     .font_weight(config.weekday.font_weight)
@@ -268,12 +285,12 @@ class CalendarRenderer:
         ).gap(config.weekday.grid_gap)
         weeks = self._month_weeks(year, month)
         grid = (
-            Column(weekdays, *[self._week(week, day_data) for week in weeks])
+            _OwnedColumn(weekdays, *[self._week(week, day_data) for week in weeks])
             .gap(config.weekday.grid_gap)
             .size(width=config.calendar_width)
         )
         return (
-            Column(header, grid)
+            _OwnedColumn(header, grid)
             .size(width=config.root_width)
             .padding(config.outer_padding)
             .gap(config.content_gap)
@@ -307,11 +324,11 @@ class CalendarRenderer:
             self.make_empty_day() if day == 0 else self.make_day_card(day, data[day])
             for day in week
         ]
-        return Row(*cells).gap(self.config.weekday.grid_gap)
+        return _OwnedRow(*cells).gap(self.config.weekday.grid_gap)
 
     def make_empty_day(self) -> Row:
         size = self.config.weekday.card_size
-        return Row().size(width=size, height=size)
+        return _OwnedRow().size(width=size, height=size)
 
     def make_day_card(self, day: int, info: DayInfo | None = None) -> Element:
         info = info or DayInfo()
@@ -335,7 +352,7 @@ class CalendarRenderer:
         if info.emojis:
             children.append(self._emoji_grid(info.emojis))
         card = (
-            Column(*children)
+            _OwnedColumn(*children)
             .size(width=size, height=size)
             .background_color(info.background)
             .border_radius(style.weekday.card_radius)
@@ -377,13 +394,13 @@ class CalendarRenderer:
         slot_width = config.weekday.card_size // columns
         slot_height = config.weekday.card_size // rows
         grid_rows = [
-            Row(
+            _OwnedRow(
                 *[self._emoji_slot(value, slot_width, slot_height) for value in row]
             ).gap(config.emoji.gap)
             for row in values
         ]
         return (
-            Column(*grid_rows)
+            _OwnedColumn(*grid_rows)
             .gap(config.emoji.gap)
             .size(width=config.weekday.card_size, height=config.weekday.card_size)
             .absolute_position(top=0, left=0)
@@ -391,9 +408,9 @@ class CalendarRenderer:
 
     def _emoji_slot(self, emoji: str | None, width: int, height: int) -> Row:
         if emoji is None:
-            return Row().size(width=width, height=height)
+            return _OwnedRow().size(width=width, height=height)
         return (
-            Row(
+            _OwnedRow(
                 Text(emoji)
                 .font_family(self.config.emoji.font_path)
                 .font_size(self.config.emoji.size)

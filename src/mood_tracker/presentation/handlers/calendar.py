@@ -1,5 +1,6 @@
 """Telegram entry points for browsing diary dates and month images."""
 
+import asyncio
 from datetime import UTC, date, datetime
 from uuid import UUID
 from zoneinfo import ZoneInfo
@@ -213,7 +214,7 @@ async def _month_image(
     calendar_images: MonthCalendarImageService,
 ) -> BufferedInputFile:
     data = await services.get_month_calendar().execute(GetMonthCalendar(user_id, month))
-    return calendar_images.render(data)
+    return await asyncio.to_thread(calendar_images.render, data)
 
 
 async def _render_month(
