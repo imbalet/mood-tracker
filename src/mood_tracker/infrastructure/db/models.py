@@ -201,6 +201,23 @@ class EventValueOrm(Timestamped, Base):
     normalized_value: Mapped[Decimal | None] = mapped_column(Numeric(5, 4))
 
 
+class EventQuestionnaireFieldOrm(Base):
+    __tablename__ = "event_questionnaire_fields"
+    __table_args__ = (
+        UniqueConstraint("event_id", "field_id", name="event_questionnaire_fields_key"),
+        CheckConstraint(
+            "sort_order >= 0", name="event_questionnaire_fields_order_check"
+        ),
+    )
+    id: Mapped[UUID] = mapped_column(postgresql.UUID(as_uuid=True), primary_key=True)
+    event_id: Mapped[UUID] = mapped_column(ForeignKey("events.id"), nullable=False)
+    field_id: Mapped[UUID] = mapped_column(ForeignKey("fields.id"), nullable=False)
+    sort_order: Mapped[int] = mapped_column(Integer, nullable=False)
+    is_enabled: Mapped[bool] = mapped_column(Boolean, nullable=False)
+    is_required: Mapped[bool] = mapped_column(Boolean, nullable=False)
+    role: Mapped[str] = mapped_column(String(24), nullable=False)
+
+
 class EventFieldProgressOrm(Base):
     __tablename__ = "event_field_progress"
     __table_args__ = (

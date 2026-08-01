@@ -16,13 +16,13 @@ from mood_tracker.application.commands import (
     CreateQuickEvent,
     DeleteEvent,
     GetEvent,
-    ListQuestionnaireFields,
+    ListEventFields,
     SaveEventValue,
     SkipEventField,
 )
 from mood_tracker.application.errors import FieldNotFound
 from mood_tracker.domain.entities import OrdinalConfig, ScaleConfig, UserProfile
-from mood_tracker.domain.enums import EventStatus, QuestionnaireKind
+from mood_tracker.domain.enums import EventStatus
 from mood_tracker.domain.errors import IncompleteDay, InvalidFieldValue
 from mood_tracker.presentation.callback_query import CallbackQueryWithMessage
 from mood_tracker.presentation.callbacks import (
@@ -409,8 +409,8 @@ async def _prompt_next(
     update_main_message: UpdateMainMessage,
 ) -> None:
     current = await services.get_event().execute(GetEvent(profile.id, event_id))
-    items = await services.list_questionnaire_fields().execute(
-        ListQuestionnaireFields(profile.id, QuestionnaireKind.EVENT)
+    items = await services.list_event_fields().execute(
+        ListEventFields(profile.id, event_id)
     )
     item = next(
         (
@@ -628,8 +628,8 @@ async def _render_event(
 ) -> None:
     current = await services.get_event().execute(GetEvent(profile.id, event_id))
     local = current.occurred_at.astimezone(ZoneInfo(current.occurred_timezone))
-    items = await services.list_questionnaire_fields().execute(
-        ListQuestionnaireFields(profile.id, QuestionnaireKind.EVENT)
+    items = await services.list_event_fields().execute(
+        ListEventFields(profile.id, event_id)
     )
     lines = [
         "<b>Событие</b>",

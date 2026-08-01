@@ -242,7 +242,7 @@ def _field_card_keyboard(view: FieldCardView) -> InlineKeyboardMarkup:
                 ),
             )
         )
-    else:
+    elif not view.is_system:
         builder.row_buttons_text_tuple(
             *(
                 (

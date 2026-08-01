@@ -9,11 +9,17 @@ from zoneinfo import ZoneInfo
 from sqlalchemy import delete, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from mood_tracker.domain.entities import DayFieldProgress, DayValue, Event
-from mood_tracker.domain.enums import EventStatus
+from mood_tracker.domain.entities import (
+    DayFieldProgress,
+    DayValue,
+    Event,
+    EventQuestionnaireField,
+)
+from mood_tracker.domain.enums import EventStatus, QuestionnaireFieldRole
 from mood_tracker.infrastructure.db.models import (
     EventFieldProgressOrm,
     EventOrm,
+    EventQuestionnaireFieldOrm,
     EventValueOrm,
 )
 
@@ -90,6 +96,23 @@ class SqlAlchemyEventRepository:
                 EventFieldProgressOrm.event_id == event.id
             )
         )
+        await self._session.execute(
+            delete(EventQuestionnaireFieldOrm).where(
+                EventQuestionnaireFieldOrm.event_id == event.id
+            )
+        )
+        for placement in event.questionnaire_fields.values():
+            self._session.add(
+                EventQuestionnaireFieldOrm(
+                    id=uuid7(),
+                    event_id=event.id,
+                    field_id=placement.field_id,
+                    sort_order=placement.sort_order,
+                    is_enabled=placement.is_enabled,
+                    is_required=placement.is_required,
+                    role=placement.role.value,
+                )
+            )
         for value in event.values.values():
             self._session.add(
                 EventValueOrm(
@@ -129,6 +152,13 @@ class SqlAlchemyEventRepository:
                 )
             )
         ).all()
+        placement_rows = (
+            await self._session.scalars(
+                select(EventQuestionnaireFieldOrm).where(
+                    EventQuestionnaireFieldOrm.event_id == row.id
+                )
+            )
+        ).all()
         return Event(
             id=row.id,
             user_id=row.user_id,
@@ -156,6 +186,16 @@ class SqlAlchemyEventRepository:
                     progress.skipped,
                 )
                 for progress in progress_rows
+            },
+            questionnaire_fields={
+                placement.field_id: EventQuestionnaireField(
+                    placement.field_id,
+                    placement.sort_order,
+                    placement.is_enabled,
+                    placement.is_required,
+                    QuestionnaireFieldRole(placement.role),
+                )
+                for placement in placement_rows
             },
         )
 

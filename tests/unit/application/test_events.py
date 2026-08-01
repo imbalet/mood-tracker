@@ -56,11 +56,13 @@ async def test_regular_event_saves_value_completes_and_changes_time(
     field = field_factory.text(user_id=user.id, name="Описание")
     occurred_at = datetime(2025, 1, 2, 9, 0, tzinfo=UTC)
     uow.users.get = AsyncMock(return_value=user)
+    uow.fields.list_for_user = AsyncMock(return_value=[field])
     event = await CreateEventUseCase(uow, id_generator).execute(
         CreateEvent(user.id, occurred_at, user.timezone.name)
     )
     uow.events.get = AsyncMock(return_value=event)
-    uow.fields.list_for_user = AsyncMock(return_value=[field])
+
+    assert tuple(event.questionnaire_fields) == (field.id,)
 
     saved = await SaveEventValueUseCase(uow).execute(
         SaveEventValue(user.id, event.id, field.id, "Важная мысль")

@@ -26,11 +26,24 @@ class QuestionnaireField:
         ):
             msg = "Day state field must remain enabled and required"
             raise CoreFieldViolation(msg)
+        if (
+            self.role is QuestionnaireFieldRole.EVENT_DESCRIPTION
+            and not self.is_enabled
+        ):
+            msg = "Event description field must remain enabled"
+            raise CoreFieldViolation(msg)
 
     def set_enabled(self, is_enabled: bool) -> None:
         """Toggle question visibility while protecting the daily-state invariant."""
-        if self.role is QuestionnaireFieldRole.DAY_STATE and not is_enabled:
-            msg = "Day state field must remain enabled"
+        if (
+            self.role
+            in (
+                QuestionnaireFieldRole.DAY_STATE,
+                QuestionnaireFieldRole.EVENT_DESCRIPTION,
+            )
+            and not is_enabled
+        ):
+            msg = "System questionnaire field must remain enabled"
             raise CoreFieldViolation(msg)
         self.is_enabled = is_enabled
 

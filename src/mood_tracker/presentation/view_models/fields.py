@@ -38,6 +38,7 @@ class FieldCardView:
     status: FieldStatus
     type: FieldType
     is_core: bool
+    is_system: bool
     semantic_text: str
     emoji: str | None
     show_in_calendar: bool
@@ -107,6 +108,9 @@ def make_field_card_view(
     is_core = (
         placement is not None and placement.role is QuestionnaireFieldRole.DAY_STATE
     ) or field.display_config.state_palette is not None
+    is_system = (
+        placement is not None and placement.role is not QuestionnaireFieldRole.ORDINARY
+    )
     return FieldCardView(
         id=field.id,
         name=field.name,
@@ -117,6 +121,7 @@ def make_field_card_view(
         ),
         type=field.current_version.type,
         is_core=is_core,
+        is_system=is_system,
         semantic_text=semantic_text,
         emoji=field.display_config.emoji,
         show_in_calendar=field.display_config.show_in_calendar,

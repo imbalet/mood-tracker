@@ -51,3 +51,14 @@ def test_core_field_cannot_be_hidden(field_factory: FieldFactory) -> None:
 
     with pytest.raises(CoreFieldViolation):
         placement.set_enabled(False)
+
+
+def test_event_description_cannot_be_hidden(field_factory: FieldFactory) -> None:
+    placement = QuestionnaireField(
+        field_factory.text().id,
+        0,
+        role=QuestionnaireFieldRole.EVENT_DESCRIPTION,
+    )
+
+    with pytest.raises(CoreFieldViolation):
+        placement.set_enabled(False)
