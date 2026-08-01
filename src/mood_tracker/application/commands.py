@@ -1,6 +1,7 @@
 """Immutable input and output contracts for core application use cases."""
 
 from dataclasses import dataclass
+from dataclasses import field as dataclass_field
 from datetime import date, datetime
 from enum import StrEnum
 from uuid import UUID
@@ -13,7 +14,11 @@ from mood_tracker.domain.entities import (
     ReferenceDay,
     ReferenceDays,
 )
-from mood_tracker.domain.enums import FieldStatus, ReferenceType
+from mood_tracker.domain.entities.questionnaire import QuestionnaireField
+from mood_tracker.domain.enums import (
+    QuestionnaireKind,
+    ReferenceType,
+)
 from mood_tracker.domain.value_objects import UserTimezone
 
 
@@ -68,39 +73,12 @@ class RenameField:
 
 
 @dataclass(frozen=True, slots=True)
-class SetFieldStatus:
-    """Change one field's active/inactive/hidden lifecycle."""
-
-    user_id: UUID
-    field_id: UUID
-    status: FieldStatus
-
-
-@dataclass(frozen=True, slots=True)
 class SetFieldDisplay:
     """Replace one field's current display configuration."""
 
     user_id: UUID
     field_id: UUID
     display_config: FieldDisplayConfig
-
-
-@dataclass(frozen=True, slots=True)
-class SetFieldSortOrder:
-    """Change one field's display and questionnaire position."""
-
-    user_id: UUID
-    field_id: UUID
-    sort_order: int
-
-
-@dataclass(frozen=True, slots=True)
-class MoveField:
-    """Move one field by one place and normalize the complete ordering."""
-
-    user_id: UUID
-    field_id: UUID
-    direction: MoveDirection
 
 
 @dataclass(frozen=True, slots=True)
@@ -113,10 +91,77 @@ class AddFieldVersion:
 
 
 @dataclass(frozen=True, slots=True)
-class ListFields:
-    """Read all fields owned by one user in display order."""
+class ListQuestionnaireFields:
+    """Read fields assigned to one explicit questionnaire."""
 
     user_id: UUID
+    kind: QuestionnaireKind
+
+
+@dataclass(frozen=True, slots=True)
+class QuestionnaireFieldItem:
+    """A semantic field resolved with its placement in one questionnaire."""
+
+    field: Field
+    placement: QuestionnaireField
+
+
+@dataclass(frozen=True, slots=True)
+class AttachFieldToQuestionnaire:
+    """Attach an existing semantic field to one questionnaire."""
+
+    user_id: UUID
+    field_id: UUID
+    kind: QuestionnaireKind
+    sort_order: int
+    is_required: bool = False
+
+
+@dataclass(frozen=True, slots=True)
+class DetachFieldFromQuestionnaire:
+    """Remove a non-system field from one questionnaire only."""
+
+    user_id: UUID
+    field_id: UUID
+    kind: QuestionnaireKind
+
+
+@dataclass(frozen=True, slots=True)
+class SetQuestionnaireFieldEnabled:
+    """Hide or restore a field without deleting its historical values."""
+
+    user_id: UUID
+    field_id: UUID
+    kind: QuestionnaireKind
+    is_enabled: bool
+
+
+@dataclass(frozen=True, slots=True)
+class SetQuestionnaireFieldRequired:
+    """Change whether a questionnaire step may be skipped."""
+
+    user_id: UUID
+    field_id: UUID
+    kind: QuestionnaireKind
+    is_required: bool
+
+
+@dataclass(frozen=True, slots=True)
+class MoveQuestionnaireField:
+    """Move a field inside one explicit questionnaire."""
+
+    user_id: UUID
+    field_id: UUID
+    kind: QuestionnaireKind
+    direction: MoveDirection
+
+
+@dataclass(frozen=True, slots=True)
+class DeleteField:
+    """Soft-delete a semantic field globally."""
+
+    user_id: UUID
+    field_id: UUID
 
 
 @dataclass(frozen=True, slots=True)
@@ -204,6 +249,7 @@ class DayForm:
     day: Day | None
     fields: tuple[Field, ...]
     next_field: Field | None
+    placements: dict[UUID, QuestionnaireField] = dataclass_field(default_factory=dict)
 
 
 @dataclass(frozen=True, slots=True)
@@ -232,3 +278,4 @@ class MonthCalendar:
     days: tuple[Day, ...]
     fields: tuple[Field, ...]
     references: ReferenceDays | None
+    placements: dict[UUID, QuestionnaireField] = dataclass_field(default_factory=dict)

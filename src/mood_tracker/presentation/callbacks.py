@@ -6,7 +6,12 @@ from uuid import UUID
 from aiogram.filters.callback_data import CallbackData
 
 from mood_tracker.application.commands import MoveDirection
-from mood_tracker.domain.enums import FieldStatus, FieldType, ReferenceType
+from mood_tracker.domain.enums import (
+    FieldStatus,
+    FieldType,
+    QuestionnaireKind,
+    ReferenceType,
+)
 
 
 class MenuSection(StrEnum):
@@ -71,6 +76,7 @@ class FieldStatusCallback(CallbackData, prefix="field_status"):
 
     field_id: UUID
     status: FieldStatus
+    kind: QuestionnaireKind = QuestionnaireKind.DAY
 
 
 class FieldMoveCallback(CallbackData, prefix="field_move"):
@@ -78,6 +84,7 @@ class FieldMoveCallback(CallbackData, prefix="field_move"):
 
     field_id: UUID
     direction: MoveDirection
+    kind: QuestionnaireKind = QuestionnaireKind.DAY
 
 
 class OrdinalDraftAction(StrEnum):

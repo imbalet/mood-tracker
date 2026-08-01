@@ -3,6 +3,7 @@
 from mood_tracker.application.commands import GetMonthCalendar, MonthCalendar
 from mood_tracker.application.errors import UserNotFound
 from mood_tracker.application.ports import UnitOfWork
+from mood_tracker.domain.enums import QuestionnaireKind
 
 
 class GetMonthCalendarUseCase:
@@ -20,5 +21,14 @@ class GetMonthCalendarUseCase:
                 raise UserNotFound
             days = await self._uow.days.list_for_month(user.id, month)
             fields = await self._uow.fields.list_for_user(user.id)
+            questionnaire = await self._uow.questionnaires.get(
+                user.id, QuestionnaireKind.DAY
+            )
             references = await self._uow.reference_days.get(user.id)
-            return MonthCalendar(month, tuple(days), tuple(fields), references)
+            return MonthCalendar(
+                month,
+                tuple(days),
+                tuple(fields),
+                references,
+                {} if questionnaire is None else questionnaire.fields,
+            )

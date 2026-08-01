@@ -6,23 +6,20 @@ from mood_tracker.application.commands import CreateQuickEvent, GetEventsForDate
 from mood_tracker.application.errors import UserNotFound
 from mood_tracker.application.ports import Clock, IdGenerator, UnitOfWork
 from mood_tracker.application.use_cases._transactions import execute_write
-from mood_tracker.domain.entities import Event, Field
+from mood_tracker.domain.entities import Event, Field, Questionnaire
 from mood_tracker.domain.enums import QuestionnaireFieldRole, QuestionnaireKind
 from mood_tracker.domain.errors import InvalidFieldValue
 
 
-def _description_field(fields: Sequence[Field]) -> Field:
-    def is_description(candidate: Field) -> bool:
-        placement = candidate.placement(QuestionnaireKind.EVENT)
-        return (
-            placement is not None
-            and placement.role is QuestionnaireFieldRole.EVENT_DESCRIPTION
-        )
-
-    field = next(
-        (candidate for candidate in fields if is_description(candidate)),
-        None,
-    )
+def _description_field(
+    fields: tuple[Field, ...], questionnaire: Questionnaire
+) -> Field:
+    field_ids = {
+        placement.field_id
+        for placement in questionnaire.fields.values()
+        if placement.role is QuestionnaireFieldRole.EVENT_DESCRIPTION
+    }
+    field = next((candidate for candidate in fields if candidate.id in field_ids), None)
     if field is None:
         msg = "Event description field is unavailable"
         raise InvalidFieldValue(msg)
@@ -66,8 +63,16 @@ class CreateQuickEventUseCase:
                 occurred_at=self._clock.now(),
                 occurred_timezone=user.timezone.name,
             )
-            fields = await self._uow.fields.list_for_user(user.id)
-            event.save_value(_description_field(fields).current_version, command.text)
+            questionnaire = await self._uow.questionnaires.get(
+                user.id, QuestionnaireKind.EVENT
+            )
+            if questionnaire is None:
+                msg = "Event questionnaire is unavailable"
+                raise InvalidFieldValue(msg)
+            fields = tuple(await self._uow.fields.list_for_user(user.id))
+            event.save_value(
+                _description_field(fields, questionnaire).current_version, command.text
+            )
             await self._uow.events.add(event)
             return event
 

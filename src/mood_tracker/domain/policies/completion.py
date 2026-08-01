@@ -16,9 +16,7 @@ class CompletionPolicy:
     ) -> None:
         """Complete a day only when every supplied active field has progress."""
         missing_ids = [
-            field.id
-            for field in fields
-            if field.is_active and not day.has_completed_step(field.id)
+            field.id for field in fields if not day.has_completed_step(field.id)
         ]
         if missing_ids:
             msg = f"Day has {len(missing_ids)} unfinished active field(s)"

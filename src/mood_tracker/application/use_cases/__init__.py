@@ -14,12 +14,10 @@ from mood_tracker.application.use_cases.events import (
 from mood_tracker.application.use_cases.fields import (
     AddFieldVersionUseCase,
     CreateFieldUseCase,
-    ListFieldsUseCase,
-    MoveFieldUseCase,
+    ListQuestionnaireFieldsUseCase,
+    QuestionnaireFieldUseCase,
     RenameFieldUseCase,
     SetFieldDisplayUseCase,
-    SetFieldSortOrderUseCase,
-    SetFieldStatusUseCase,
 )
 from mood_tracker.application.use_cases.references import GetReferenceHistoryUseCase
 from mood_tracker.application.use_cases.registration import (
@@ -38,14 +36,12 @@ __all__ = [
     "GetEventsForDateUseCase",
     "GetUserByTelegramIdUseCase",
     "GetReferenceHistoryUseCase",
-    "ListFieldsUseCase",
-    "MoveFieldUseCase",
+    "ListQuestionnaireFieldsUseCase",
     "RegisterUserUseCase",
+    "QuestionnaireFieldUseCase",
     "RenameFieldUseCase",
     "SaveDayValueUseCase",
     "SetFieldDisplayUseCase",
-    "SetFieldSortOrderUseCase",
-    "SetFieldStatusUseCase",
     "SetTimezoneUseCase",
     "SkipDayTextUseCase",
 ]

@@ -7,14 +7,7 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from mood_tracker.domain.entities import Field
-from mood_tracker.domain.entities.questionnaire import QuestionnaireField
-from mood_tracker.domain.enums import (
-    FieldStatus,
-    QuestionnaireFieldRole,
-    QuestionnaireKind,
-)
 from mood_tracker.infrastructure.db.models import (
-    EventFieldOrm,
     FieldOrm,
     FieldVersionOrm,
 )
@@ -34,7 +27,11 @@ class SqlAlchemyFieldRepository:
 
     async def get(self, user_id: UUID, field_id: UUID) -> Field | None:
         row = await self._session.scalar(
-            select(FieldOrm).where(FieldOrm.id == field_id, FieldOrm.user_id == user_id)
+            select(FieldOrm).where(
+                FieldOrm.id == field_id,
+                FieldOrm.user_id == user_id,
+                FieldOrm.deleted_at.is_(None),
+            )
         )
         return await self._to_domain(row) if row else None
 
@@ -42,8 +39,8 @@ class SqlAlchemyFieldRepository:
         rows = (
             await self._session.scalars(
                 select(FieldOrm)
-                .where(FieldOrm.user_id == user_id)
-                .order_by(FieldOrm.sort_order)
+                .where(FieldOrm.user_id == user_id, FieldOrm.deleted_at.is_(None))
+                .order_by(FieldOrm.name)
             )
         ).all()
         return [await self._to_domain(row) for row in rows]
@@ -56,25 +53,12 @@ class SqlAlchemyFieldRepository:
                 id=field.id,
                 user_id=field.user_id,
                 name=field.name,
-                status=field.status.value,
-                is_core=field.is_core,
                 current_version_id=field.current_version_id,
-                sort_order=field.sort_order,
                 display_config=display_to_json(field.display_config),
             )
         )
         for version in field.versions:
             self._session.add(version_to_orm(version))
-        event = field.placement(QuestionnaireKind.EVENT)
-        if event is not None:
-            self._session.add(
-                EventFieldOrm(
-                    field_id=field.id,
-                    required=event.is_required,
-                    sort_order=event.sort_order,
-                    is_system=event.role is QuestionnaireFieldRole.EVENT_DESCRIPTION,
-                )
-            )
 
     async def save(self, field: Field) -> None:
         row = await self._session.get(FieldOrm, field.id)
@@ -82,16 +66,14 @@ class SqlAlchemyFieldRepository:
             return
         (
             row.name,
-            row.status,
             row.current_version_id,
-            row.sort_order,
             row.display_config,
+            row.deleted_at,
         ) = (
             field.name,
-            field.status.value,
             field.current_version_id,
-            field.sort_order,
             display_to_json(field.display_config),
+            field.deleted_at,
         )
         known_version_ids = set(
             (
@@ -105,24 +87,6 @@ class SqlAlchemyFieldRepository:
         for version in field.versions:
             if version.id not in known_version_ids:
                 self._session.add(version_to_orm(version))
-        config = await self._session.get(EventFieldOrm, field.id)
-        event = field.placement(QuestionnaireKind.EVENT)
-        if event is None:
-            if config is not None:
-                await self._session.delete(config)
-        elif config is None:
-            self._session.add(
-                EventFieldOrm(
-                    field_id=field.id,
-                    required=event.is_required,
-                    sort_order=event.sort_order,
-                    is_system=event.role is QuestionnaireFieldRole.EVENT_DESCRIPTION,
-                )
-            )
-        else:
-            config.required = event.is_required
-            config.sort_order = event.sort_order
-            config.is_system = event.role is QuestionnaireFieldRole.EVENT_DESCRIPTION
 
     async def _to_domain(self, row: FieldOrm) -> Field:
         version_rows = (
@@ -136,30 +100,6 @@ class SqlAlchemyFieldRepository:
         current_version = next(
             version for version in versions if version.id == row.current_version_id
         )
-        event_config = await self._session.get(EventFieldOrm, row.id)
-        placements = {
-            QuestionnaireKind.DAY: QuestionnaireField(
-                row.id,
-                row.sort_order,
-                is_enabled=FieldStatus(row.status) is FieldStatus.ACTIVE,
-                role=(
-                    QuestionnaireFieldRole.DAY_STATE
-                    if row.is_core
-                    else QuestionnaireFieldRole.ORDINARY
-                ),
-            )
-        }
-        if event_config is not None:
-            placements[QuestionnaireKind.EVENT] = QuestionnaireField(
-                row.id,
-                event_config.sort_order,
-                is_required=event_config.required,
-                role=(
-                    QuestionnaireFieldRole.EVENT_DESCRIPTION
-                    if event_config.is_system
-                    else QuestionnaireFieldRole.ORDINARY
-                ),
-            )
         return Field(
             row.id,
             row.user_id,
@@ -167,7 +107,7 @@ class SqlAlchemyFieldRepository:
             display_from_json(row.display_config),
             current_version,
             versions,
-            placements,
+            row.deleted_at,
         )
 
 

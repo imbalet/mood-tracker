@@ -17,24 +17,47 @@ from mood_tracker.application.commands import (
 from mood_tracker.application.errors import DayNotFound, FieldNotFound, UserNotFound
 from mood_tracker.application.ports import Clock, IdGenerator, UnitOfWork
 from mood_tracker.application.use_cases._transactions import execute_write
-from mood_tracker.domain.entities import Day, Field, ReferenceDays, ScaleConfig
+from mood_tracker.domain.entities import (
+    Day,
+    Field,
+    Questionnaire,
+    ReferenceDays,
+    ScaleConfig,
+)
 from mood_tracker.domain.entities.reference_days import boundary_reference_candidate
-from mood_tracker.domain.enums import DayStatus, ReferenceType
+from mood_tracker.domain.enums import (
+    DayStatus,
+    QuestionnaireFieldRole,
+    QuestionnaireKind,
+    ReferenceType,
+)
 from mood_tracker.domain.policies import CompletionPolicy
 
 
-def _sorted_fields(fields: Sequence[Field]) -> tuple[Field, ...]:
-    return tuple(sorted(fields, key=lambda field: field.sort_order))
+def _sorted_fields(
+    fields: Sequence[Field], questionnaire: Questionnaire
+) -> tuple[Field, ...]:
+    return tuple(
+        sorted(
+            (field for field in fields if field.id in questionnaire.fields),
+            key=lambda field: questionnaire.fields[field.id].sort_order,
+        )
+    )
 
 
-def _next_field(day: Day | None, fields: Sequence[Field]) -> Field | None:
+def _next_field(
+    day: Day | None, fields: Sequence[Field], questionnaire: Questionnaire
+) -> Field | None:
     if day is not None and day.status is DayStatus.COMPLETE:
         return None
     return next(
         (
             field
-            for field in _sorted_fields(fields)
-            if field.is_active and (day is None or not day.has_completed_step(field.id))
+            for field in _sorted_fields(fields, questionnaire)
+            if (
+                questionnaire.fields[field.id].is_enabled
+                and (day is None or not day.has_completed_step(field.id))
+            )
         ),
         None,
     )
@@ -145,12 +168,20 @@ class GetDayUseCase:
                 or self._clock.now().astimezone(ZoneInfo(user.timezone.name)).date()
             )
             day = await self._uow.days.get_by_date(user.id, day_date)
-            fields = _sorted_fields(await self._uow.fields.list_for_user(user.id))
+            questionnaire = await self._uow.questionnaires.get(
+                user.id, QuestionnaireKind.DAY
+            )
+            if questionnaire is None:
+                raise FieldNotFound
+            fields = _sorted_fields(
+                await self._uow.fields.list_for_user(user.id), questionnaire
+            )
             return DayForm(
                 day_date=day_date,
                 day=day,
                 fields=fields,
-                next_field=_next_field(day, fields),
+                placements=questionnaire.fields,
+                next_field=_next_field(day, fields, questionnaire),
             )
 
 
@@ -176,9 +207,17 @@ class SaveDayValueUseCase:
                 command.field_id,
             )
             day.save_value(field.current_version, command.value)
-            fields = await self._uow.fields.list_for_user(command.user_id)
+            questionnaire = await self._uow.questionnaires.get(
+                command.user_id, QuestionnaireKind.DAY
+            )
+            if questionnaire is None:
+                raise FieldNotFound
+            fields = _sorted_fields(
+                await self._uow.fields.list_for_user(command.user_id), questionnaire
+            )
             if day.status is DayStatus.DRAFT and all(
-                not candidate.is_active or day.has_completed_step(candidate.id)
+                not questionnaire.fields[candidate.id].is_enabled
+                or day.has_completed_step(candidate.id)
                 for candidate in fields
             ):
                 CompletionPolicy().complete(day, fields, self._clock.now())
@@ -186,7 +225,11 @@ class SaveDayValueUseCase:
                 await self._uow.days.add(day)
             else:
                 await self._uow.days.save(day)
-            if not field.is_core:
+            placement = questionnaire.fields.get(field.id)
+            if (
+                placement is None
+                or placement.role is not QuestionnaireFieldRole.DAY_STATE
+            ):
                 return None
             return await self._handle_core_value(command.user_id, day, field)
 
@@ -267,9 +310,17 @@ class SkipDayTextUseCase:
                 command.field_id,
             )
             day.skip_text(field.current_version)
-            fields = await self._uow.fields.list_for_user(command.user_id)
+            questionnaire = await self._uow.questionnaires.get(
+                command.user_id, QuestionnaireKind.DAY
+            )
+            if questionnaire is None:
+                raise FieldNotFound
+            fields = _sorted_fields(
+                await self._uow.fields.list_for_user(command.user_id), questionnaire
+            )
             if day.status is DayStatus.DRAFT and all(
-                not candidate.is_active or day.has_completed_step(candidate.id)
+                not questionnaire.fields[candidate.id].is_enabled
+                or day.has_completed_step(candidate.id)
                 for candidate in fields
             ):
                 CompletionPolicy().complete(day, fields, self._clock.now())
@@ -301,8 +352,22 @@ class ConfirmReferenceUseCase:
             day = await self._uow.days.get(user.id, command.day_id)
             if day is None:
                 raise DayNotFound
+            questionnaire = await self._uow.questionnaires.get(
+                user.id, QuestionnaireKind.DAY
+            )
+            if questionnaire is None:
+                raise FieldNotFound
             fields = await self._uow.fields.list_for_user(user.id)
-            core_field = next((field for field in fields if field.is_core), None)
+            core_field = next(
+                (
+                    field
+                    for field in fields
+                    if questionnaire.fields.get(field.id) is not None
+                    and questionnaire.fields[field.id].role
+                    is QuestionnaireFieldRole.DAY_STATE
+                ),
+                None,
+            )
             if core_field is None:
                 raise FieldNotFound
             reference_days = await self._uow.reference_days.get(user.id)

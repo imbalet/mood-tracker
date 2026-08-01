@@ -3,7 +3,8 @@
 from aiogram import F, Router
 from aiogram.fsm.context import FSMContext
 
-from mood_tracker.application.commands import ListFields
+from mood_tracker.application.commands import ListQuestionnaireFields
+from mood_tracker.domain.enums import QuestionnaireKind
 from mood_tracker.presentation.callback_query import CallbackQueryWithMessage
 from mood_tracker.presentation.callbacks import (
     FieldAction,
@@ -20,7 +21,7 @@ from mood_tracker.presentation.handlers.fields.common import (
     render_order,
 )
 from mood_tracker.presentation.keyboards import field_type_keyboard
-from mood_tracker.presentation.queries import get_owned_field, get_user_profile
+from mood_tracker.presentation.queries import get_user_profile
 from mood_tracker.presentation.services import ApplicationServices
 from mood_tracker.presentation.state import PresentationData
 from mood_tracker.presentation.utils import UpdateMainMessage
@@ -83,11 +84,19 @@ async def open_order_from_fields(
     if profile is None:
         await query.answer(TEXTS[TextKey.START_FIRST], show_alert=True)
         return
-    fields = await services.list_fields().execute(ListFields(profile.id))
+    items = await services.list_questionnaire_fields().execute(
+        ListQuestionnaireFields(profile.id, QuestionnaireKind.DAY)
+    )
     await state.set_state(None)
     await presentation_data.clear_flow()
     await query.answer()
-    await render_order(query, presentation_data, fields, None, update_main_message)
+    await render_order(
+        query,
+        presentation_data,
+        tuple(item.field for item in items),
+        None,
+        update_main_message,
+    )
 
 
 @router.callback_query(FieldCallback.filter(F.action == FieldAction.OPEN))
@@ -105,11 +114,18 @@ async def open_field(
     if profile is None:
         await query.answer(TEXTS[TextKey.START_FIRST], show_alert=True)
         return
-    field = await get_owned_field(profile, callback_data.field_id, services)
-    if field is None:
+    items = await services.list_questionnaire_fields().execute(
+        ListQuestionnaireFields(profile.id, QuestionnaireKind.DAY)
+    )
+    item = next(
+        (item for item in items if item.field.id == callback_data.field_id), None
+    )
+    if item is None:
         await query.answer(TEXTS[TextKey.FIELD_UNAVAILABLE], show_alert=True)
         return
     await state.set_state(None)
     await presentation_data.clear_flow()
     await query.answer()
-    await render_field(query, presentation_data, field, update_main_message)
+    await render_field(
+        query, presentation_data, item.field, update_main_message, item.placement
+    )

@@ -5,6 +5,7 @@ from datetime import UTC, datetime
 
 from mood_tracker.application.commands import RegisterUser
 from mood_tracker.application.use_cases import RegisterUserUseCase
+from mood_tracker.domain.enums import QuestionnaireFieldRole, QuestionnaireKind
 from mood_tracker.domain.value_objects import UserTimezone
 from mood_tracker.infrastructure.db.session import create_session_factory
 from mood_tracker.infrastructure.db.uow import SqlAlchemyUnitOfWork
@@ -34,9 +35,16 @@ async def test_register_persists_user_and_default_fields() -> None:
         async with SqlAlchemyUnitOfWork(session_factory) as uow:
             loaded = await uow.users.get(user.id)
             fields = await uow.fields.list_for_user(user.id)
+            day_questionnaire = await uow.questionnaires.get(
+                user.id, QuestionnaireKind.DAY
+            )
 
         assert loaded == user
         assert len(fields) == 4
-        assert fields[0].is_core
+        assert day_questionnaire is not None
+        assert any(
+            placement.role is QuestionnaireFieldRole.DAY_STATE
+            for placement in day_questionnaire.fields.values()
+        )
     finally:
         await engine.dispose()

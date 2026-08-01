@@ -54,24 +54,23 @@ class UserOrm(Timestamped, Base):
 
 class FieldOrm(Timestamped, Base):
     __tablename__ = "fields"
-    __table_args__ = (
-        CheckConstraint(
-            "status IN ('active', 'inactive', 'hidden')", name="fields_status_check"
-        ),
-        CheckConstraint("sort_order >= 0", name="fields_sort_order_check"),
-    )
     id: Mapped[UUID] = mapped_column(postgresql.UUID(as_uuid=True), primary_key=True)
     user_id: Mapped[UUID] = mapped_column(ForeignKey("users.id"), nullable=False)
     name: Mapped[str] = mapped_column(String(200), nullable=False)
-    status: Mapped[str] = mapped_column(String(16), nullable=False)
-    is_core: Mapped[bool] = mapped_column(Boolean, nullable=False)
     current_version_id: Mapped[UUID] = mapped_column(
-        postgresql.UUID(as_uuid=True), nullable=False
+        ForeignKey(
+            "field_versions.id",
+            name="fields_current_version_fkey",
+            use_alter=True,
+            deferrable=True,
+            initially="DEFERRED",
+        ),
+        nullable=False,
     )
-    sort_order: Mapped[int] = mapped_column(Integer, nullable=False)
     display_config: Mapped[dict[str, Any]] = mapped_column(
         postgresql.JSONB, nullable=False
     )
+    deleted_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
 
 
 class FieldVersionOrm(Base):
@@ -90,15 +89,33 @@ class FieldVersionOrm(Base):
     )
 
 
-class EventFieldOrm(Base):
-    __tablename__ = "event_fields"
+class QuestionnaireOrm(Timestamped, Base):
+    __tablename__ = "questionnaires"
     __table_args__ = (
-        CheckConstraint("sort_order >= 0", name="event_fields_sort_order_check"),
+        UniqueConstraint("user_id", "kind", name="questionnaires_user_kind_key"),
     )
-    field_id: Mapped[UUID] = mapped_column(ForeignKey("fields.id"), primary_key=True)
-    required: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
+    id: Mapped[UUID] = mapped_column(postgresql.UUID(as_uuid=True), primary_key=True)
+    user_id: Mapped[UUID] = mapped_column(ForeignKey("users.id"), nullable=False)
+    kind: Mapped[str] = mapped_column(String(16), nullable=False)
+
+
+class QuestionnaireFieldOrm(Base):
+    __tablename__ = "questionnaire_fields"
+    __table_args__ = (
+        UniqueConstraint(
+            "questionnaire_id", "field_id", name="questionnaire_fields_key"
+        ),
+        CheckConstraint("sort_order >= 0", name="questionnaire_fields_order_check"),
+    )
+    id: Mapped[UUID] = mapped_column(postgresql.UUID(as_uuid=True), primary_key=True)
+    questionnaire_id: Mapped[UUID] = mapped_column(
+        ForeignKey("questionnaires.id"), nullable=False
+    )
+    field_id: Mapped[UUID] = mapped_column(ForeignKey("fields.id"), nullable=False)
     sort_order: Mapped[int] = mapped_column(Integer, nullable=False)
-    is_system: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
+    is_enabled: Mapped[bool] = mapped_column(Boolean, nullable=False, default=True)
+    is_required: Mapped[bool] = mapped_column(Boolean, nullable=False, default=True)
+    role: Mapped[str] = mapped_column(String(24), nullable=False)
 
 
 class DayOrm(Timestamped, Base):

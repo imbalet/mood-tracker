@@ -6,7 +6,7 @@ from uuid import UUID
 
 from mood_tracker.application.commands import DayForm, ReferenceReview
 from mood_tracker.domain.entities import Field, OrdinalConfig, ScaleConfig
-from mood_tracker.domain.enums import DayStatus, FieldStatus, ReferenceType
+from mood_tracker.domain.enums import DayStatus, ReferenceType
 
 
 class DayFieldAction(StrEnum):
@@ -130,8 +130,6 @@ def _entry_views(form: DayForm) -> list[DayEntryView]:
         return []
     entries: list[DayEntryView] = []
     for field in form.fields:
-        if field.status is FieldStatus.HIDDEN:
-            continue
         value = form.day.values.get(field.id)
         progress = form.day.progress.get(field.id)
         if value is None and progress is None:
@@ -163,12 +161,13 @@ def _entry_views(form: DayForm) -> list[DayEntryView]:
 def _action_views(form: DayForm) -> list[DayFieldActionView]:
     actions: list[DayFieldActionView] = []
     for field in form.fields:
-        if field.status is FieldStatus.HIDDEN:
+        placement = form.placements.get(field.id)
+        if placement is None:
             continue
         is_completed = form.day is not None and form.day.has_completed_step(field.id)
         if is_completed:
             action = DayFieldAction.EDIT
-        elif field.status is FieldStatus.ACTIVE:
+        elif placement.is_enabled:
             action = DayFieldAction.ADD
         else:
             continue

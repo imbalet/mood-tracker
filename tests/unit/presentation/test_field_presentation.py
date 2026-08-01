@@ -1,3 +1,5 @@
+from mood_tracker.domain.entities.questionnaire import QuestionnaireField
+from mood_tracker.domain.enums import QuestionnaireFieldRole
 from mood_tracker.presentation.screens import (
     field_card_screen,
     field_order_screen,
@@ -13,7 +15,12 @@ from mood_tracker.presentation.view_models import (
 def test_field_card_escapes_user_name(field_factory) -> None:
     field = field_factory.text(name="<важное>")
 
-    screen = field_card_screen(make_field_card_view(field))
+    screen = field_card_screen(
+        make_field_card_view(
+            field,
+            QuestionnaireField(field.id, 0, role=QuestionnaireFieldRole.DAY_STATE),
+        )
+    )
 
     assert isinstance(screen.content, str)
     assert "<b>&lt;важное&gt;</b>" in screen.content
@@ -40,7 +47,12 @@ def test_fields_keyboard_exposes_each_field_and_navigation(field_factory) -> Non
 def test_core_field_keyboard_does_not_offer_status_changes(field_factory) -> None:
     field = field_factory.scale(is_core=True)
 
-    screen = field_card_screen(make_field_card_view(field))
+    screen = field_card_screen(
+        make_field_card_view(
+            field,
+            QuestionnaireField(field.id, 0, role=QuestionnaireFieldRole.DAY_STATE),
+        )
+    )
     assert screen.reply_markup is not None
     texts = {
         button.text for row in screen.reply_markup.inline_keyboard for button in row

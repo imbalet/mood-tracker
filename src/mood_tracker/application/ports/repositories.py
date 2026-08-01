@@ -5,7 +5,15 @@ from datetime import date
 from typing import Protocol
 from uuid import UUID
 
-from mood_tracker.domain.entities import Day, Event, Field, ReferenceDays, UserProfile
+from mood_tracker.domain.entities import (
+    Day,
+    Event,
+    Field,
+    Questionnaire,
+    ReferenceDays,
+    UserProfile,
+)
+from mood_tracker.domain.enums import QuestionnaireKind
 
 
 class UserRepository(Protocol):
@@ -30,6 +38,18 @@ class FieldRepository(Protocol):
     async def add(self, field: Field) -> None: ...
 
     async def save(self, field: Field) -> None: ...
+
+
+class QuestionnaireRepository(Protocol):
+    """Persist the field placements of a single user questionnaire."""
+
+    async def get(
+        self, user_id: UUID, kind: QuestionnaireKind
+    ) -> Questionnaire | None: ...
+
+    async def add(self, questionnaire: Questionnaire) -> None: ...
+
+    async def save(self, questionnaire: Questionnaire) -> None: ...
 
 
 class DayRepository(Protocol):

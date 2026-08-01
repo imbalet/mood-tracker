@@ -9,6 +9,7 @@ from mood_tracker.application.ports.repositories import (
     DayRepository,
     EventRepository,
     FieldRepository,
+    QuestionnaireRepository,
     ReferenceDaysRepository,
     UserRepository,
 )
@@ -19,6 +20,7 @@ class UnitOfWork(Protocol):
 
     users: UserRepository
     fields: FieldRepository
+    questionnaires: QuestionnaireRepository
     days: DayRepository
     events: EventRepository
     reference_days: ReferenceDaysRepository

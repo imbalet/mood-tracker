@@ -12,6 +12,7 @@ from mood_tracker.domain.entities import (
     FieldVersion,
     OrdinalConfig,
     OrdinalOption,
+    Questionnaire,
     ScaleConfig,
     StatePalette,
     TextConfig,
@@ -80,11 +81,6 @@ def create_default_fields(
                 state_palette=StatePalette("#D96C75", "#B8BEC7", "#6FAF8F")
             ),
             state,
-            questionnaire_fields={
-                QuestionnaireKind.DAY: QuestionnaireField(
-                    ids.state_field, 0, role=QuestionnaireFieldRole.DAY_STATE
-                )
-            },
         ),
         Field(
             ids.thoughts_field,
@@ -92,9 +88,6 @@ def create_default_fields(
             "Негативные мысли",
             FieldDisplayConfig(emoji="💀"),
             thoughts,
-            questionnaire_fields={
-                QuestionnaireKind.DAY: QuestionnaireField(ids.thoughts_field, 1)
-            },
         ),
         Field(
             ids.comment_field,
@@ -102,11 +95,6 @@ def create_default_fields(
             "Комментарий",
             FieldDisplayConfig(),
             comment,
-            questionnaire_fields={
-                QuestionnaireKind.DAY: QuestionnaireField(
-                    ids.comment_field, 2, is_required=False
-                )
-            },
         ),
         Field(
             ids.event_description_field,
@@ -114,9 +102,38 @@ def create_default_fields(
             "Описание",
             FieldDisplayConfig(),
             description,
-            questionnaire_fields={
-                QuestionnaireKind.EVENT: QuestionnaireField(
-                    ids.event_description_field,
+        ),
+    )
+
+
+def create_default_questionnaires(
+    user_id: UUID, day_id: UUID, event_id: UUID, field_ids: DefaultFieldIds
+) -> tuple[Questionnaire, Questionnaire]:
+    """Create the independent placement aggregates for standard fields."""
+    return (
+        Questionnaire(
+            day_id,
+            user_id,
+            QuestionnaireKind.DAY,
+            {
+                field_ids.state_field: QuestionnaireField(
+                    field_ids.state_field, 0, role=QuestionnaireFieldRole.DAY_STATE
+                ),
+                field_ids.thoughts_field: QuestionnaireField(
+                    field_ids.thoughts_field, 1
+                ),
+                field_ids.comment_field: QuestionnaireField(
+                    field_ids.comment_field, 2, is_required=False
+                ),
+            },
+        ),
+        Questionnaire(
+            event_id,
+            user_id,
+            QuestionnaireKind.EVENT,
+            {
+                field_ids.event_description_field: QuestionnaireField(
+                    field_ids.event_description_field,
                     0,
                     is_required=False,
                     role=QuestionnaireFieldRole.EVENT_DESCRIPTION,

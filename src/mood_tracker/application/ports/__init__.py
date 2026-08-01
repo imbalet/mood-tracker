@@ -6,6 +6,7 @@ from mood_tracker.application.ports.repositories import (
     DayRepository,
     EventRepository,
     FieldRepository,
+    QuestionnaireRepository,
     ReferenceDaysRepository,
     UserRepository,
 )
@@ -17,6 +18,7 @@ __all__ = [
     "EventRepository",
     "FieldRepository",
     "IdGenerator",
+    "QuestionnaireRepository",
     "ReferenceDaysRepository",
     "UnitOfWork",
     "UserRepository",

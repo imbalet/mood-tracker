@@ -10,7 +10,7 @@ from aiogram.types import Message
 from mood_tracker.application.commands import (
     AddFieldVersion,
     CreateField,
-    ListFields,
+    ListQuestionnaireFields,
     RenameField,
 )
 from mood_tracker.application.errors import FieldNotFound
@@ -23,7 +23,7 @@ from mood_tracker.domain.entities import (
     TextConfig,
     UserProfile,
 )
-from mood_tracker.domain.enums import FieldType
+from mood_tracker.domain.enums import FieldType, QuestionnaireKind
 from mood_tracker.domain.errors import InvalidFieldVersion
 from mood_tracker.presentation.callback_query import CallbackQueryWithMessage
 from mood_tracker.presentation.callbacks import (
@@ -452,14 +452,16 @@ async def _create_field(
     config: ScaleConfig | OrdinalConfig | TextConfig,
     services: ApplicationServices,
 ) -> Field:
-    fields = await services.list_fields().execute(ListFields(profile.id))
+    fields = await services.list_questionnaire_fields().execute(
+        ListQuestionnaireFields(profile.id, QuestionnaireKind.DAY)
+    )
     return await services.create_field().execute(
         CreateField(
             profile.id,
             name,
             config,
             FieldDisplayConfig(),
-            sort_order=max((field.sort_order for field in fields), default=-1) + 1,
+            sort_order=len(fields),
         )
     )
 

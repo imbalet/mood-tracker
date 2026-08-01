@@ -1,4 +1,5 @@
 from unittest.mock import AsyncMock
+from uuid import uuid7
 
 import pytest
 
@@ -6,14 +7,21 @@ from mood_tracker.application.commands import (
     AddFieldVersion,
     CreateField,
     MoveDirection,
-    MoveField,
+    MoveQuestionnaireField,
 )
 from mood_tracker.application.use_cases import (
     AddFieldVersionUseCase,
     CreateFieldUseCase,
-    MoveFieldUseCase,
+    QuestionnaireFieldUseCase,
 )
-from mood_tracker.domain.entities import FieldDisplayConfig, ScaleConfig, TextConfig
+from mood_tracker.domain.entities import (
+    FieldDisplayConfig,
+    Questionnaire,
+    ScaleConfig,
+    TextConfig,
+)
+from mood_tracker.domain.entities.questionnaire import QuestionnaireField
+from mood_tracker.domain.enums import QuestionnaireKind
 from mood_tracker.domain.errors import InvalidFieldVersion
 
 
@@ -22,6 +30,9 @@ async def test_create_field_persists_current_semantic_version(
 ) -> None:
     user = user_factory.build()
     uow.users.get = AsyncMock(return_value=user)
+    uow.questionnaires.get = AsyncMock(
+        return_value=Questionnaire(uuid7(), user.id, QuestionnaireKind.DAY)
+    )
     use_case = CreateFieldUseCase(uow, clock, id_generator)
 
     field = await use_case.execute(
@@ -40,7 +51,7 @@ async def test_create_field_persists_current_semantic_version(
 
 
 async def test_move_field_swaps_neighbours_and_normalizes_order(
-    uow, user_factory, field_factory
+    uow, clock, user_factory, field_factory
 ) -> None:
     user = user_factory.build()
     first = field_factory.text(user_id=user.id, name="Первое", sort_order=3)
@@ -48,13 +59,28 @@ async def test_move_field_swaps_neighbours_and_normalizes_order(
     uow.users.get = AsyncMock(return_value=user)
     uow.fields.list_for_user = AsyncMock(return_value=(first, second))
 
-    fields = await MoveFieldUseCase(uow).execute(
-        MoveField(user.id, second.id, MoveDirection.UP)
+    questionnaire = Questionnaire(
+        uuid7(),
+        user.id,
+        QuestionnaireKind.DAY,
+        {
+            first.id: QuestionnaireField(first.id, 3),
+            second.id: QuestionnaireField(second.id, 8),
+        },
+    )
+    uow.questionnaires.get = AsyncMock(return_value=questionnaire)
+    items = await QuestionnaireFieldUseCase(uow, clock).move(
+        MoveQuestionnaireField(
+            user.id, second.id, QuestionnaireKind.DAY, MoveDirection.UP
+        )
     )
 
-    assert [field.name for field in fields] == ["Второе", "Первое"]
-    assert [field.sort_order for field in fields] == [0, 1]
-    assert uow.fields.save.await_count == 2
+    assert [item.field.name for item in items] == ["Второе", "Первое"]
+    assert [item.placement.sort_order for item in items] == [
+        0,
+        1,
+    ]
+    uow.questionnaires.save.assert_awaited_once()
     uow.commit.assert_awaited_once()
 
 

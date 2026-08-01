@@ -6,7 +6,8 @@ from PIL import Image
 
 from mood_tracker.application.commands import MonthCalendar
 from mood_tracker.domain.entities import FieldDisplayConfig, ReferenceDays, StatePalette
-from mood_tracker.domain.enums import DayStatus
+from mood_tracker.domain.entities.questionnaire import QuestionnaireField
+from mood_tracker.domain.enums import DayStatus, QuestionnaireFieldRole
 from mood_tracker.presentation.rendering.calendar.month import (
     MonthCalendarImageService,
     MonthCalendarMapper,
@@ -38,7 +39,17 @@ def test_month_calendar_renders_a_png_with_state_color(
     day.save_value(state.current_version, 0)
 
     image_file = MonthCalendarImageService().render(
-        MonthCalendar(date(2025, 2, 1), (day,), (state,), None)
+        MonthCalendar(
+            date(2025, 2, 1),
+            (day,),
+            (state,),
+            None,
+            {
+                state.id: QuestionnaireField(
+                    state.id, 0, role=QuestionnaireFieldRole.DAY_STATE
+                )
+            },
+        )
     )
     opened = Image.open(BytesIO(image_file.data))
 
@@ -95,7 +106,16 @@ def test_field_emoji_keeps_its_slot_when_an_earlier_field_is_empty(
     day = day_factory.build(day_date=date(2025, 2, 3))
     day.save_value(hydration.current_version, 0)
     day.save_value(exercise.current_version, 2)
-    source = MonthCalendar(date(2025, 2, 1), (day,), (hydration, exercise), None)
+    source = MonthCalendar(
+        date(2025, 2, 1),
+        (day,),
+        (hydration, exercise),
+        None,
+        {
+            hydration.id: QuestionnaireField(hydration.id, 0),
+            exercise.id: QuestionnaireField(exercise.id, 1),
+        },
+    )
     theme = CalendarTheme.default()
 
     result = MonthCalendarMapper(theme, len(theme.renderer.emoji.positions)).map(

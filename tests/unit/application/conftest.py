@@ -11,10 +11,14 @@ from mood_tracker.application.ports import (
     EventRepository,
     FieldRepository,
     IdGenerator,
+    QuestionnaireRepository,
     ReferenceDaysRepository,
     UnitOfWork,
     UserRepository,
 )
+from mood_tracker.domain.entities import Questionnaire
+from mood_tracker.domain.entities.questionnaire import QuestionnaireField
+from mood_tracker.domain.enums import QuestionnaireFieldRole, QuestionnaireKind
 
 
 class FixedClock:
@@ -52,6 +56,40 @@ def uow() -> UnitOfWork:
     unit_of_work.rollback = AsyncMock()
     unit_of_work.users = create_autospec(UserRepository, instance=True)
     unit_of_work.fields = create_autospec(FieldRepository, instance=True)
+    unit_of_work.questionnaires = create_autospec(
+        QuestionnaireRepository, instance=True
+    )
+
+    async def questionnaire_for_user(
+        user_id: UUID, kind: QuestionnaireKind
+    ) -> Questionnaire:
+        fields = await unit_of_work.fields.list_for_user(user_id)
+        return Questionnaire(
+            uuid7(),
+            user_id,
+            kind,
+            {
+                field.id: QuestionnaireField(
+                    field.id,
+                    index,
+                    role=(
+                        QuestionnaireFieldRole.EVENT_DESCRIPTION
+                        if kind is QuestionnaireKind.EVENT and field.name == "Описание"
+                        else (
+                            QuestionnaireFieldRole.DAY_STATE
+                            if (
+                                kind is QuestionnaireKind.DAY
+                                and field.name == "Состояние"
+                            )
+                            else QuestionnaireFieldRole.ORDINARY
+                        )
+                    ),
+                )
+                for index, field in enumerate(fields)
+            },
+        )
+
+    unit_of_work.questionnaires.get = AsyncMock(side_effect=questionnaire_for_user)
     unit_of_work.days = create_autospec(DayRepository, instance=True)
     unit_of_work.events = create_autospec(EventRepository, instance=True)
     unit_of_work.reference_days = create_autospec(

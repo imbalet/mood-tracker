@@ -4,14 +4,18 @@ from uuid import UUID
 
 from mood_tracker.application.commands import (
     AddFieldVersion,
+    AttachFieldToQuestionnaire,
     CreateField,
-    ListFields,
+    DeleteField,
+    DetachFieldFromQuestionnaire,
+    ListQuestionnaireFields,
     MoveDirection,
-    MoveField,
+    MoveQuestionnaireField,
+    QuestionnaireFieldItem,
     RenameField,
     SetFieldDisplay,
-    SetFieldSortOrder,
-    SetFieldStatus,
+    SetQuestionnaireFieldEnabled,
+    SetQuestionnaireFieldRequired,
 )
 from mood_tracker.application.errors import FieldNotFound, UserNotFound
 from mood_tracker.application.ports import Clock, IdGenerator, UnitOfWork
@@ -19,9 +23,12 @@ from mood_tracker.application.use_cases._transactions import (
     execute_transaction,
     execute_write,
 )
-from mood_tracker.domain.entities import Field, FieldVersion
+from mood_tracker.domain.entities import Field, FieldVersion, Questionnaire
 from mood_tracker.domain.entities.questionnaire import QuestionnaireField
-from mood_tracker.domain.enums import QuestionnaireKind
+from mood_tracker.domain.enums import (
+    QuestionnaireFieldRole,
+    QuestionnaireKind,
+)
 from mood_tracker.domain.errors import InvalidFieldVersion
 
 
@@ -35,6 +42,27 @@ async def _get_owned_field(uow: UnitOfWork, user_id: UUID, field_id: UUID) -> Fi
 async def _ensure_user_exists(uow: UnitOfWork, user_id: UUID) -> None:
     if await uow.users.get(user_id) is None:
         raise UserNotFound
+
+
+async def _get_questionnaire(
+    uow: UnitOfWork, user_id: UUID, kind: QuestionnaireKind
+) -> Questionnaire:
+    questionnaire = await uow.questionnaires.get(user_id, kind)
+    if questionnaire is None:
+        raise FieldNotFound
+    return questionnaire
+
+
+async def _questionnaire_fields(
+    uow: UnitOfWork, user_id: UUID, kind: QuestionnaireKind
+) -> tuple[QuestionnaireFieldItem, ...]:
+    questionnaire = await _get_questionnaire(uow, user_id, kind)
+    fields = {field.id: field for field in await uow.fields.list_for_user(user_id)}
+    return tuple(
+        QuestionnaireFieldItem(fields[placement.field_id], placement)
+        for placement in questionnaire.ordered_fields()
+        if placement.field_id in fields
+    )
 
 
 class CreateFieldUseCase:
@@ -66,34 +94,18 @@ class CreateFieldUseCase:
                 name=command.name,
                 display_config=command.display_config,
                 current_version=version,
-                questionnaire_fields={
-                    QuestionnaireKind.DAY: QuestionnaireField(
-                        field_id, command.sort_order
-                    )
-                },
             )
             await self._uow.fields.add(field)
+            questionnaire = await _get_questionnaire(
+                self._uow, command.user_id, QuestionnaireKind.DAY
+            )
+            questionnaire.fields[field.id] = QuestionnaireField(
+                field.id, command.sort_order
+            )
+            await self._uow.questionnaires.save(questionnaire)
             return field
 
         return await execute_write(self._uow, operation)
-
-
-class ListFieldsUseCase:
-    """Read user-owned fields in their configured order."""
-
-    def __init__(self, uow: UnitOfWork) -> None:
-        self._uow = uow
-
-    async def execute(self, command: ListFields) -> tuple[Field, ...]:
-        """Return all fields only when the owner exists."""
-        async with self._uow:
-            await _ensure_user_exists(self._uow, command.user_id)
-            return tuple(
-                sorted(
-                    await self._uow.fields.list_for_user(command.user_id),
-                    key=lambda field: field.sort_order,
-                )
-            )
 
 
 class RenameFieldUseCase:
@@ -114,24 +126,6 @@ class RenameFieldUseCase:
         return await execute_transaction(self._uow, operation)
 
 
-class SetFieldStatusUseCase:
-    """Change a field lifecycle state."""
-
-    def __init__(self, uow: UnitOfWork) -> None:
-        self._uow = uow
-
-    async def execute(self, command: SetFieldStatus) -> Field:
-        """Persist a lifecycle change while keeping core rules in domain."""
-
-        async def operation() -> Field:
-            field = await _get_owned_field(self._uow, command.user_id, command.field_id)
-            field.set_status(command.status)
-            await self._uow.fields.save(field)
-            return field
-
-        return await execute_transaction(self._uow, operation)
-
-
 class SetFieldDisplayUseCase:
     """Change global visual field settings."""
 
@@ -146,68 +140,6 @@ class SetFieldDisplayUseCase:
             field.set_display_config(command.display_config)
             await self._uow.fields.save(field)
             return field
-
-        return await execute_transaction(self._uow, operation)
-
-
-class SetFieldSortOrderUseCase:
-    """Change one field's position."""
-
-    def __init__(self, uow: UnitOfWork) -> None:
-        self._uow = uow
-
-    async def execute(self, command: SetFieldSortOrder) -> Field:
-        """Persist a new sort order."""
-
-        async def operation() -> Field:
-            field = await _get_owned_field(self._uow, command.user_id, command.field_id)
-            field.set_sort_order(command.sort_order)
-            await self._uow.fields.save(field)
-            return field
-
-        return await execute_transaction(self._uow, operation)
-
-
-class MoveFieldUseCase:
-    """Move a field while keeping every user order unique and contiguous."""
-
-    def __init__(self, uow: UnitOfWork) -> None:
-        self._uow = uow
-
-    async def execute(self, command: MoveField) -> tuple[Field, ...]:
-        """Swap one field with its neighbour and persist normalized positions."""
-
-        async def operation() -> tuple[Field, ...]:
-            await _ensure_user_exists(self._uow, command.user_id)
-            fields = list(
-                sorted(
-                    await self._uow.fields.list_for_user(command.user_id),
-                    key=lambda field: (field.sort_order, str(field.id)),
-                )
-            )
-            current_index = next(
-                (
-                    index
-                    for index, field in enumerate(fields)
-                    if field.id == command.field_id
-                ),
-                None,
-            )
-            if current_index is None:
-                raise FieldNotFound
-            target_index = current_index + (
-                -1 if command.direction is MoveDirection.UP else 1
-            )
-            if 0 <= target_index < len(fields):
-                fields[current_index], fields[target_index] = (
-                    fields[target_index],
-                    fields[current_index],
-                )
-            for index, field in enumerate(fields):
-                if field.sort_order != index:
-                    field.set_sort_order(index)
-                    await self._uow.fields.save(field)
-            return tuple(fields)
 
         return await execute_transaction(self._uow, operation)
 
@@ -242,3 +174,136 @@ class AddFieldVersionUseCase:
             return field
 
         return await execute_write(self._uow, operation)
+
+
+class QuestionnaireFieldUseCase:
+    """Configure a field's participation in an explicitly selected questionnaire."""
+
+    def __init__(self, uow: UnitOfWork, clock: Clock) -> None:
+        self._uow = uow
+        self._clock = clock
+
+    async def attach(self, command: AttachFieldToQuestionnaire) -> Field:
+        async def operation() -> Field:
+            field = await _get_owned_field(self._uow, command.user_id, command.field_id)
+            questionnaire = await _get_questionnaire(
+                self._uow, command.user_id, command.kind
+            )
+            questionnaire.fields[command.field_id] = QuestionnaireField(
+                command.field_id, command.sort_order, is_required=command.is_required
+            )
+            await self._uow.questionnaires.save(questionnaire)
+            return field
+
+        return await execute_transaction(self._uow, operation)
+
+    async def detach(self, command: DetachFieldFromQuestionnaire) -> Field:
+        async def operation() -> Field:
+            field = await _get_owned_field(self._uow, command.user_id, command.field_id)
+            questionnaire = await _get_questionnaire(
+                self._uow, command.user_id, command.kind
+            )
+            placement = questionnaire.fields.get(field.id)
+            if placement is None:
+                raise FieldNotFound
+            if placement.role is not QuestionnaireFieldRole.ORDINARY:
+                raise InvalidFieldVersion(
+                    "System questionnaire field cannot be detached"
+                )
+            del questionnaire.fields[field.id]
+            await self._uow.questionnaires.save(questionnaire)
+            return field
+
+        return await execute_transaction(self._uow, operation)
+
+    async def set_enabled(self, command: SetQuestionnaireFieldEnabled) -> Field:
+        async def operation() -> Field:
+            field = await _get_owned_field(self._uow, command.user_id, command.field_id)
+            questionnaire = await _get_questionnaire(
+                self._uow, command.user_id, command.kind
+            )
+            placement = questionnaire.fields.get(field.id)
+            if placement is None:
+                raise FieldNotFound
+            placement.set_enabled(command.is_enabled)
+            await self._uow.questionnaires.save(questionnaire)
+            return field
+
+        return await execute_transaction(self._uow, operation)
+
+    async def set_required(self, command: SetQuestionnaireFieldRequired) -> Field:
+        async def operation() -> Field:
+            field = await _get_owned_field(self._uow, command.user_id, command.field_id)
+            questionnaire = await _get_questionnaire(
+                self._uow, command.user_id, command.kind
+            )
+            placement = questionnaire.fields.get(field.id)
+            if placement is None:
+                raise FieldNotFound
+            if (
+                placement.role is QuestionnaireFieldRole.DAY_STATE
+                and not command.is_required
+            ):
+                raise InvalidFieldVersion("Day state field must remain required")
+            placement.is_required = command.is_required
+            await self._uow.questionnaires.save(questionnaire)
+            return field
+
+        return await execute_transaction(self._uow, operation)
+
+    async def move(
+        self, command: MoveQuestionnaireField
+    ) -> tuple[QuestionnaireFieldItem, ...]:
+        """Move one placement and normalize only that questionnaire's order."""
+
+        async def operation() -> tuple[QuestionnaireFieldItem, ...]:
+            questionnaire = await _get_questionnaire(
+                self._uow, command.user_id, command.kind
+            )
+            placements = list(questionnaire.ordered_fields())
+            current_index = next(
+                (
+                    index
+                    for index, placement in enumerate(placements)
+                    if placement.field_id == command.field_id
+                ),
+                None,
+            )
+            if current_index is None:
+                raise FieldNotFound
+            target_index = current_index + (
+                -1 if command.direction is MoveDirection.UP else 1
+            )
+            if 0 <= target_index < len(placements):
+                placements[current_index], placements[target_index] = (
+                    placements[target_index],
+                    placements[current_index],
+                )
+            for index, placement in enumerate(placements):
+                placement.sort_order = index
+            await self._uow.questionnaires.save(questionnaire)
+            return await _questionnaire_fields(self._uow, command.user_id, command.kind)
+
+        return await execute_transaction(self._uow, operation)
+
+    async def delete(self, command: DeleteField) -> None:
+        async def operation() -> None:
+            field = await _get_owned_field(self._uow, command.user_id, command.field_id)
+            field.delete(self._clock.now())
+            await self._uow.fields.save(field)
+
+        await execute_transaction(self._uow, operation)
+
+
+class ListQuestionnaireFieldsUseCase:
+    """List the fields assigned to one questionnaire in its own order."""
+
+    def __init__(self, uow: UnitOfWork) -> None:
+        self._uow = uow
+
+    async def execute(
+        self, command: ListQuestionnaireFields
+    ) -> tuple[QuestionnaireFieldItem, ...]:
+        async with self._uow:
+            await _ensure_user_exists(self._uow, command.user_id)
+            return await _questionnaire_fields(self._uow, command.user_id, command.kind)

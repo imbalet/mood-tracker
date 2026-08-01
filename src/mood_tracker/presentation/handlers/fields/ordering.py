@@ -3,8 +3,12 @@
 from aiogram import F, Router
 from aiogram.fsm.context import FSMContext
 
-from mood_tracker.application.commands import ListFields, MoveField
+from mood_tracker.application.commands import (
+    ListQuestionnaireFields,
+    MoveQuestionnaireField,
+)
 from mood_tracker.application.errors import FieldNotFound
+from mood_tracker.domain.enums import QuestionnaireKind
 from mood_tracker.presentation.callback_query import CallbackQueryWithMessage
 from mood_tracker.presentation.callbacks import (
     FieldAction,
@@ -36,7 +40,10 @@ async def open_field_order(
     if profile is None:
         await query.answer(TEXTS[TextKey.START_FIRST], show_alert=True)
         return
-    fields = await services.list_fields().execute(ListFields(profile.id))
+    items = await services.list_questionnaire_fields().execute(
+        ListQuestionnaireFields(profile.id, QuestionnaireKind.DAY)
+    )
+    fields = tuple(item.field for item in items)
     if not any(field.id == callback_data.field_id for field in fields):
         await query.answer(TEXTS[TextKey.FIELD_UNAVAILABLE], show_alert=True)
         return
@@ -63,7 +70,10 @@ async def move_field(
     if profile is None:
         await query.answer(TEXTS[TextKey.START_FIRST], show_alert=True)
         return
-    current_fields = await services.list_fields().execute(ListFields(profile.id))
+    items = await services.list_questionnaire_fields().execute(
+        ListQuestionnaireFields(profile.id, callback_data.kind)
+    )
+    current_fields = tuple(item.field for item in items)
     current_index = next(
         (
             index
@@ -82,8 +92,13 @@ async def move_field(
         await query.answer()
         return
     try:
-        fields = await services.move_field().execute(
-            MoveField(profile.id, callback_data.field_id, callback_data.direction)
+        items = await services.questionnaire_field().move(
+            MoveQuestionnaireField(
+                profile.id,
+                callback_data.field_id,
+                callback_data.kind,
+                callback_data.direction,
+            )
         )
     except FieldNotFound:
         await query.answer(TEXTS[TextKey.FIELD_UNAVAILABLE], show_alert=True)
@@ -92,5 +107,9 @@ async def move_field(
     await state.set_state(None)
     await presentation_data.clear_flow()
     await render_order(
-        query, presentation_data, fields, callback_data.field_id, update_main_message
+        query,
+        presentation_data,
+        tuple(item.field for item in items),
+        callback_data.field_id,
+        update_main_message,
     )

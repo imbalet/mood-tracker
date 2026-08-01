@@ -8,7 +8,8 @@ from mood_tracker.domain.entities import (
     OrdinalConfig,
     OrdinalOption,
 )
-from mood_tracker.domain.enums import DayStatus, FieldStatus, FieldType
+from mood_tracker.domain.entities.questionnaire import QuestionnaireField
+from mood_tracker.domain.enums import DayStatus, FieldType
 from mood_tracker.presentation.screens import day_card_screen, day_value_prompt_screen
 from mood_tracker.presentation.view_models import (
     make_day_card_view,
@@ -50,7 +51,16 @@ def test_day_card_keyboard_allows_editing_and_adding_current_active_fields(
             )
         },
     )
-    form = DayForm(day.date, day, (state, crying), next_field=None)
+    form = DayForm(
+        day.date,
+        day,
+        (state, crying),
+        next_field=None,
+        placements={
+            state.id: QuestionnaireField(state.id, 0),
+            crying.id: QuestionnaireField(crying.id, 1),
+        },
+    )
 
     screen = day_card_screen(make_day_card_view(form))
 
@@ -97,9 +107,15 @@ def test_day_view_uses_the_saved_ordinal_version(day_factory, field_factory) -> 
         field_version_id=previous_version.id,
         skipped=False,
     )
-    field.set_status(FieldStatus.INACTIVE)
-
-    view = make_day_card_view(DayForm(day.date, day, (field,), next_field=None))
+    view = make_day_card_view(
+        DayForm(
+            day.date,
+            day,
+            (field,),
+            next_field=None,
+            placements={field.id: QuestionnaireField(field.id, 0, is_enabled=False)},
+        )
+    )
 
     assert view.entries[0].rendered_value == "Да"
     assert view.actions[0].action.value == "edit"

@@ -27,6 +27,13 @@ class QuestionnaireField:
             msg = "Day state field must remain enabled and required"
             raise CoreFieldViolation(msg)
 
+    def set_enabled(self, is_enabled: bool) -> None:
+        """Toggle question visibility while protecting the daily-state invariant."""
+        if self.role is QuestionnaireFieldRole.DAY_STATE and not is_enabled:
+            msg = "Day state field must remain enabled"
+            raise CoreFieldViolation(msg)
+        self.is_enabled = is_enabled
+
 
 @dataclass(slots=True)
 class Questionnaire:

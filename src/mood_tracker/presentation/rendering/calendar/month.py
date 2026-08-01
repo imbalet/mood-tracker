@@ -10,7 +10,12 @@ from aiogram.types import BufferedInputFile
 
 from mood_tracker.application.commands import MonthCalendar
 from mood_tracker.domain.entities import Field
-from mood_tracker.domain.enums import DayStatus, ReferenceType
+from mood_tracker.domain.entities.questionnaire import QuestionnaireField
+from mood_tracker.domain.enums import (
+    DayStatus,
+    QuestionnaireFieldRole,
+    ReferenceType,
+)
 from mood_tracker.presentation.rendering.calendar.orchestrator import (
     RenderedImage,
     RenderOrchestrator,
@@ -220,16 +225,21 @@ def _to_visualization_data(source: MonthCalendar) -> DiaryVisualizationData:
             )
             for day in source.days
         ),
-        fields=tuple(_field_data(field) for field in source.fields),
+        fields=tuple(
+            _field_data(field, source.placements.get(field.id))
+            for field in source.fields
+        ),
     )
 
 
-def _field_data(field: Field) -> FieldData:
+def _field_data(field: Field, placement: QuestionnaireField | None) -> FieldData:
     palette = field.display_config.state_palette
     return FieldData(
         id=field.id,
-        is_core=field.is_core,
-        sort_order=field.sort_order,
+        is_core=(
+            placement is not None and placement.role is QuestionnaireFieldRole.DAY_STATE
+        ),
+        sort_order=placement.sort_order if placement is not None else 0,
         emoji=field.display_config.emoji,
         show_in_calendar=field.display_config.show_in_calendar,
         state_palette=None

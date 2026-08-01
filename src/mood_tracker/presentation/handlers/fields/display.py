@@ -6,9 +6,13 @@ from aiogram import F, Router
 from aiogram.fsm.context import FSMContext
 from aiogram.types import Message
 
-from mood_tracker.application.commands import SetFieldDisplay, SetFieldStatus
+from mood_tracker.application.commands import (
+    SetFieldDisplay,
+    SetQuestionnaireFieldEnabled,
+)
 from mood_tracker.application.errors import FieldNotFound
 from mood_tracker.domain.entities import FieldDisplayConfig, StatePalette
+from mood_tracker.domain.enums import FieldStatus
 from mood_tracker.domain.errors import CoreFieldViolation, InvalidFieldVersion
 from mood_tracker.presentation.callback_query import CallbackQueryWithMessage
 from mood_tracker.presentation.callbacks import (
@@ -185,8 +189,13 @@ async def set_status(
         await query.answer(TEXTS[TextKey.START_FIRST], show_alert=True)
         return
     try:
-        field = await services.set_field_status().execute(
-            SetFieldStatus(profile.id, callback_data.field_id, callback_data.status)
+        field = await services.questionnaire_field().set_enabled(
+            SetQuestionnaireFieldEnabled(
+                profile.id,
+                callback_data.field_id,
+                callback_data.kind,
+                callback_data.status is FieldStatus.ACTIVE,
+            )
         )
     except FieldNotFound, CoreFieldViolation:
         await query.answer(TEXTS[TextKey.FIELD_UNAVAILABLE], show_alert=True)
@@ -296,7 +305,7 @@ async def _update_display(
         else:
             await invalidate_form(state, presentation_data, event, update_main_message)
         return
-    if update_palette and not field.is_core:
+    if update_palette and (field.display_config.state_palette is None):
         if isinstance(event, CallbackQueryWithMessage):
             await event.answer(TEXTS[TextKey.FIELD_UNAVAILABLE], show_alert=True)
         else:

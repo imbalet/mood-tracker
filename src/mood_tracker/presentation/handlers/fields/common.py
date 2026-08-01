@@ -5,8 +5,10 @@ from uuid import UUID
 from aiogram.fsm.context import FSMContext
 from aiogram.types import Message
 
-from mood_tracker.application.commands import ListFields
+from mood_tracker.application.commands import ListQuestionnaireFields
 from mood_tracker.domain.entities import Field, UserProfile
+from mood_tracker.domain.entities.questionnaire import QuestionnaireField
+from mood_tracker.domain.enums import QuestionnaireKind
 from mood_tracker.presentation.callback_query import CallbackQueryWithMessage
 from mood_tracker.presentation.constants import TEXTS, TextKey
 from mood_tracker.presentation.screens import (
@@ -34,9 +36,13 @@ async def render_fields(
     update_main_message: UpdateMainMessage,
 ) -> None:
     """Render the field settings list for an owned profile."""
-    fields = await services.list_fields().execute(ListFields(profile.id))
+    items = await services.list_questionnaire_fields().execute(
+        ListQuestionnaireFields(profile.id, QuestionnaireKind.DAY)
+    )
     await update_main_message(
-        presentation_data, event, fields_list_screen(make_fields_list_view(fields))
+        presentation_data,
+        event,
+        fields_list_screen(make_fields_list_view(tuple(item.field for item in items))),
     )
 
 
@@ -45,10 +51,13 @@ async def render_field(
     presentation_data: PresentationData,
     field: Field,
     update_main_message: UpdateMainMessage,
+    placement: QuestionnaireField | None = None,
 ) -> None:
     """Render one field's settings card."""
     await update_main_message(
-        presentation_data, event, field_card_screen(make_field_card_view(field))
+        presentation_data,
+        event,
+        field_card_screen(make_field_card_view(field, placement)),
     )
 
 

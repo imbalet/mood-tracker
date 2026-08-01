@@ -4,7 +4,12 @@ from dataclasses import dataclass
 from uuid import UUID
 
 from mood_tracker.domain.entities import Field, OrdinalConfig, ScaleConfig
-from mood_tracker.domain.enums import FieldStatus, FieldType
+from mood_tracker.domain.entities.questionnaire import QuestionnaireField
+from mood_tracker.domain.enums import (
+    FieldStatus,
+    FieldType,
+    QuestionnaireFieldRole,
+)
 
 
 @dataclass(frozen=True, slots=True)
@@ -75,7 +80,9 @@ def make_fields_list_view(fields: tuple[Field, ...]) -> FieldsListView:
     )
 
 
-def make_field_card_view(field: Field) -> FieldCardView:
+def make_field_card_view(
+    field: Field, placement: QuestionnaireField | None = None
+) -> FieldCardView:
     """Map current field semantics and display settings into one card."""
     config = field.current_version.config
     if isinstance(config, ScaleConfig):
@@ -87,17 +94,24 @@ def make_field_card_view(field: Field) -> FieldCardView:
     else:
         semantic_text = "Свободный текст"
     palette = field.display_config.state_palette
+    is_core = (
+        placement is not None and placement.role is QuestionnaireFieldRole.DAY_STATE
+    ) or field.display_config.state_palette is not None
     return FieldCardView(
         id=field.id,
         name=field.name,
-        status=field.status,
+        status=(
+            FieldStatus.ACTIVE
+            if placement is None or placement.is_enabled
+            else FieldStatus.INACTIVE
+        ),
         type=field.current_version.type,
-        is_core=field.is_core,
+        is_core=is_core,
         semantic_text=semantic_text,
         emoji=field.display_config.emoji,
         show_in_calendar=field.display_config.show_in_calendar,
         version_count=len(field.versions),
-        position=field.sort_order + 1,
+        position=(placement.sort_order + 1) if placement is not None else 0,
         palette_colors=(palette.minimum, palette.middle, palette.maximum)
         if palette is not None
         else None,
@@ -122,11 +136,20 @@ def make_field_order_view(
     )
 
 
-def make_palette_view(field: Field) -> PaletteView | None:
+def make_palette_view(
+    field: Field, placement: QuestionnaireField | None = None
+) -> PaletteView | None:
     """Return a core Scale palette ready for visual rendering, if configured."""
     config = field.current_version.config
     palette = field.display_config.state_palette
-    if not field.is_core or not isinstance(config, ScaleConfig) or palette is None:
+    if (
+        (
+            placement is not None
+            and placement.role is not QuestionnaireFieldRole.DAY_STATE
+        )
+        or not isinstance(config, ScaleConfig)
+        or palette is None
+    ):
         return None
     return PaletteView(
         field_id=field.id,

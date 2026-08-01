@@ -13,13 +13,12 @@ from mood_tracker.application.use_cases import (
     GetEventsForDateUseCase,
     GetMonthCalendarUseCase,
     GetUserByTelegramIdUseCase,
-    ListFieldsUseCase,
-    MoveFieldUseCase,
+    ListQuestionnaireFieldsUseCase,
+    QuestionnaireFieldUseCase,
     RegisterUserUseCase,
     RenameFieldUseCase,
     SaveDayValueUseCase,
     SetFieldDisplayUseCase,
-    SetFieldStatusUseCase,
     SkipDayTextUseCase,
 )
 from mood_tracker.infrastructure.clock import SystemClock
@@ -60,8 +59,11 @@ class ApplicationServices:
     def confirm_reference(self) -> ConfirmReferenceUseCase:
         return ConfirmReferenceUseCase(self._uow(), SystemClock(), Uuid7IdGenerator())
 
-    def list_fields(self) -> ListFieldsUseCase:
-        return ListFieldsUseCase(self._uow())
+    def list_questionnaire_fields(self) -> ListQuestionnaireFieldsUseCase:
+        return ListQuestionnaireFieldsUseCase(self._uow())
+
+    def questionnaire_field(self) -> QuestionnaireFieldUseCase:
+        return QuestionnaireFieldUseCase(self._uow(), SystemClock())
 
     def create_field(self) -> CreateFieldUseCase:
         return CreateFieldUseCase(self._uow(), SystemClock(), Uuid7IdGenerator())
@@ -69,14 +71,8 @@ class ApplicationServices:
     def rename_field(self) -> RenameFieldUseCase:
         return RenameFieldUseCase(self._uow())
 
-    def set_field_status(self) -> SetFieldStatusUseCase:
-        return SetFieldStatusUseCase(self._uow())
-
     def set_field_display(self) -> SetFieldDisplayUseCase:
         return SetFieldDisplayUseCase(self._uow())
-
-    def move_field(self) -> MoveFieldUseCase:
-        return MoveFieldUseCase(self._uow())
 
     def add_field_version(self) -> AddFieldVersionUseCase:
         return AddFieldVersionUseCase(self._uow(), SystemClock(), Uuid7IdGenerator())

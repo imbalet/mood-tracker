@@ -9,7 +9,8 @@ from mood_tracker.domain.entities.field import (
     OrdinalOption,
     ScaleConfig,
 )
-from mood_tracker.domain.enums import FieldStatus, FieldType
+from mood_tracker.domain.entities.questionnaire import QuestionnaireField
+from mood_tracker.domain.enums import FieldType, QuestionnaireFieldRole
 from mood_tracker.domain.errors import CoreFieldViolation, InvalidFieldVersion
 from tests.factories import FieldFactory
 
@@ -46,6 +47,7 @@ def test_field_version_rejects_config_of_another_type() -> None:
 
 def test_core_field_cannot_be_hidden(field_factory: FieldFactory) -> None:
     field = field_factory.scale(is_core=True)
+    placement = QuestionnaireField(field.id, 0, role=QuestionnaireFieldRole.DAY_STATE)
 
     with pytest.raises(CoreFieldViolation):
-        field.set_status(FieldStatus.HIDDEN)
+        placement.set_enabled(False)

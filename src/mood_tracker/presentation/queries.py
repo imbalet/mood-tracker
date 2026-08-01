@@ -2,8 +2,12 @@
 
 from uuid import UUID
 
-from mood_tracker.application.commands import GetUserByTelegramId, ListFields
+from mood_tracker.application.commands import (
+    GetUserByTelegramId,
+    ListQuestionnaireFields,
+)
 from mood_tracker.domain.entities import Field, UserProfile
+from mood_tracker.domain.enums import QuestionnaireKind
 from mood_tracker.presentation.services import ApplicationServices
 
 
@@ -22,9 +26,11 @@ async def get_owned_field(
     """Return a field only when it belongs to the supplied profile."""
     return next(
         (
-            field
-            for field in await services.list_fields().execute(ListFields(profile.id))
-            if field.id == field_id
+            item.field
+            for item in await services.list_questionnaire_fields().execute(
+                ListQuestionnaireFields(profile.id, QuestionnaireKind.DAY)
+            )
+            if item.field.id == field_id
         ),
         None,
     )

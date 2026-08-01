@@ -11,6 +11,7 @@ from mood_tracker.application.ports.repositories import (
     DayRepository,
     EventRepository,
     FieldRepository,
+    QuestionnaireRepository,
     ReferenceDaysRepository,
     UserRepository,
 )
@@ -18,6 +19,7 @@ from mood_tracker.infrastructure.db.repositories import (
     SqlAlchemyDayRepository,
     SqlAlchemyEventRepository,
     SqlAlchemyFieldRepository,
+    SqlAlchemyQuestionnaireRepository,
     SqlAlchemyReferenceDaysRepository,
     SqlAlchemyUserRepository,
 )
@@ -26,6 +28,7 @@ from mood_tracker.infrastructure.db.repositories import (
 class SqlAlchemyUnitOfWork:
     users: UserRepository
     fields: FieldRepository
+    questionnaires: QuestionnaireRepository
     days: DayRepository
     events: EventRepository
     reference_days: ReferenceDaysRepository
@@ -38,6 +41,7 @@ class SqlAlchemyUnitOfWork:
         self._session = self._factory()
         self.users = SqlAlchemyUserRepository(self._session)
         self.fields = SqlAlchemyFieldRepository(self._session)
+        self.questionnaires = SqlAlchemyQuestionnaireRepository(self._session)
         self.days = SqlAlchemyDayRepository(self._session)
         self.events = SqlAlchemyEventRepository(self._session)
         self.reference_days = SqlAlchemyReferenceDaysRepository(self._session)
