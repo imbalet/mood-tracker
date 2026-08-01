@@ -37,7 +37,8 @@ class RegisterUserUseCase:
                 telegram_id=command.telegram_id,
                 timezone=command.timezone,
             )
-            ids = DefaultFieldIds(*(self._id_generator.new() for _ in range(8)))
+            # мб отрефакторить
+            ids = DefaultFieldIds(*(self._id_generator.new() for _ in range(10)))
             fields = create_default_fields(user.id, ids, self._clock.now())
             await self._uow.users.add(user)
             for field in fields:

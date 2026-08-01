@@ -16,7 +16,7 @@ async def test_register_user_creates_default_profile_and_fields(
 
     assert user.telegram_id == 42
     uow.users.add.assert_awaited_once_with(user)
-    assert uow.fields.add.await_count == 4
+    assert uow.fields.add.await_count == 5
     uow.commit.assert_awaited_once()
 
 

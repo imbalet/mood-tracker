@@ -6,9 +6,13 @@ from uuid import UUID
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from mood_tracker.domain.entities import Field
+from mood_tracker.domain.entities import EventFieldConfig, Field
 from mood_tracker.domain.enums import FieldStatus
-from mood_tracker.infrastructure.db.models import FieldOrm, FieldVersionOrm
+from mood_tracker.infrastructure.db.models import (
+    EventFieldOrm,
+    FieldOrm,
+    FieldVersionOrm,
+)
 from mood_tracker.infrastructure.db.repositories._mapping import (
     display_from_json,
     display_to_json,
@@ -56,6 +60,15 @@ class SqlAlchemyFieldRepository:
         )
         for version in field.versions:
             self._session.add(version_to_orm(version))
+        if field.event_config is not None:
+            self._session.add(
+                EventFieldOrm(
+                    field_id=field.id,
+                    required=field.event_config.required,
+                    sort_order=field.event_config.sort_order,
+                    is_system=field.event_config.is_system,
+                )
+            )
 
     async def save(self, field: Field) -> None:
         row = await self._session.get(FieldOrm, field.id)
@@ -86,6 +99,23 @@ class SqlAlchemyFieldRepository:
         for version in field.versions:
             if version.id not in known_version_ids:
                 self._session.add(version_to_orm(version))
+        config = await self._session.get(EventFieldOrm, field.id)
+        if field.event_config is None:
+            if config is not None:
+                await self._session.delete(config)
+        elif config is None:
+            self._session.add(
+                EventFieldOrm(
+                    field_id=field.id,
+                    required=field.event_config.required,
+                    sort_order=field.event_config.sort_order,
+                    is_system=field.event_config.is_system,
+                )
+            )
+        else:
+            config.required = field.event_config.required
+            config.sort_order = field.event_config.sort_order
+            config.is_system = field.event_config.is_system
 
     async def _to_domain(self, row: FieldOrm) -> Field:
         version_rows = (
@@ -99,6 +129,7 @@ class SqlAlchemyFieldRepository:
         current_version = next(
             version for version in versions if version.id == row.current_version_id
         )
+        event_config = await self._session.get(EventFieldOrm, row.id)
         return Field(
             row.id,
             row.user_id,
@@ -109,6 +140,15 @@ class SqlAlchemyFieldRepository:
             display_from_json(row.display_config),
             current_version,
             versions,
+            (
+                EventFieldConfig(
+                    event_config.required,
+                    event_config.sort_order,
+                    event_config.is_system,
+                )
+                if event_config is not None
+                else None
+            ),
         )
 
 

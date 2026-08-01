@@ -25,6 +25,7 @@ from mood_tracker.presentation.error_handler import (
 from mood_tracker.presentation.errors import StaleCallback
 from mood_tracker.presentation.handlers import (
     calendar_router,
+    events_router,
     fields_router,
     menu_router,
     onboarding_router,
@@ -64,7 +65,12 @@ async def run() -> None:
     services = ApplicationServices(session_factory)
     calendar_images = MonthCalendarImageService()
     dispatcher.include_routers(
-        menu_router, onboarding_router, today_router, calendar_router, fields_router
+        menu_router,
+        onboarding_router,
+        today_router,
+        events_router,
+        calendar_router,
+        fields_router,
     )
     dispatcher.update.middleware(
         ApplicationMiddleware(services, Sender(bot), calendar_images)
@@ -81,6 +87,7 @@ async def run() -> None:
                 BotCommand(command="start", description="Открыть дневник"),
                 BotCommand(command="menu", description="Открыть меню"),
                 BotCommand(command="today", description="Заполнить сегодняшний день"),
+                BotCommand(command="event", description="Быстро записать событие"),
                 BotCommand(command="dates", description="Выбрать дату"),
                 BotCommand(command="calendar", description="Календарь месяца"),
             ]

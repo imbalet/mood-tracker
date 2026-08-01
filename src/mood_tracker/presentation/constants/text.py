@@ -96,6 +96,9 @@ class TextKey(StrEnum):
     INVALID_FIELD_INPUT = "invalid_field_input"
     INVALID_SCALE_INPUT = "invalid_scale_input"
     INVALID_PALETTE_INPUT = "invalid_palette_input"
+    EVENT_COMMAND_HINT = "event_command_hint"
+    EVENT_SAVED = "event_saved"
+    EVENT_NOT_SAVED = "event_not_saved"
 
 
 _TEXTS: dict[TextKey, str] = {
@@ -210,6 +213,13 @@ _TEXTS: dict[TextKey, str] = {
         "⚠️ Нужны три HEX-цвета через пробел. Например "
         "<code>#D9534F #F0E68C #5CB85C</code>."
     ),
+    TextKey.EVENT_COMMAND_HINT: (
+        "Напиши событие после команды, например: <code>/event важный разговор</code>."
+    ),
+    TextKey.EVENT_SAVED: (
+        "⏳ Событие сохранено как черновик. Позже его можно будет дополнить."
+    ),
+    TextKey.EVENT_NOT_SAVED: "Не удалось сохранить событие. Попробуй ещё раз.",
 }
 
 

@@ -7,6 +7,7 @@ from typing import Protocol, Self
 
 from mood_tracker.application.ports.repositories import (
     DayRepository,
+    EventRepository,
     FieldRepository,
     ReferenceDaysRepository,
     UserRepository,
@@ -19,6 +20,7 @@ class UnitOfWork(Protocol):
     users: UserRepository
     fields: FieldRepository
     days: DayRepository
+    events: EventRepository
     reference_days: ReferenceDaysRepository
 
     async def __aenter__(self) -> Self: ...

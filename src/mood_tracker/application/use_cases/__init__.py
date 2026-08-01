@@ -7,6 +7,10 @@ from mood_tracker.application.use_cases.days import (
     SaveDayValueUseCase,
     SkipDayTextUseCase,
 )
+from mood_tracker.application.use_cases.events import (
+    CreateQuickEventUseCase,
+    GetEventsForDateUseCase,
+)
 from mood_tracker.application.use_cases.fields import (
     AddFieldVersionUseCase,
     CreateFieldUseCase,
@@ -29,7 +33,9 @@ __all__ = [
     "AddFieldVersionUseCase",
     "ConfirmReferenceUseCase",
     "CreateFieldUseCase",
+    "CreateQuickEventUseCase",
     "GetDayUseCase",
+    "GetEventsForDateUseCase",
     "GetUserByTelegramIdUseCase",
     "GetReferenceHistoryUseCase",
     "ListFieldsUseCase",

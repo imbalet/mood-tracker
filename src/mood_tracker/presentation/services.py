@@ -8,7 +8,9 @@ from mood_tracker.application.use_cases import (
     AddFieldVersionUseCase,
     ConfirmReferenceUseCase,
     CreateFieldUseCase,
+    CreateQuickEventUseCase,
     GetDayUseCase,
+    GetEventsForDateUseCase,
     GetMonthCalendarUseCase,
     GetUserByTelegramIdUseCase,
     ListFieldsUseCase,
@@ -42,6 +44,12 @@ class ApplicationServices:
 
     def get_month_calendar(self) -> GetMonthCalendarUseCase:
         return GetMonthCalendarUseCase(self._uow())
+
+    def get_events_for_date(self) -> GetEventsForDateUseCase:
+        return GetEventsForDateUseCase(self._uow())
+
+    def create_quick_event(self) -> CreateQuickEventUseCase:
+        return CreateQuickEventUseCase(self._uow(), SystemClock(), Uuid7IdGenerator())
 
     def save_day_value(self) -> SaveDayValueUseCase:
         return SaveDayValueUseCase(self._uow(), SystemClock(), Uuid7IdGenerator())

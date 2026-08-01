@@ -180,6 +180,20 @@ class FieldDisplayConfig:
 
 
 @dataclass(frozen=True, slots=True)
+class EventFieldConfig:
+    """One field's independent participation in the event questionnaire."""
+
+    required: bool
+    sort_order: int
+    is_system: bool = False
+
+    def __post_init__(self) -> None:
+        if self.sort_order < 0:
+            msg = "Event field sort order cannot be negative"
+            raise InvalidFieldVersion(msg)
+
+
+@dataclass(frozen=True, slots=True)
 class FieldVersion:
     """Immutable meaning of a field at the point a value is saved."""
 
@@ -212,6 +226,7 @@ class Field:
     display_config: FieldDisplayConfig
     current_version: FieldVersion
     versions: list[FieldVersion] = field(default_factory=list)
+    event_config: EventFieldConfig | None = None
 
     def __post_init__(self) -> None:
         _require_non_empty(self.name, "Field name")

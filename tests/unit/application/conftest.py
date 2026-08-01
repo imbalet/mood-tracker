@@ -8,6 +8,7 @@ import pytest
 from mood_tracker.application.ports import (
     Clock,
     DayRepository,
+    EventRepository,
     FieldRepository,
     IdGenerator,
     ReferenceDaysRepository,
@@ -52,6 +53,7 @@ def uow() -> UnitOfWork:
     unit_of_work.users = create_autospec(UserRepository, instance=True)
     unit_of_work.fields = create_autospec(FieldRepository, instance=True)
     unit_of_work.days = create_autospec(DayRepository, instance=True)
+    unit_of_work.events = create_autospec(EventRepository, instance=True)
     unit_of_work.reference_days = create_autospec(
         ReferenceDaysRepository, instance=True
     )

@@ -9,12 +9,14 @@ from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 from mood_tracker.application.errors import IdentifierCollision
 from mood_tracker.application.ports.repositories import (
     DayRepository,
+    EventRepository,
     FieldRepository,
     ReferenceDaysRepository,
     UserRepository,
 )
 from mood_tracker.infrastructure.db.repositories import (
     SqlAlchemyDayRepository,
+    SqlAlchemyEventRepository,
     SqlAlchemyFieldRepository,
     SqlAlchemyReferenceDaysRepository,
     SqlAlchemyUserRepository,
@@ -25,6 +27,7 @@ class SqlAlchemyUnitOfWork:
     users: UserRepository
     fields: FieldRepository
     days: DayRepository
+    events: EventRepository
     reference_days: ReferenceDaysRepository
 
     def __init__(self, session_factory: async_sessionmaker[AsyncSession]) -> None:
@@ -36,6 +39,7 @@ class SqlAlchemyUnitOfWork:
         self.users = SqlAlchemyUserRepository(self._session)
         self.fields = SqlAlchemyFieldRepository(self._session)
         self.days = SqlAlchemyDayRepository(self._session)
+        self.events = SqlAlchemyEventRepository(self._session)
         self.reference_days = SqlAlchemyReferenceDaysRepository(self._session)
         return self
 

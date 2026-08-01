@@ -6,6 +6,7 @@ from typing import Any
 from uuid import UUID
 
 from sqlalchemy import (
+    BigInteger,
     Boolean,
     CheckConstraint,
     Date,
@@ -43,7 +44,7 @@ class Timestamped:
 class UserOrm(Timestamped, Base):
     __tablename__ = "users"
     id: Mapped[UUID] = mapped_column(postgresql.UUID(as_uuid=True), primary_key=True)
-    telegram_id: Mapped[int] = mapped_column(unique=True, nullable=False)
+    telegram_id: Mapped[int] = mapped_column(BigInteger, unique=True, nullable=False)
     timezone: Mapped[str] = mapped_column(String(64), nullable=False)
     reminder_enabled: Mapped[bool] = mapped_column(
         Boolean, default=False, nullable=False
@@ -89,6 +90,17 @@ class FieldVersionOrm(Base):
     )
 
 
+class EventFieldOrm(Base):
+    __tablename__ = "event_fields"
+    __table_args__ = (
+        CheckConstraint("sort_order >= 0", name="event_fields_sort_order_check"),
+    )
+    field_id: Mapped[UUID] = mapped_column(ForeignKey("fields.id"), primary_key=True)
+    required: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
+    sort_order: Mapped[int] = mapped_column(Integer, nullable=False)
+    is_system: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
+
+
 class DayOrm(Timestamped, Base):
     __tablename__ = "days"
     __table_args__ = (
@@ -130,6 +142,55 @@ class DayFieldProgressOrm(Base):
     )
     id: Mapped[UUID] = mapped_column(postgresql.UUID(as_uuid=True), primary_key=True)
     day_id: Mapped[UUID] = mapped_column(ForeignKey("days.id"), nullable=False)
+    field_id: Mapped[UUID] = mapped_column(ForeignKey("fields.id"), nullable=False)
+    field_version_id: Mapped[UUID] = mapped_column(
+        ForeignKey("field_versions.id"), nullable=False
+    )
+    skipped: Mapped[bool] = mapped_column(Boolean, nullable=False)
+
+
+class EventOrm(Timestamped, Base):
+    __tablename__ = "events"
+    __table_args__ = (
+        CheckConstraint("status IN ('draft', 'complete')", name="events_status_check"),
+    )
+    id: Mapped[UUID] = mapped_column(postgresql.UUID(as_uuid=True), primary_key=True)
+    user_id: Mapped[UUID] = mapped_column(ForeignKey("users.id"), nullable=False)
+    occurred_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), nullable=False
+    )
+    occurred_timezone: Mapped[str] = mapped_column(String(64), nullable=False)
+    status: Mapped[str] = mapped_column(String(16), nullable=False)
+    completed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    deleted_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+
+
+class EventValueOrm(Timestamped, Base):
+    __tablename__ = "event_values"
+    __table_args__ = (
+        UniqueConstraint("event_id", "field_id", name="event_values_event_field_key"),
+        CheckConstraint(
+            "normalized_value IS NULL OR normalized_value BETWEEN 0 AND 1",
+            name="event_values_normalized_check",
+        ),
+    )
+    id: Mapped[UUID] = mapped_column(postgresql.UUID(as_uuid=True), primary_key=True)
+    event_id: Mapped[UUID] = mapped_column(ForeignKey("events.id"), nullable=False)
+    field_id: Mapped[UUID] = mapped_column(ForeignKey("fields.id"), nullable=False)
+    field_version_id: Mapped[UUID] = mapped_column(
+        ForeignKey("field_versions.id"), nullable=False
+    )
+    value: Mapped[dict[str, Any]] = mapped_column(postgresql.JSONB, nullable=False)
+    normalized_value: Mapped[Decimal | None] = mapped_column(Numeric(5, 4))
+
+
+class EventFieldProgressOrm(Base):
+    __tablename__ = "event_field_progress"
+    __table_args__ = (
+        UniqueConstraint("event_id", "field_id", name="event_progress_event_field_key"),
+    )
+    id: Mapped[UUID] = mapped_column(postgresql.UUID(as_uuid=True), primary_key=True)
+    event_id: Mapped[UUID] = mapped_column(ForeignKey("events.id"), nullable=False)
     field_id: Mapped[UUID] = mapped_column(ForeignKey("fields.id"), nullable=False)
     field_version_id: Mapped[UUID] = mapped_column(
         ForeignKey("field_versions.id"), nullable=False

@@ -7,6 +7,7 @@ from datetime import datetime
 from uuid import UUID
 
 from mood_tracker.domain.entities import (
+    EventFieldConfig,
     Field,
     FieldDisplayConfig,
     FieldVersion,
@@ -31,11 +32,13 @@ class DefaultFieldIds:
     thoughts_version: UUID
     comment_field: UUID
     comment_version: UUID
+    event_description_field: UUID
+    event_description_version: UUID
 
 
 def create_default_fields(
     user_id: UUID, ids: DefaultFieldIds, created_at: datetime
-) -> tuple[Field, Field, Field, Field]:
+) -> tuple[Field, Field, Field, Field, Field]:
     """Create the standard active fields in their questionnaire display order."""
     state_version = FieldVersion(
         id=ids.state_version,
@@ -75,6 +78,13 @@ def create_default_fields(
     comment_version = FieldVersion(
         id=ids.comment_version,
         field_id=ids.comment_field,
+        type=FieldType.TEXT,
+        config=TextConfig(),
+        created_at=created_at,
+    )
+    event_description_version = FieldVersion(
+        id=ids.event_description_version,
+        field_id=ids.event_description_field,
         type=FieldType.TEXT,
         config=TextConfig(),
         created_at=created_at,
@@ -121,5 +131,16 @@ def create_default_fields(
             sort_order=3,
             display_config=FieldDisplayConfig(),
             current_version=comment_version,
+        ),
+        Field(
+            id=ids.event_description_field,
+            user_id=user_id,
+            name="Описание",
+            status=FieldStatus.ACTIVE,
+            is_core=False,
+            sort_order=4,
+            display_config=FieldDisplayConfig(),
+            current_version=event_description_version,
+            event_config=EventFieldConfig(required=False, sort_order=0, is_system=True),
         ),
     )

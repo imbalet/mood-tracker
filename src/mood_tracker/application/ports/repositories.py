@@ -5,7 +5,7 @@ from datetime import date
 from typing import Protocol
 from uuid import UUID
 
-from mood_tracker.domain.entities import Day, Field, ReferenceDays, UserProfile
+from mood_tracker.domain.entities import Day, Event, Field, ReferenceDays, UserProfile
 
 
 class UserRepository(Protocol):
@@ -48,6 +48,20 @@ class DayRepository(Protocol):
     async def add(self, day: Day) -> None: ...
 
     async def save(self, day: Day) -> None: ...
+
+
+class EventRepository(Protocol):
+    """Persist standalone, owner-scoped contextual events."""
+
+    async def get(self, user_id: UUID, event_id: UUID) -> Event | None: ...
+
+    async def list_for_date(
+        self, user_id: UUID, event_date: date
+    ) -> Sequence[Event]: ...
+
+    async def add(self, event: Event) -> None: ...
+
+    async def save(self, event: Event) -> None: ...
 
 
 class ReferenceDaysRepository(Protocol):

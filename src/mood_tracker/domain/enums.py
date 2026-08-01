@@ -26,6 +26,13 @@ class DayStatus(StrEnum):
     COMPLETE = "complete"
 
 
+class EventStatus(StrEnum):
+    """Lifecycle of an event questionnaire."""
+
+    DRAFT = "draft"
+    COMPLETE = "complete"
+
+
 class ReferenceType(StrEnum):
     """The direction of a personal best/worst reference day."""
 

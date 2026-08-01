@@ -1,7 +1,7 @@
 """Immutable input and output contracts for core application use cases."""
 
 from dataclasses import dataclass
-from datetime import date
+from datetime import date, datetime
 from enum import StrEnum
 from uuid import UUID
 
@@ -125,6 +125,31 @@ class GetDay:
 
     user_id: UUID
     day_date: date | None = None
+
+
+@dataclass(frozen=True, slots=True)
+class GetEventsForDate:
+    user_id: UUID
+    event_date: date
+
+
+@dataclass(frozen=True, slots=True)
+class CreateQuickEvent:
+    user_id: UUID
+    text: str
+
+
+@dataclass(frozen=True, slots=True)
+class ChangeEventTime:
+    user_id: UUID
+    event_id: UUID
+    occurred_at: datetime
+
+
+@dataclass(frozen=True, slots=True)
+class DeleteEvent:
+    user_id: UUID
+    event_id: UUID
 
 
 @dataclass(frozen=True, slots=True)
