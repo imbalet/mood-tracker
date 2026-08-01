@@ -1,4 +1,4 @@
-"""Factories for the four standard fields of a newly registered user."""
+"""Factories for the standard day and event fields of a new user."""
 
 from __future__ import annotations
 
@@ -7,7 +7,6 @@ from datetime import datetime
 from uuid import UUID
 
 from mood_tracker.domain.entities import (
-    EventFieldConfig,
     Field,
     FieldDisplayConfig,
     FieldVersion,
@@ -17,17 +16,18 @@ from mood_tracker.domain.entities import (
     StatePalette,
     TextConfig,
 )
-from mood_tracker.domain.enums import FieldStatus, FieldType
+from mood_tracker.domain.entities.questionnaire import QuestionnaireField
+from mood_tracker.domain.enums import (
+    FieldType,
+    QuestionnaireFieldRole,
+    QuestionnaireKind,
+)
 
 
 @dataclass(frozen=True, slots=True)
 class DefaultFieldIds:
-    """IDs supplied by application for the four default fields and versions."""
-
     state_field: UUID
     state_version: UUID
-    crying_field: UUID
-    crying_version: UUID
     thoughts_field: UUID
     thoughts_version: UUID
     comment_field: UUID
@@ -38,109 +38,89 @@ class DefaultFieldIds:
 
 def create_default_fields(
     user_id: UUID, ids: DefaultFieldIds, created_at: datetime
-) -> tuple[Field, Field, Field, Field, Field]:
-    """Create the standard active fields in their questionnaire display order."""
-    state_version = FieldVersion(
-        id=ids.state_version,
-        field_id=ids.state_field,
-        type=FieldType.SCALE,
-        config=ScaleConfig(minimum=0, maximum=10),
-        created_at=created_at,
+) -> tuple[Field, Field, Field, Field]:
+    """Create the two independent default questionnaires' reusable fields."""
+
+    def version(
+        field_id: UUID, version_id: UUID, type: FieldType, config: object
+    ) -> FieldVersion:
+        return FieldVersion(version_id, field_id, type, config, created_at)  # type: ignore[arg-type]
+
+    state = version(
+        ids.state_field, ids.state_version, FieldType.SCALE, ScaleConfig(0, 10)
     )
-    crying_version = FieldVersion(
-        id=ids.crying_version,
-        field_id=ids.crying_field,
-        type=FieldType.ORDINAL,
-        config=OrdinalConfig(
-            options=(
-                OrdinalOption(0, "Нет"),
-                OrdinalOption(1, "Немного"),
-                OrdinalOption(2, "Был"),
-                OrdinalOption(3, "Сильно"),
-            )
-        ),
-        created_at=created_at,
-    )
-    thoughts_version = FieldVersion(
-        id=ids.thoughts_version,
-        field_id=ids.thoughts_field,
-        type=FieldType.ORDINAL,
-        config=OrdinalConfig(
-            options=(
+    thoughts = version(
+        ids.thoughts_field,
+        ids.thoughts_version,
+        FieldType.ORDINAL,
+        OrdinalConfig(
+            (
                 OrdinalOption(0, "Нет"),
                 OrdinalOption(1, "Были"),
                 OrdinalOption(2, "Много"),
                 OrdinalOption(3, "Очень много"),
             )
         ),
-        created_at=created_at,
     )
-    comment_version = FieldVersion(
-        id=ids.comment_version,
-        field_id=ids.comment_field,
-        type=FieldType.TEXT,
-        config=TextConfig(),
-        created_at=created_at,
+    comment = version(
+        ids.comment_field, ids.comment_version, FieldType.TEXT, TextConfig()
     )
-    event_description_version = FieldVersion(
-        id=ids.event_description_version,
-        field_id=ids.event_description_field,
-        type=FieldType.TEXT,
-        config=TextConfig(),
-        created_at=created_at,
+    description = version(
+        ids.event_description_field,
+        ids.event_description_version,
+        FieldType.TEXT,
+        TextConfig(),
     )
     return (
         Field(
-            id=ids.state_field,
-            user_id=user_id,
-            name="Состояние",
-            status=FieldStatus.ACTIVE,
-            is_core=True,
-            sort_order=0,
-            display_config=FieldDisplayConfig(
+            ids.state_field,
+            user_id,
+            "Состояние",
+            FieldDisplayConfig(
                 state_palette=StatePalette("#D96C75", "#B8BEC7", "#6FAF8F")
             ),
-            current_version=state_version,
+            state,
+            questionnaire_fields={
+                QuestionnaireKind.DAY: QuestionnaireField(
+                    ids.state_field, 0, role=QuestionnaireFieldRole.DAY_STATE
+                )
+            },
         ),
         Field(
-            id=ids.crying_field,
-            user_id=user_id,
-            name="Плач",
-            status=FieldStatus.ACTIVE,
-            is_core=False,
-            sort_order=1,
-            display_config=FieldDisplayConfig(emoji="💧"),
-            current_version=crying_version,
+            ids.thoughts_field,
+            user_id,
+            "Негативные мысли",
+            FieldDisplayConfig(emoji="💀"),
+            thoughts,
+            questionnaire_fields={
+                QuestionnaireKind.DAY: QuestionnaireField(ids.thoughts_field, 1)
+            },
         ),
         Field(
-            id=ids.thoughts_field,
-            user_id=user_id,
-            name="Негативные мысли",
-            status=FieldStatus.ACTIVE,
-            is_core=False,
-            sort_order=2,
-            display_config=FieldDisplayConfig(emoji="💀"),
-            current_version=thoughts_version,
+            ids.comment_field,
+            user_id,
+            "Комментарий",
+            FieldDisplayConfig(),
+            comment,
+            questionnaire_fields={
+                QuestionnaireKind.DAY: QuestionnaireField(
+                    ids.comment_field, 2, is_required=False
+                )
+            },
         ),
         Field(
-            id=ids.comment_field,
-            user_id=user_id,
-            name="Комментарий",
-            status=FieldStatus.ACTIVE,
-            is_core=False,
-            sort_order=3,
-            display_config=FieldDisplayConfig(),
-            current_version=comment_version,
-        ),
-        Field(
-            id=ids.event_description_field,
-            user_id=user_id,
-            name="Описание",
-            status=FieldStatus.ACTIVE,
-            is_core=False,
-            sort_order=4,
-            display_config=FieldDisplayConfig(),
-            current_version=event_description_version,
-            event_config=EventFieldConfig(required=False, sort_order=0, is_system=True),
+            ids.event_description_field,
+            user_id,
+            "Описание",
+            FieldDisplayConfig(),
+            description,
+            questionnaire_fields={
+                QuestionnaireKind.EVENT: QuestionnaireField(
+                    ids.event_description_field,
+                    0,
+                    is_required=False,
+                    role=QuestionnaireFieldRole.EVENT_DESCRIPTION,
+                )
+            },
         ),
     )

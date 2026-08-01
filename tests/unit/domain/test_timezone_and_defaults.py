@@ -24,17 +24,16 @@ def test_default_field_factory_creates_expected_core_and_order(
 ) -> None:
     fields = create_default_fields(
         user_id=uuid7(),
-        ids=DefaultFieldIds(*(uuid7() for _ in range(10))),
+        ids=DefaultFieldIds(*(uuid7() for _ in range(8))),
         created_at=fixed_now,
     )
 
     assert [field.name for field in fields] == [
         "Состояние",
-        "Плач",
         "Негативные мысли",
         "Комментарий",
         "Описание",
     ]
     assert fields[0].is_core
     assert fields[0].current_version.type is FieldType.SCALE
-    assert fields[1].display_config.emoji == "💧"
+    assert fields[1].display_config.emoji == "💀"

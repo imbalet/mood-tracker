@@ -19,6 +19,21 @@ class FieldStatus(StrEnum):
     HIDDEN = "hidden"
 
 
+class QuestionnaireKind(StrEnum):
+    """Built-in forms which independently select and order fields."""
+
+    DAY = "day"
+    EVENT = "event"
+
+
+class QuestionnaireFieldRole(StrEnum):
+    """Non-removable system roles scoped to one questionnaire."""
+
+    ORDINARY = "ordinary"
+    DAY_STATE = "day_state"
+    EVENT_DESCRIPTION = "event_description"
+
+
 class DayStatus(StrEnum):
     """The historical completion state of a day."""
 

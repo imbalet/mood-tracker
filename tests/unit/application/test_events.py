@@ -4,7 +4,8 @@ import pytest
 
 from mood_tracker.application.commands import CreateQuickEvent
 from mood_tracker.application.use_cases.events import CreateQuickEventUseCase
-from mood_tracker.domain.entities import EventFieldConfig
+from mood_tracker.domain.entities.questionnaire import QuestionnaireField
+from mood_tracker.domain.enums import QuestionnaireFieldRole, QuestionnaireKind
 from mood_tracker.domain.errors import InvalidFieldValue
 
 
@@ -13,7 +14,14 @@ async def test_quick_event_saves_text_as_a_draft(
 ) -> None:
     user = user_factory.build()
     description = field_factory.text(user_id=user.id, name="Описание")
-    description.event_config = EventFieldConfig(False, 0, is_system=True)
+    description.questionnaire_fields = {
+        QuestionnaireKind.EVENT: QuestionnaireField(
+            description.id,
+            0,
+            is_required=False,
+            role=QuestionnaireFieldRole.EVENT_DESCRIPTION,
+        )
+    }
     uow.users.get = AsyncMock(return_value=user)
     uow.fields.list_for_user = AsyncMock(return_value=[description])
     use_case = CreateQuickEventUseCase(uow, clock, id_generator)

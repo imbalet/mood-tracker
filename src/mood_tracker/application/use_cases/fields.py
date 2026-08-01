@@ -20,7 +20,8 @@ from mood_tracker.application.use_cases._transactions import (
     execute_write,
 )
 from mood_tracker.domain.entities import Field, FieldVersion
-from mood_tracker.domain.enums import FieldStatus
+from mood_tracker.domain.entities.questionnaire import QuestionnaireField
+from mood_tracker.domain.enums import QuestionnaireKind
 from mood_tracker.domain.errors import InvalidFieldVersion
 
 
@@ -63,11 +64,13 @@ class CreateFieldUseCase:
                 id=field_id,
                 user_id=command.user_id,
                 name=command.name,
-                status=FieldStatus.ACTIVE,
-                is_core=False,
-                sort_order=command.sort_order,
                 display_config=command.display_config,
                 current_version=version,
+                questionnaire_fields={
+                    QuestionnaireKind.DAY: QuestionnaireField(
+                        field_id, command.sort_order
+                    )
+                },
             )
             await self._uow.fields.add(field)
             return field

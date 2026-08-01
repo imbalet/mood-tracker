@@ -13,7 +13,13 @@ from mood_tracker.domain.entities import (
     ScaleConfig,
     TextConfig,
 )
-from mood_tracker.domain.enums import FieldStatus, FieldType
+from mood_tracker.domain.entities.questionnaire import QuestionnaireField
+from mood_tracker.domain.enums import (
+    FieldStatus,
+    FieldType,
+    QuestionnaireFieldRole,
+    QuestionnaireKind,
+)
 
 
 class FieldFactory:
@@ -135,9 +141,18 @@ class FieldFactory:
             id=field_id,
             user_id=user_id or uuid7(),
             name=name,
-            status=status,
-            is_core=is_core,
-            sort_order=sort_order,
             display_config=display_config or FieldDisplayConfig(),
             current_version=version,
+            questionnaire_fields={
+                QuestionnaireKind.DAY: QuestionnaireField(
+                    field_id,
+                    sort_order,
+                    is_enabled=status is FieldStatus.ACTIVE,
+                    role=(
+                        QuestionnaireFieldRole.DAY_STATE
+                        if is_core
+                        else QuestionnaireFieldRole.ORDINARY
+                    ),
+                )
+            },
         )

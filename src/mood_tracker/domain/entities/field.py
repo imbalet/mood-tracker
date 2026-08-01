@@ -8,7 +8,13 @@ from datetime import datetime
 from typing import ClassVar, override
 from uuid import UUID
 
-from mood_tracker.domain.enums import FieldStatus, FieldType
+from mood_tracker.domain.entities.questionnaire import QuestionnaireField
+from mood_tracker.domain.enums import (
+    FieldStatus,
+    FieldType,
+    QuestionnaireFieldRole,
+    QuestionnaireKind,
+)
 from mood_tracker.domain.errors import (
     CoreFieldViolation,
     InvalidFieldValue,
@@ -180,20 +186,6 @@ class FieldDisplayConfig:
 
 
 @dataclass(frozen=True, slots=True)
-class EventFieldConfig:
-    """One field's independent participation in the event questionnaire."""
-
-    required: bool
-    sort_order: int
-    is_system: bool = False
-
-    def __post_init__(self) -> None:
-        if self.sort_order < 0:
-            msg = "Event field sort order cannot be negative"
-            raise InvalidFieldVersion(msg)
-
-
-@dataclass(frozen=True, slots=True)
 class FieldVersion:
     """Immutable meaning of a field at the point a value is saved."""
 
@@ -220,19 +212,15 @@ class Field:
     id: UUID
     user_id: UUID
     name: str
-    status: FieldStatus
-    is_core: bool
-    sort_order: int
     display_config: FieldDisplayConfig
     current_version: FieldVersion
     versions: list[FieldVersion] = field(default_factory=list)
-    event_config: EventFieldConfig | None = None
+    questionnaire_fields: dict[QuestionnaireKind, QuestionnaireField] = field(
+        default_factory=dict
+    )
 
     def __post_init__(self) -> None:
         _require_non_empty(self.name, "Field name")
-        if self.sort_order < 0:
-            msg = "Field sort order cannot be negative"
-            raise InvalidFieldVersion(msg)
         if self.current_version.field_id != self.id:
             msg = "Current field version belongs to another field"
             raise InvalidFieldVersion(msg)
@@ -241,9 +229,13 @@ class Field:
         if self.current_version not in self.versions:
             msg = "Current field version must belong to field history"
             raise InvalidFieldVersion(msg)
-        if self.is_core and self.status is not FieldStatus.ACTIVE:
-            msg = "Core state field must remain active"
-            raise CoreFieldViolation(msg)
+
+    def placement(self, kind: QuestionnaireKind) -> QuestionnaireField | None:
+        return self.questionnaire_fields.get(kind)
+
+    @property
+    def day_placement(self) -> QuestionnaireField | None:
+        return self.placement(QuestionnaireKind.DAY)
 
     @property
     def current_version_id(self) -> UUID:
@@ -253,7 +245,25 @@ class Field:
     @property
     def is_active(self) -> bool:
         """Whether this field must be processed in a new day."""
-        return self.status is FieldStatus.ACTIVE
+        placement = self.day_placement
+        return placement is not None and placement.is_enabled
+
+    @property
+    def status(self) -> FieldStatus:
+        """Compatibility view of this field's day-questionnaire state."""
+        return FieldStatus.ACTIVE if self.is_active else FieldStatus.INACTIVE
+
+    @property
+    def is_core(self) -> bool:
+        placement = self.day_placement
+        return (
+            placement is not None and placement.role is QuestionnaireFieldRole.DAY_STATE
+        )
+
+    @property
+    def sort_order(self) -> int:
+        placement = self.day_placement
+        return placement.sort_order if placement is not None else 0
 
     def rename(self, name: str) -> None:
         """Change only the presentation name of the field."""
@@ -262,10 +272,13 @@ class Field:
 
     def set_status(self, status: FieldStatus) -> None:
         """Change field lifecycle while preserving the core-field invariant."""
+        placement = self.day_placement
+        if placement is None:
+            return
         if self.is_core and status is not FieldStatus.ACTIVE:
             msg = "Core state field cannot become inactive or hidden"
             raise CoreFieldViolation(msg)
-        self.status = status
+        placement.is_enabled = status is FieldStatus.ACTIVE
 
     def set_display_config(self, display_config: FieldDisplayConfig) -> None:
         """Replace current presentation without changing any semantic version."""
@@ -276,7 +289,9 @@ class Field:
         if sort_order < 0:
             msg = "Field sort order cannot be negative"
             raise InvalidFieldVersion(msg)
-        self.sort_order = sort_order
+        placement = self.day_placement
+        if placement is not None:
+            placement.sort_order = sort_order
 
     def add_version(self, version: FieldVersion) -> None:
         """Append a new immutable meaning and make it current."""

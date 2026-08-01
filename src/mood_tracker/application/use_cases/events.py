@@ -7,16 +7,20 @@ from mood_tracker.application.errors import UserNotFound
 from mood_tracker.application.ports import Clock, IdGenerator, UnitOfWork
 from mood_tracker.application.use_cases._transactions import execute_write
 from mood_tracker.domain.entities import Event, Field
+from mood_tracker.domain.enums import QuestionnaireFieldRole, QuestionnaireKind
 from mood_tracker.domain.errors import InvalidFieldValue
 
 
 def _description_field(fields: Sequence[Field]) -> Field:
+    def is_description(candidate: Field) -> bool:
+        placement = candidate.placement(QuestionnaireKind.EVENT)
+        return (
+            placement is not None
+            and placement.role is QuestionnaireFieldRole.EVENT_DESCRIPTION
+        )
+
     field = next(
-        (
-            candidate
-            for candidate in fields
-            if candidate.event_config is not None and candidate.event_config.is_system
-        ),
+        (candidate for candidate in fields if is_description(candidate)),
         None,
     )
     if field is None:

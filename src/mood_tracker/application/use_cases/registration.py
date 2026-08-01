@@ -38,7 +38,7 @@ class RegisterUserUseCase:
                 timezone=command.timezone,
             )
             # мб отрефакторить
-            ids = DefaultFieldIds(*(self._id_generator.new() for _ in range(10)))
+            ids = DefaultFieldIds(*(self._id_generator.new() for _ in range(8)))
             fields = create_default_fields(user.id, ids, self._clock.now())
             await self._uow.users.add(user)
             for field in fields:

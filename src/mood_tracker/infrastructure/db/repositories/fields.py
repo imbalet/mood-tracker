@@ -6,8 +6,13 @@ from uuid import UUID
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from mood_tracker.domain.entities import EventFieldConfig, Field
-from mood_tracker.domain.enums import FieldStatus
+from mood_tracker.domain.entities import Field
+from mood_tracker.domain.entities.questionnaire import QuestionnaireField
+from mood_tracker.domain.enums import (
+    FieldStatus,
+    QuestionnaireFieldRole,
+    QuestionnaireKind,
+)
 from mood_tracker.infrastructure.db.models import (
     EventFieldOrm,
     FieldOrm,
@@ -60,13 +65,14 @@ class SqlAlchemyFieldRepository:
         )
         for version in field.versions:
             self._session.add(version_to_orm(version))
-        if field.event_config is not None:
+        event = field.placement(QuestionnaireKind.EVENT)
+        if event is not None:
             self._session.add(
                 EventFieldOrm(
                     field_id=field.id,
-                    required=field.event_config.required,
-                    sort_order=field.event_config.sort_order,
-                    is_system=field.event_config.is_system,
+                    required=event.is_required,
+                    sort_order=event.sort_order,
+                    is_system=event.role is QuestionnaireFieldRole.EVENT_DESCRIPTION,
                 )
             )
 
@@ -100,22 +106,23 @@ class SqlAlchemyFieldRepository:
             if version.id not in known_version_ids:
                 self._session.add(version_to_orm(version))
         config = await self._session.get(EventFieldOrm, field.id)
-        if field.event_config is None:
+        event = field.placement(QuestionnaireKind.EVENT)
+        if event is None:
             if config is not None:
                 await self._session.delete(config)
         elif config is None:
             self._session.add(
                 EventFieldOrm(
                     field_id=field.id,
-                    required=field.event_config.required,
-                    sort_order=field.event_config.sort_order,
-                    is_system=field.event_config.is_system,
+                    required=event.is_required,
+                    sort_order=event.sort_order,
+                    is_system=event.role is QuestionnaireFieldRole.EVENT_DESCRIPTION,
                 )
             )
         else:
-            config.required = field.event_config.required
-            config.sort_order = field.event_config.sort_order
-            config.is_system = field.event_config.is_system
+            config.required = event.is_required
+            config.sort_order = event.sort_order
+            config.is_system = event.role is QuestionnaireFieldRole.EVENT_DESCRIPTION
 
     async def _to_domain(self, row: FieldOrm) -> Field:
         version_rows = (
@@ -130,25 +137,37 @@ class SqlAlchemyFieldRepository:
             version for version in versions if version.id == row.current_version_id
         )
         event_config = await self._session.get(EventFieldOrm, row.id)
+        placements = {
+            QuestionnaireKind.DAY: QuestionnaireField(
+                row.id,
+                row.sort_order,
+                is_enabled=FieldStatus(row.status) is FieldStatus.ACTIVE,
+                role=(
+                    QuestionnaireFieldRole.DAY_STATE
+                    if row.is_core
+                    else QuestionnaireFieldRole.ORDINARY
+                ),
+            )
+        }
+        if event_config is not None:
+            placements[QuestionnaireKind.EVENT] = QuestionnaireField(
+                row.id,
+                event_config.sort_order,
+                is_required=event_config.required,
+                role=(
+                    QuestionnaireFieldRole.EVENT_DESCRIPTION
+                    if event_config.is_system
+                    else QuestionnaireFieldRole.ORDINARY
+                ),
+            )
         return Field(
             row.id,
             row.user_id,
             row.name,
-            FieldStatus(row.status),
-            row.is_core,
-            row.sort_order,
             display_from_json(row.display_config),
             current_version,
             versions,
-            (
-                EventFieldConfig(
-                    event_config.required,
-                    event_config.sort_order,
-                    event_config.is_system,
-                )
-                if event_config is not None
-                else None
-            ),
+            placements,
         )
 
 
