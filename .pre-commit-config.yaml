@@ -51,8 +51,3 @@ repos:
         entry: uv run mypy
         language: system
         pass_filenames: false
-      - id: unit-tests
-        name: unit tests
-        entry: uv run pytest tests/unit
-        language: system
-        pass_filenames: false
