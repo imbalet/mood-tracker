@@ -1,7 +1,5 @@
 """Timestamped contextual events and their versioned values."""
 
-from __future__ import annotations
-
 from dataclasses import dataclass, field
 from datetime import datetime
 from uuid import UUID

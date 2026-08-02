@@ -1,7 +1,5 @@
 """Aiogram application entry point and dependency composition root."""
 
-from __future__ import annotations
-
 import asyncio
 import contextlib
 

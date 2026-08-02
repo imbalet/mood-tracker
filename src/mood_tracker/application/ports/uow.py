@@ -1,7 +1,5 @@
 """Transactional persistence boundary for application use cases."""
 
-from __future__ import annotations
-
 from types import TracebackType
 from typing import Protocol, Self
 

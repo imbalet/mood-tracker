@@ -1,7 +1,5 @@
 """Personal best/worst reference days and their change history."""
 
-from __future__ import annotations
-
 from collections.abc import Callable
 from dataclasses import dataclass, field
 from datetime import datetime

@@ -1,7 +1,5 @@
 """Day aggregate, field-step progress and versioned values."""
 
-from __future__ import annotations
-
 from collections.abc import Iterable
 from dataclasses import dataclass, field
 from datetime import date, datetime
