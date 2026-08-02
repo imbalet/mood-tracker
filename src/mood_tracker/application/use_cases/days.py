@@ -31,7 +31,6 @@ from mood_tracker.domain.enums import (
     QuestionnaireKind,
     ReferenceType,
 )
-from mood_tracker.domain.policies import CompletionPolicy
 
 
 def _sorted_fields(
@@ -220,7 +219,7 @@ class SaveDayValueUseCase:
                 or day.has_completed_step(candidate.id)
                 for candidate in fields
             ):
-                CompletionPolicy().complete(day, fields, self._clock.now())
+                day.complete([i.id for i in fields], self._clock.now())
             if is_new:
                 await self._uow.days.add(day)
             else:
@@ -323,7 +322,7 @@ class SkipDayTextUseCase:
                 or day.has_completed_step(candidate.id)
                 for candidate in fields
             ):
-                CompletionPolicy().complete(day, fields, self._clock.now())
+                day.complete([i.id for i in fields], self._clock.now())
             if is_new:
                 await self._uow.days.add(day)
             else:

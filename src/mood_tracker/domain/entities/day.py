@@ -2,13 +2,14 @@
 
 from __future__ import annotations
 
+from collections.abc import Iterable
 from dataclasses import dataclass, field
 from datetime import date, datetime
 from uuid import UUID
 
 from mood_tracker.domain.entities.field import FieldVersion
 from mood_tracker.domain.enums import DayStatus, FieldType
-from mood_tracker.domain.errors import InvalidFieldValue
+from mood_tracker.domain.errors import IncompleteDay, InvalidFieldValue
 
 
 @dataclass(frozen=True, slots=True)
@@ -84,7 +85,14 @@ class Day:
         """Whether the questionnaire step has been answered or explicitly skipped."""
         return field_id in self.progress
 
-    def complete(self, completed_at: datetime) -> None:
-        """Persist the historical fact that the day was completed."""
+    def complete(self, field_ids: Iterable[UUID], completed_at: datetime) -> None:
+        """Complete a day only when every supplied active field has progress."""
+        missing_ids = [
+            field_id for field_id in field_ids if not self.has_completed_step(field_id)
+        ]
+        if missing_ids:
+            msg = f"Day has {len(missing_ids)} unfinished active field(s)"
+            raise IncompleteDay(msg)
+
         self.status = DayStatus.COMPLETE
         self.completed_at = completed_at
