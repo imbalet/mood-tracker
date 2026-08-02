@@ -1,13 +1,14 @@
 """Factories for the standard day and event fields of a new user."""
 
-from __future__ import annotations
-
+from collections.abc import Callable
 from dataclasses import dataclass
 from datetime import datetime
+from typing import Self
 from uuid import UUID
 
 from mood_tracker.domain.entities import (
     Field,
+    FieldConfig,
     FieldDisplayConfig,
     FieldVersion,
     OrdinalConfig,
@@ -26,7 +27,14 @@ from mood_tracker.domain.enums import (
 
 
 @dataclass(frozen=True, slots=True)
-class DefaultFieldIds:
+class DefaultProfileSetup:
+    fields: tuple[Field, ...]
+    questionnaires: tuple[Questionnaire, ...]
+
+
+@dataclass(frozen=True, slots=True)
+class DefaultProfileIds:
+    # fields
     state_field: UUID
     state_version: UUID
     thoughts_field: UUID
@@ -36,16 +44,46 @@ class DefaultFieldIds:
     event_description_field: UUID
     event_description_version: UUID
 
+    # questionnaires
+    day_questionnaire: UUID
+    event_questionnaire: UUID
 
-def create_default_fields(
-    user_id: UUID, ids: DefaultFieldIds, created_at: datetime
+    @classmethod
+    def generate(cls, new_id: Callable[[], UUID]) -> Self:
+        return cls(
+            state_field=new_id(),
+            state_version=new_id(),
+            thoughts_field=new_id(),
+            thoughts_version=new_id(),
+            comment_field=new_id(),
+            comment_version=new_id(),
+            event_description_field=new_id(),
+            event_description_version=new_id(),
+            day_questionnaire=new_id(),
+            event_questionnaire=new_id(),
+        )
+
+
+def create_default_profile_setup(
+    user_id: UUID,
+    ids: DefaultProfileIds,
+    created_at: datetime,
+) -> DefaultProfileSetup:
+    return DefaultProfileSetup(
+        fields=_create_default_fields(user_id=user_id, ids=ids, created_at=created_at),
+        questionnaires=_create_default_questionnaires(user_id=user_id, ids=ids),
+    )
+
+
+def _create_default_fields(
+    user_id: UUID, ids: DefaultProfileIds, created_at: datetime
 ) -> tuple[Field, Field, Field, Field]:
     """Create the two independent default questionnaires' reusable fields."""
 
     def version(
-        field_id: UUID, version_id: UUID, type: FieldType, config: object
+        field_id: UUID, version_id: UUID, type: FieldType, config: FieldConfig
     ) -> FieldVersion:
-        return FieldVersion(version_id, field_id, type, config, created_at)  # type: ignore[arg-type]
+        return FieldVersion(version_id, field_id, type, config, created_at)
 
     state = version(
         ids.state_field, ids.state_version, FieldType.SCALE, ScaleConfig(0, 10)
@@ -106,34 +144,32 @@ def create_default_fields(
     )
 
 
-def create_default_questionnaires(
-    user_id: UUID, day_id: UUID, event_id: UUID, field_ids: DefaultFieldIds
+def _create_default_questionnaires(
+    user_id: UUID, ids: DefaultProfileIds
 ) -> tuple[Questionnaire, Questionnaire]:
     """Create the independent placement aggregates for standard fields."""
     return (
         Questionnaire(
-            day_id,
+            ids.day_questionnaire,
             user_id,
             QuestionnaireKind.DAY,
             {
-                field_ids.state_field: QuestionnaireField(
-                    field_ids.state_field, 0, role=QuestionnaireFieldRole.DAY_STATE
+                ids.state_field: QuestionnaireField(
+                    ids.state_field, 0, role=QuestionnaireFieldRole.DAY_STATE
                 ),
-                field_ids.thoughts_field: QuestionnaireField(
-                    field_ids.thoughts_field, 1
-                ),
-                field_ids.comment_field: QuestionnaireField(
-                    field_ids.comment_field, 2, is_required=False
+                ids.thoughts_field: QuestionnaireField(ids.thoughts_field, 1),
+                ids.comment_field: QuestionnaireField(
+                    ids.comment_field, 2, is_required=False
                 ),
             },
         ),
         Questionnaire(
-            event_id,
+            ids.event_questionnaire,
             user_id,
             QuestionnaireKind.EVENT,
             {
-                field_ids.event_description_field: QuestionnaireField(
-                    field_ids.event_description_field,
+                ids.event_description_field: QuestionnaireField(
+                    ids.event_description_field,
                     0,
                     is_required=False,
                     role=QuestionnaireFieldRole.EVENT_DESCRIPTION,

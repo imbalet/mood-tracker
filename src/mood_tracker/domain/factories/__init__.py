@@ -1,9 +1,8 @@
 """Public domain factories."""
 
 from mood_tracker.domain.factories.defaults import (
-    DefaultFieldIds,
-    create_default_fields,
-    create_default_questionnaires,
+    DefaultProfileIds,
+    create_default_profile_setup,
 )
 
-__all__ = ["DefaultFieldIds", "create_default_fields", "create_default_questionnaires"]
+__all__ = ["DefaultProfileIds", "create_default_profile_setup"]

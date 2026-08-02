@@ -13,9 +13,8 @@ from mood_tracker.application.use_cases._transactions import (
 )
 from mood_tracker.domain.entities import UserProfile
 from mood_tracker.domain.factories import (
-    DefaultFieldIds,
-    create_default_fields,
-    create_default_questionnaires,
+    DefaultProfileIds,
+    create_default_profile_setup,
 )
 
 
@@ -41,11 +40,12 @@ class RegisterUserUseCase:
                 telegram_id=command.telegram_id,
                 timezone=command.timezone,
             )
-            ids = DefaultFieldIds(*(self._id_generator.new() for _ in range(8)))
-            fields = create_default_fields(user.id, ids, self._clock.now())
-            questionnaires = create_default_questionnaires(
-                user.id, self._id_generator.new(), self._id_generator.new(), ids
+            ids = DefaultProfileIds.generate(self._id_generator.new)
+            setup = create_default_profile_setup(
+                user_id=user.id, ids=ids, created_at=self._clock.now()
             )
+            fields = setup.fields
+            questionnaires = setup.questionnaires
             await self._uow.users.add(user)
             for field in fields:
                 await self._uow.fields.add(field)
