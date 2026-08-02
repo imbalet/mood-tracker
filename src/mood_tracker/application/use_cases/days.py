@@ -73,7 +73,7 @@ def _reference_day_id(
 
 
 def _is_boundary_for(day: Day, core_field: Field, type: ReferenceType) -> bool:
-    value = day.values.get(core_field.id)
+    value = day.response.answers.get(core_field.id)
     if value is None or not isinstance(value.value, int):
         return False
     version = core_field.get_version(value.field_version_id)
@@ -214,12 +214,15 @@ class SaveDayValueUseCase:
             fields = _sorted_fields(
                 await self._uow.fields.list_for_user(command.user_id), questionnaire
             )
-            if day.status is DayStatus.DRAFT and all(
-                not questionnaire.fields[candidate.id].is_enabled
-                or day.has_completed_step(candidate.id)
+            active_field_ids = tuple(
+                candidate.id
                 for candidate in fields
+                if questionnaire.fields[candidate.id].is_enabled
+            )
+            if day.status is DayStatus.DRAFT and all(
+                day.has_completed_step(field_id) for field_id in active_field_ids
             ):
-                day.complete([i.id for i in fields], self._clock.now())
+                day.complete(active_field_ids, self._clock.now())
             if is_new:
                 await self._uow.days.add(day)
             else:
@@ -252,7 +255,7 @@ class SaveDayValueUseCase:
         rolled_back = await _rollback_if_invalid_current(
             self._uow, user_id, day, core_field, reference_days
         )
-        value = day.values[core_field.id].value
+        value = day.response.answers[core_field.id].value
         if not isinstance(value, int) or not isinstance(
             core_field.current_version.config, ScaleConfig
         ):
@@ -317,12 +320,15 @@ class SkipDayTextUseCase:
             fields = _sorted_fields(
                 await self._uow.fields.list_for_user(command.user_id), questionnaire
             )
-            if day.status is DayStatus.DRAFT and all(
-                not questionnaire.fields[candidate.id].is_enabled
-                or day.has_completed_step(candidate.id)
+            active_field_ids = tuple(
+                candidate.id
                 for candidate in fields
+                if questionnaire.fields[candidate.id].is_enabled
+            )
+            if day.status is DayStatus.DRAFT and all(
+                day.has_completed_step(field_id) for field_id in active_field_ids
             ):
-                day.complete([i.id for i in fields], self._clock.now())
+                day.complete(active_field_ids, self._clock.now())
             if is_new:
                 await self._uow.days.add(day)
             else:

@@ -10,10 +10,11 @@ from sqlalchemy import delete, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from mood_tracker.domain.entities import (
-    DayFieldProgress,
-    DayValue,
+    Answer,
     Event,
     EventQuestionnaireField,
+    QuestionnaireResponse,
+    QuestionProgress,
 )
 from mood_tracker.domain.enums import EventStatus, QuestionnaireFieldRole
 from mood_tracker.infrastructure.db.models import (
@@ -113,7 +114,7 @@ class SqlAlchemyEventRepository:
                     role=placement.role.value,
                 )
             )
-        for value in event.values.values():
+        for value in event.response.answers.values():
             self._session.add(
                 EventValueOrm(
                     id=uuid7(),
@@ -128,7 +129,7 @@ class SqlAlchemyEventRepository:
                     ),
                 )
             )
-        for progress in event.progress.values():
+        for progress in event.response.progress.values():
             self._session.add(
                 EventFieldProgressOrm(
                     id=uuid7(),
@@ -167,26 +168,27 @@ class SqlAlchemyEventRepository:
             status=EventStatus(row.status),
             completed_at=row.completed_at,
             deleted_at=row.deleted_at,
-            values={
-                value.field_id: DayValue(
-                    row.id,
-                    value.field_id,
-                    value.field_version_id,
-                    value.value["value"],
-                    float(value.normalized_value)
-                    if value.normalized_value is not None
-                    else None,
-                )
-                for value in value_rows
-            },
-            progress={
-                progress.field_id: DayFieldProgress(
-                    progress.field_id,
-                    progress.field_version_id,
-                    progress.skipped,
-                )
-                for progress in progress_rows
-            },
+            response=QuestionnaireResponse(
+                answers={
+                    value.field_id: Answer(
+                        field_id=value.field_id,
+                        field_version_id=value.field_version_id,
+                        value=value.value["value"],
+                        normalized_value=float(value.normalized_value)
+                        if value.normalized_value is not None
+                        else None,
+                    )
+                    for value in value_rows
+                },
+                progress={
+                    progress.field_id: QuestionProgress(
+                        field_id=progress.field_id,
+                        field_version_id=progress.field_version_id,
+                        skipped=progress.skipped,
+                    )
+                    for progress in progress_rows
+                },
+            ),
             questionnaire_fields={
                 placement.field_id: EventQuestionnaireField(
                     placement.field_id,

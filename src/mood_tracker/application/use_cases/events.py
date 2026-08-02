@@ -251,7 +251,7 @@ class CompleteEventUseCase:
             ]
             if any(not event.has_completed_step(field.id) for field in required):
                 raise IncompleteDay("Required event fields are unfinished")
-            if not event.values:
+            if not event.response.answers:
                 event.delete(self._clock.now())
                 await self._uow.events.save(event)
                 return event

@@ -148,8 +148,8 @@ def _entry_views(form: DayForm) -> list[DayEntryView]:
         return []
     entries: list[DayEntryView] = []
     for field in form.fields:
-        value = form.day.values.get(field.id)
-        progress = form.day.progress.get(field.id)
+        value = form.day.response.answers.get(field.id)
+        progress = form.day.response.progress.get(field.id)
         if value is None and progress is None:
             continue
         if value is None:

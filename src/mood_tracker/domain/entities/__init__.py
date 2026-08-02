@@ -1,6 +1,6 @@
 """Public domain entities and field-version value objects."""
 
-from mood_tracker.domain.entities.day import Day, DayFieldProgress, DayValue
+from mood_tracker.domain.entities.day import Day
 from mood_tracker.domain.entities.event import Event, EventQuestionnaireField
 from mood_tracker.domain.entities.field import (
     Field,
@@ -13,14 +13,18 @@ from mood_tracker.domain.entities.field import (
     StatePalette,
     TextConfig,
 )
-from mood_tracker.domain.entities.questionnaire import Questionnaire, QuestionnaireField
+from mood_tracker.domain.entities.questionnaire import (
+    Answer,
+    Questionnaire,
+    QuestionnaireField,
+    QuestionnaireResponse,
+    QuestionProgress,
+)
 from mood_tracker.domain.entities.reference_days import ReferenceDay, ReferenceDays
 from mood_tracker.domain.entities.user import UserProfile
 
 __all__ = [
     "Day",
-    "DayFieldProgress",
-    "DayValue",
     "Event",
     "EventQuestionnaireField",
     "Field",
@@ -37,4 +41,7 @@ __all__ = [
     "StatePalette",
     "TextConfig",
     "UserProfile",
+    "Answer",
+    "QuestionProgress",
+    "QuestionnaireResponse",
 ]

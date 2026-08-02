@@ -644,8 +644,8 @@ async def _render_event(
         f"Статус: {'черновик' if current.status is EventStatus.DRAFT else 'завершено'}",
     ]
     for item in items:
-        value = current.values.get(item.field.id)
-        progress = current.progress.get(item.field.id)
+        value = current.response.answers.get(item.field.id)
+        progress = current.response.progress.get(item.field.id)
         if value is not None:
             lines.append(f"<b>{item.field.name}</b>: {value.value}")
         elif progress is not None and progress.skipped:

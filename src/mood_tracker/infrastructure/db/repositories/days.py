@@ -8,7 +8,12 @@ from uuid import UUID, uuid7
 from sqlalchemy import delete, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from mood_tracker.domain.entities import Day, DayFieldProgress, DayValue
+from mood_tracker.domain.entities import (
+    Answer,
+    Day,
+    QuestionnaireResponse,
+    QuestionProgress,
+)
 from mood_tracker.domain.enums import DayStatus
 from mood_tracker.infrastructure.db.models import (
     DayFieldProgressOrm,
@@ -91,7 +96,7 @@ class SqlAlchemyDayRepository:
         await self._session.execute(
             delete(DayFieldProgressOrm).where(DayFieldProgressOrm.day_id == day.id)
         )
-        for value in day.values.values():
+        for value in day.response.answers.values():
             self._session.add(
                 DayValueOrm(
                     id=uuid7(),
@@ -106,7 +111,7 @@ class SqlAlchemyDayRepository:
                     ),
                 )
             )
-        for progress in day.progress.values():
+        for progress in day.response.progress.values():
             self._session.add(
                 DayFieldProgressOrm(
                     id=uuid7(),
@@ -134,28 +139,27 @@ class SqlAlchemyDayRepository:
             row.date,
             DayStatus(row.status),
             row.completed_at,
-            {
-                value.field_id: DayValue(
-                    row.id,
-                    value.field_id,
-                    value.field_version_id,
-                    value.value["value"],
-                    (
-                        float(value.normalized_value)
+            response=QuestionnaireResponse(
+                answers={
+                    value.field_id: Answer(
+                        field_id=value.field_id,
+                        field_version_id=value.field_version_id,
+                        value=value.value["value"],
+                        normalized_value=float(value.normalized_value)
                         if value.normalized_value is not None
-                        else None
-                    ),
-                )
-                for value in value_rows
-            },
-            {
-                progress.field_id: DayFieldProgress(
-                    progress.field_id,
-                    progress.field_version_id,
-                    progress.skipped,
-                )
-                for progress in progress_rows
-            },
+                        else None,
+                    )
+                    for value in value_rows
+                },
+                progress={
+                    progress.field_id: QuestionProgress(
+                        field_id=progress.field_id,
+                        field_version_id=progress.field_version_id,
+                        skipped=progress.skipped,
+                    )
+                    for progress in progress_rows
+                },
+            ),
         )
 
 

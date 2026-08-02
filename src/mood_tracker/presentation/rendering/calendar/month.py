@@ -218,7 +218,7 @@ def _to_visualization_data(source: MonthCalendar) -> DiaryVisualizationData:
                 record_types=frozenset(records.get(day.id, set())),
                 values={
                     field_id: DayValueData(value.normalized_value)
-                    for field_id, value in day.values.items()
+                    for field_id, value in day.response.answers.items()
                 },
             )
             for day in source.days
