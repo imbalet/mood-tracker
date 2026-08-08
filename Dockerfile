@@ -11,6 +11,13 @@ RUN uv sync --frozen --no-dev
 
 FROM python:3.14-slim
 
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    libegl1 \
+    libgl1 \
+    libglib2.0-0 \
+    fontconfig \
+    && rm -rf /var/lib/apt/lists/*
+
 RUN useradd --create-home --uid 10001 appuser
 WORKDIR /app
 COPY --from=builder --chown=appuser:appuser /app /app
