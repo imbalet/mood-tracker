@@ -1,9 +1,12 @@
 """Typed compact callback payloads for diary interactions."""
 
+import base64
 from enum import StrEnum
+from typing import Any, override
 from uuid import UUID
 
 from aiogram.filters.callback_data import CallbackData
+from pydantic import field_validator
 
 from mood_tracker.application.commands import MoveDirection
 from mood_tracker.domain.enums import (
@@ -228,12 +231,52 @@ class EventTimeCallback(CallbackData, prefix="event_time"):
     now: bool
 
 
-class EventValueCallback(CallbackData, prefix="event_value"):
+def encode_uuid(value: UUID) -> str:
+    return base64.urlsafe_b64encode(value.bytes).rstrip(b"=").decode()
+
+
+def decode_uuid(value: str) -> UUID:
+    return UUID(bytes=base64.urlsafe_b64decode(value + "=="))
+
+
+class EventValueCallback(CallbackData, prefix="evnt_vle"):
     event_id: UUID
     field_id: UUID
     value: int
 
+    # TODO: refactor
+    @override
+    def _encode_value(self, key: str, value: Any) -> str:
+        if isinstance(value, UUID):
+            return encode_uuid(value)
 
-class SkipEventFieldCallback(CallbackData, prefix="event_skip"):
+        return super()._encode_value(key, value)
+
+    @field_validator("event_id", "field_id", mode="before")
+    @classmethod
+    def decode_compact_uuid(cls, value: Any) -> Any:
+        if isinstance(value, str) and len(value) == 22:
+            return decode_uuid(value)
+
+        return value
+
+
+class SkipEventFieldCallback(CallbackData, prefix="evntskp"):
     event_id: UUID
     field_id: UUID
+
+    # TODO: refactor
+    @override
+    def _encode_value(self, key: str, value: Any) -> str:
+        if isinstance(value, UUID):
+            return encode_uuid(value)
+
+        return super()._encode_value(key, value)
+
+    @field_validator("event_id", "field_id", mode="before")
+    @classmethod
+    def decode_compact_uuid(cls, value: Any) -> Any:
+        if isinstance(value, str) and len(value) == 22:
+            return decode_uuid(value)
+
+        return value
