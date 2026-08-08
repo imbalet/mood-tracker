@@ -1,7 +1,7 @@
 """Public domain entities and field-version value objects."""
 
 from mood_tracker.domain.entities.day import Day
-from mood_tracker.domain.entities.event import Event, EventQuestionnaireField
+from mood_tracker.domain.entities.event import Event
 from mood_tracker.domain.entities.field import (
     Field,
     FieldConfig,
@@ -26,7 +26,6 @@ from mood_tracker.domain.entities.user import UserProfile
 __all__ = [
     "Day",
     "Event",
-    "EventQuestionnaireField",
     "Field",
     "FieldConfig",
     "FieldDisplayConfig",

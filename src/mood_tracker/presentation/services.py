@@ -18,7 +18,6 @@ from mood_tracker.application.use_cases import (
     GetEventUseCase,
     GetMonthCalendarUseCase,
     GetUserByTelegramIdUseCase,
-    ListEventFieldsUseCase,
     ListQuestionnaireFieldsUseCase,
     QuestionnaireFieldUseCase,
     RegisterUserUseCase,
@@ -63,9 +62,6 @@ class ApplicationServices:
 
     def get_event(self) -> GetEventUseCase:
         return GetEventUseCase(self._uow())
-
-    def list_event_fields(self) -> ListEventFieldsUseCase:
-        return ListEventFieldsUseCase(self._uow())
 
     def save_event_value(self) -> SaveEventValueUseCase:
         return SaveEventValueUseCase(self._uow())

@@ -201,14 +201,6 @@ class GetEvent:
 
 
 @dataclass(frozen=True, slots=True)
-class ListEventFields:
-    """Read the field placements captured by one owned event."""
-
-    user_id: UUID
-    event_id: UUID
-
-
-@dataclass(frozen=True, slots=True)
 class SaveEventValue:
     user_id: UUID
     event_id: UUID

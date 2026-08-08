@@ -15,7 +15,6 @@ from mood_tracker.application.use_cases.events import (
     DeleteEventUseCase,
     GetEventsForDateUseCase,
     GetEventUseCase,
-    ListEventFieldsUseCase,
     SaveEventValueUseCase,
     SkipEventFieldUseCase,
 )
@@ -47,7 +46,6 @@ __all__ = [
     "GetDayUseCase",
     "GetEventUseCase",
     "GetEventsForDateUseCase",
-    "ListEventFieldsUseCase",
     "GetUserByTelegramIdUseCase",
     "GetReferenceHistoryUseCase",
     "ListQuestionnaireFieldsUseCase",

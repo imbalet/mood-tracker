@@ -6,18 +6,7 @@ from uuid import UUID
 
 from mood_tracker.domain.entities.field import FieldVersion
 from mood_tracker.domain.entities.questionnaire import Answer, QuestionnaireResponse
-from mood_tracker.domain.enums import EventStatus, QuestionnaireFieldRole
-
-
-@dataclass(frozen=True, slots=True)
-class EventQuestionnaireField:
-    """Immutable placement snapshot captured when an event is created."""
-
-    field_id: UUID
-    sort_order: int
-    is_enabled: bool
-    is_required: bool
-    role: QuestionnaireFieldRole
+from mood_tracker.domain.enums import EventStatus
 
 
 @dataclass(slots=True)
@@ -32,9 +21,6 @@ class Event:
     completed_at: datetime | None = None
     deleted_at: datetime | None = None
     response: QuestionnaireResponse = field(default_factory=QuestionnaireResponse)
-    questionnaire_fields: dict[UUID, EventQuestionnaireField] = field(
-        default_factory=dict
-    )
 
     def __post_init__(self) -> None:
         if self.occurred_at.tzinfo is None:
@@ -49,11 +35,6 @@ class Event:
 
     def has_completed_step(self, field_id: UUID) -> bool:
         return self.response.has_completed_step(field_id=field_id)
-
-    def ordered_questionnaire_fields(self) -> tuple[EventQuestionnaireField, ...]:
-        return tuple(
-            sorted(self.questionnaire_fields.values(), key=lambda item: item.sort_order)
-        )
 
     def complete(self, completed_at: datetime) -> None:
         self.status = EventStatus.COMPLETE

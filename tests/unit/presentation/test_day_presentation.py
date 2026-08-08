@@ -2,11 +2,12 @@ from uuid import uuid7
 
 from mood_tracker.application.commands import DayForm
 from mood_tracker.domain.entities import (
-    DayFieldProgress,
-    DayValue,
+    Answer,
     FieldVersion,
     OrdinalConfig,
     OrdinalOption,
+    QuestionnaireResponse,
+    QuestionProgress,
 )
 from mood_tracker.domain.entities.questionnaire import QuestionnaireField
 from mood_tracker.domain.enums import DayStatus, FieldType
@@ -43,13 +44,15 @@ def test_day_card_keyboard_allows_editing_and_adding_current_active_fields(
     crying = field_factory.ordinal(name="Плач", sort_order=1)
     day = day_factory.build(
         status=DayStatus.COMPLETE,
-        progress={
-            state.id: DayFieldProgress(
-                field_id=state.id,
-                field_version_id=state.current_version.id,
-                skipped=False,
-            )
-        },
+        response=QuestionnaireResponse(
+            progress={
+                state.id: QuestionProgress(
+                    field_id=state.id,
+                    field_version_id=state.current_version.id,
+                    skipped=False,
+                )
+            }
+        ),
     )
     form = DayForm(
         day.date,
@@ -96,14 +99,13 @@ def test_day_view_uses_the_saved_ordinal_version(day_factory, field_factory) -> 
         )
     )
     day = day_factory.build()
-    day.values[field.id] = DayValue(
-        day_id=day.id,
+    day.response.answers[field.id] = Answer(
         field_id=field.id,
         field_version_id=previous_version.id,
         value=1,
         normalized_value=1.0,
     )
-    day.progress[field.id] = DayFieldProgress(
+    day.response.progress[field.id] = QuestionProgress(
         field_id=field.id,
         field_version_id=previous_version.id,
         skipped=False,

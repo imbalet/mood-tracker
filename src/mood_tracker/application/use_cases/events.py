@@ -1,7 +1,6 @@
 """Read and quick-capture event use cases."""
 
 from collections.abc import Sequence
-from dataclasses import dataclass
 from uuid import UUID
 
 from mood_tracker.application.commands import (
@@ -12,7 +11,6 @@ from mood_tracker.application.commands import (
     DeleteEvent,
     GetEvent,
     GetEventsForDate,
-    ListEventFields,
     SaveEventValue,
     SkipEventField,
 )
@@ -24,7 +22,6 @@ from mood_tracker.application.use_cases._transactions import (
 )
 from mood_tracker.domain.entities import (
     Event,
-    EventQuestionnaireField,
     Field,
     Questionnaire,
 )
@@ -45,27 +42,6 @@ def _description_field(
         msg = "Event description field is unavailable"
         raise InvalidFieldValue(msg)
     return field
-
-
-def _snapshot(questionnaire: Questionnaire) -> dict[UUID, EventQuestionnaireField]:
-    return {
-        placement.field_id: EventQuestionnaireField(
-            field_id=placement.field_id,
-            sort_order=placement.sort_order,
-            is_enabled=placement.is_enabled,
-            is_required=placement.is_required,
-            role=placement.role,
-        )
-        for placement in questionnaire.fields.values()
-    }
-
-
-@dataclass(frozen=True, slots=True)
-class EventFieldItem:
-    """A field resolved against the questionnaire snapshot of one event."""
-
-    field: Field
-    placement: EventQuestionnaireField
 
 
 class GetEventsForDateUseCase:
@@ -111,7 +87,6 @@ class CreateQuickEventUseCase:
             if questionnaire is None:
                 msg = "Event questionnaire is unavailable"
                 raise InvalidFieldValue(msg)
-            event.questionnaire_fields = _snapshot(questionnaire)
             fields = tuple(await self._uow.fields.list_for_user(user.id))
             event.save_value(
                 _description_field(fields, questionnaire).current_version, command.text
@@ -124,16 +99,23 @@ class CreateQuickEventUseCase:
 
 async def _event_and_fields(
     uow: UnitOfWork, user_id: UUID, event_id: UUID
-) -> tuple[Event, dict[UUID, Field]]:
+) -> tuple[Event, Questionnaire, dict[UUID, Field]]:
     event = await uow.events.get(user_id, event_id)
     if event is None:
         raise EventNotFound
+    questionnaire = await uow.questionnaires.get(user_id, QuestionnaireKind.EVENT)
+    if questionnaire is None:
+        raise FieldNotFound
     fields = {field.id: field for field in await uow.fields.list_for_user(user_id)}
-    return event, {
-        field_id: fields[field_id]
-        for field_id in event.questionnaire_fields
-        if field_id in fields
-    }
+    return (
+        event,
+        questionnaire,
+        {
+            field_id: fields[field_id]
+            for field_id in questionnaire.fields
+            if field_id in fields
+        },
+    )
 
 
 class CreateEventUseCase:
@@ -145,18 +127,12 @@ class CreateEventUseCase:
         async def operation() -> Event:
             if await self._uow.users.get(command.user_id) is None:
                 raise UserNotFound
-            questionnaire = await self._uow.questionnaires.get(
-                command.user_id, QuestionnaireKind.EVENT
-            )
-            if questionnaire is None:
-                raise FieldNotFound
             event = Event(
                 self._id_generator.new(),
                 command.user_id,
                 command.occurred_at,
                 command.occurred_timezone,
             )
-            event.questionnaire_fields = _snapshot(questionnaire)
             await self._uow.events.add(event)
             return event
 
@@ -175,35 +151,18 @@ class GetEventUseCase:
             return event
 
 
-class ListEventFieldsUseCase:
-    """Resolve fields retained by a particular event's questionnaire snapshot."""
-
-    def __init__(self, uow: UnitOfWork) -> None:
-        self._uow = uow
-
-    async def execute(self, command: ListEventFields) -> tuple[EventFieldItem, ...]:
-        async with self._uow:
-            event, fields = await _event_and_fields(
-                self._uow, command.user_id, command.event_id
-            )
-            return tuple(
-                EventFieldItem(fields[placement.field_id], placement)
-                for placement in event.ordered_questionnaire_fields()
-                if placement.field_id in fields
-            )
-
-
 class SaveEventValueUseCase:
     def __init__(self, uow: UnitOfWork) -> None:
         self._uow = uow
 
     async def execute(self, command: SaveEventValue) -> Event:
         async def operation() -> Event:
-            event, fields = await _event_and_fields(
+            event, questionnaire, fields = await _event_and_fields(
                 self._uow, command.user_id, command.event_id
             )
             field = fields.get(command.field_id)
-            if field is None:
+            placement = questionnaire.fields.get(command.field_id)
+            if field is None or placement is None or not placement.is_enabled:
                 raise FieldNotFound
             event.save_value(field.current_version, command.value)
             await self._uow.events.save(event)
@@ -218,14 +177,14 @@ class SkipEventFieldUseCase:
 
     async def execute(self, command: SkipEventField) -> Event:
         async def operation() -> Event:
-            event, fields = await _event_and_fields(
+            event, questionnaire, fields = await _event_and_fields(
                 self._uow, command.user_id, command.event_id
             )
             field = fields.get(command.field_id)
-            if field is None:
+            placement = questionnaire.fields.get(command.field_id)
+            if field is None or placement is None or not placement.is_enabled:
                 raise FieldNotFound
-            placement = event.questionnaire_fields.get(command.field_id)
-            if placement is None or placement.is_required:
+            if placement.is_required:
                 raise InvalidFieldValue("Required event field cannot be skipped")
             event.skip_field(field.current_version)
             await self._uow.events.save(event)
@@ -241,12 +200,12 @@ class CompleteEventUseCase:
 
     async def execute(self, command: CompleteEvent) -> Event:
         async def operation() -> Event:
-            event, fields = await _event_and_fields(
+            event, questionnaire, fields = await _event_and_fields(
                 self._uow, command.user_id, command.event_id
             )
             required = [
                 fields[field_id]
-                for field_id, placement in event.questionnaire_fields.items()
+                for field_id, placement in questionnaire.fields.items()
                 if placement.is_enabled and placement.is_required and field_id in fields
             ]
             if any(not event.has_completed_step(field.id) for field in required):

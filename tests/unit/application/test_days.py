@@ -46,7 +46,7 @@ async def test_save_first_core_value_creates_day_and_reference_baselines(
     day = uow.days.add.await_args.args[0]
     references = uow.reference_days.save.await_args.args[0]
     assert review is None
-    assert day.values[state.id].value == 5
+    assert day.response.answers[state.id].value == 5
     assert day.status is DayStatus.COMPLETE
     assert references.best_day_id == day.id
     assert references.worst_day_id == day.id
@@ -68,4 +68,4 @@ async def test_skip_text_creates_and_completes_day(
 
     day = uow.days.add.await_args.args[0]
     assert day.status is DayStatus.COMPLETE
-    assert day.progress[text.id].skipped
+    assert day.response.progress[text.id].skipped

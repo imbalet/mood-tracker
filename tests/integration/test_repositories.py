@@ -48,7 +48,7 @@ async def test_register_persists_user_and_default_fields() -> None:
         await engine.dispose()
 
 
-async def test_event_persists_questionnaire_snapshot() -> None:
+async def test_event_persists_without_questionnaire_snapshot() -> None:
     engine, session_factory = create_session_factory(os.environ["TEST_DATABASE_URL"])
     try:
         user = await RegisterUserUseCase(
@@ -67,9 +67,6 @@ async def test_event_persists_questionnaire_snapshot() -> None:
             loaded = await uow.events.get(user.id, event.id)
 
         assert loaded is not None
-        assert len(loaded.questionnaire_fields) == 1
-        assert next(iter(loaded.questionnaire_fields.values())).role is (
-            QuestionnaireFieldRole.EVENT_DESCRIPTION
-        )
+        assert loaded.response.answers == {}
     finally:
         await engine.dispose()

@@ -3,7 +3,7 @@
 from datetime import date, datetime
 from uuid import UUID, uuid7
 
-from mood_tracker.domain.entities import Day, DayFieldProgress, DayValue
+from mood_tracker.domain.entities import Day, QuestionnaireResponse
 from mood_tracker.domain.enums import DayStatus
 
 
@@ -18,8 +18,7 @@ class DayFactory:
         day_date: date = date(2025, 1, 2),
         status: DayStatus = DayStatus.DRAFT,
         completed_at: datetime | None = None,
-        values: dict[UUID, DayValue] | None = None,
-        progress: dict[UUID, DayFieldProgress] | None = None,
+        response: QuestionnaireResponse | None = None,
     ) -> Day:
         """Build a day with copied values and questionnaire progress."""
         return Day(
@@ -28,6 +27,5 @@ class DayFactory:
             date=day_date,
             status=status,
             completed_at=completed_at,
-            values=dict(values or {}),
-            progress=dict(progress or {}),
+            response=response or QuestionnaireResponse(),
         )

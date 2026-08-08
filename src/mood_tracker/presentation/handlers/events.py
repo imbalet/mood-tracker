@@ -16,13 +16,13 @@ from mood_tracker.application.commands import (
     CreateQuickEvent,
     DeleteEvent,
     GetEvent,
-    ListEventFields,
+    ListQuestionnaireFields,
     SaveEventValue,
     SkipEventField,
 )
 from mood_tracker.application.errors import FieldNotFound
-from mood_tracker.domain.entities import OrdinalConfig, ScaleConfig, UserProfile
-from mood_tracker.domain.enums import EventStatus
+from mood_tracker.domain.entities import Field, OrdinalConfig, ScaleConfig, UserProfile
+from mood_tracker.domain.enums import EventStatus, QuestionnaireKind
 from mood_tracker.domain.errors import IncompleteDay, InvalidFieldValue
 from mood_tracker.presentation.callback_query import CallbackQueryWithMessage
 from mood_tracker.presentation.callbacks import (
@@ -409,8 +409,8 @@ async def _prompt_next(
     update_main_message: UpdateMainMessage,
 ) -> None:
     current = await services.get_event().execute(GetEvent(profile.id, event_id))
-    items = await services.list_event_fields().execute(
-        ListEventFields(profile.id, event_id)
+    items = await services.list_questionnaire_fields().execute(
+        ListQuestionnaireFields(profile.id, QuestionnaireKind.EVENT)
     )
     item = next(
         (
@@ -628,8 +628,8 @@ async def _render_event(
 ) -> None:
     current = await services.get_event().execute(GetEvent(profile.id, event_id))
     local = current.occurred_at.astimezone(ZoneInfo(current.occurred_timezone))
-    items = await services.list_event_fields().execute(
-        ListEventFields(profile.id, event_id)
+    items = await services.list_questionnaire_fields().execute(
+        ListQuestionnaireFields(profile.id, QuestionnaireKind.EVENT)
     )
     lines = [
         "<b>Событие</b>",
@@ -647,7 +647,10 @@ async def _render_event(
         value = current.response.answers.get(item.field.id)
         progress = current.response.progress.get(item.field.id)
         if value is not None:
-            lines.append(f"<b>{item.field.name}</b>: {value.value}")
+            rendered_value = _render_value(
+                item.field, value.value, value.field_version_id
+            )
+            lines.append(f"<b>{item.field.name}</b>: {rendered_value}")
         elif progress is not None and progress.skipped:
             lines.append(f"<b>{item.field.name}</b>: пропущено")
     builder = KeyboardBuilder()
@@ -684,3 +687,18 @@ def _today(profile: UserProfile) -> date:
 
 def _parse_day(value: str) -> date:
     return date(int(value[:4]), int(value[4:6]), int(value[6:]))
+
+
+def _render_value(field: Field, value: int | str, version_id: UUID) -> str:
+    version = field.get_version(version_id)
+    if version is None:
+        return str(value)
+    config = version.config
+    if isinstance(config, OrdinalConfig) and isinstance(value, int):
+        return next(
+            (option.label for option in config.options if option.value == value),
+            str(value),
+        )
+    if isinstance(config, ScaleConfig):
+        return f"{value}/{config.maximum}"
+    return str(value)
