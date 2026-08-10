@@ -9,9 +9,8 @@ from aiogram.types import (
     InputRichMessageMedia,
 )
 
-from mood_tracker.application.commands import MoveDirection
 from mood_tracker.domain.entities import ScaleConfig, StatePalette
-from mood_tracker.domain.enums import FieldStatus, FieldType
+from mood_tracker.domain.enums import FieldStatus, FieldType, MoveDirection
 from mood_tracker.presentation.callbacks import (
     FieldAction,
     FieldCallback,

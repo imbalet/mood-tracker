@@ -8,6 +8,7 @@ from mood_tracker.application.commands import (
     MoveQuestionnaireField,
 )
 from mood_tracker.application.errors import FieldNotFound
+from mood_tracker.domain.errors import QuestionnaireViolation
 from mood_tracker.presentation.callback_query import CallbackQueryWithMessage
 from mood_tracker.presentation.callbacks import (
     FieldAction,
@@ -104,7 +105,7 @@ async def move_field(
                 callback_data.direction,
             )
         )
-    except FieldNotFound:
+    except FieldNotFound, QuestionnaireViolation:
         await query.answer(TEXTS[TextKey.FIELD_UNAVAILABLE], show_alert=True)
         return
     await query.answer(TEXTS[TextKey.FIELD_CONFIG_SAVED])

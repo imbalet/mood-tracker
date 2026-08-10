@@ -3,7 +3,6 @@
 from dataclasses import dataclass
 from dataclasses import field as dataclass_field
 from datetime import date, datetime
-from enum import StrEnum
 from uuid import UUID
 
 from mood_tracker.domain.entities import (
@@ -16,17 +15,11 @@ from mood_tracker.domain.entities import (
 )
 from mood_tracker.domain.entities.questionnaire import QuestionnaireField
 from mood_tracker.domain.enums import (
+    MoveDirection,
     QuestionnaireKind,
     ReferenceType,
 )
 from mood_tracker.domain.value_objects import UserTimezone
-
-
-class MoveDirection(StrEnum):
-    """One-step direction in a user's field order."""
-
-    UP = "up"
-    DOWN = "down"
 
 
 @dataclass(frozen=True, slots=True)
@@ -60,7 +53,6 @@ class CreateField:
     name: str
     config: FieldConfig
     display_config: FieldDisplayConfig
-    sort_order: int
     kind: QuestionnaireKind = QuestionnaireKind.DAY
 
 
@@ -114,7 +106,6 @@ class AttachFieldToQuestionnaire:
     user_id: UUID
     field_id: UUID
     kind: QuestionnaireKind
-    sort_order: int
     is_required: bool = False
 
 

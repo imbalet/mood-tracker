@@ -21,6 +21,10 @@ class CoreFieldViolation(DomainError):
     """Raised when an operation would violate the state-field invariant."""
 
 
+class QuestionnaireViolation(DomainError):
+    """Raised when an operation violates questionnaire placement rules."""
+
+
 class IncompleteDay(DomainError):
     """Raised when attempting to complete a day with unfinished active fields."""
 

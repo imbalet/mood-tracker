@@ -105,6 +105,11 @@ class QuestionnaireFieldOrm(Base):
         UniqueConstraint(
             "questionnaire_id", "field_id", name="questionnaire_fields_key"
         ),
+        UniqueConstraint(
+            "questionnaire_id",
+            "sort_order",
+            name="questionnaire_fields_questionnaire_order_key",
+        ),
         CheckConstraint("sort_order >= 0", name="questionnaire_fields_order_check"),
     )
     id: Mapped[UUID] = mapped_column(postgresql.UUID(as_uuid=True), primary_key=True)

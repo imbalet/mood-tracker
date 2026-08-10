@@ -34,6 +34,13 @@ class QuestionnaireFieldRole(StrEnum):
     EVENT_DESCRIPTION = "event_description"
 
 
+class MoveDirection(StrEnum):
+    """One-step direction in a questionnaire's field order."""
+
+    UP = "up"
+    DOWN = "down"
+
+
 class DayStatus(StrEnum):
     """The historical completion state of a day."""
 

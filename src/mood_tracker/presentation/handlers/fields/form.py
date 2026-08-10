@@ -10,7 +10,6 @@ from aiogram.types import Message
 from mood_tracker.application.commands import (
     AddFieldVersion,
     CreateField,
-    ListQuestionnaireFields,
     RenameField,
 )
 from mood_tracker.application.errors import FieldNotFound
@@ -465,16 +464,12 @@ async def _create_field(
     kind: QuestionnaireKind,
     services: ApplicationServices,
 ) -> Field:
-    fields = await services.list_questionnaire_fields().execute(
-        ListQuestionnaireFields(profile.id, kind)
-    )
     return await services.create_field().execute(
         CreateField(
             profile.id,
             name,
             config,
             FieldDisplayConfig(),
-            sort_order=len(fields),
             kind=kind,
         )
     )

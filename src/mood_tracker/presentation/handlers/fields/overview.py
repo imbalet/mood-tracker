@@ -9,6 +9,7 @@ from mood_tracker.application.commands import (
 )
 from mood_tracker.application.errors import FieldNotFound
 from mood_tracker.domain.enums import QuestionnaireKind
+from mood_tracker.domain.errors import QuestionnaireViolation
 from mood_tracker.presentation.callback_query import CallbackQueryWithMessage
 from mood_tracker.presentation.callbacks import (
     AttachFieldCallback,
@@ -184,19 +185,15 @@ async def attach_field(
     if profile is None:
         await query.answer(TEXTS[TextKey.START_FIRST], show_alert=True)
         return
-    items = await services.list_questionnaire_fields().execute(
-        ListQuestionnaireFields(profile.id, callback_data.kind)
-    )
     try:
         await services.questionnaire_field().attach(
             AttachFieldToQuestionnaire(
                 profile.id,
                 callback_data.field_id,
                 callback_data.kind,
-                len(items),
             )
         )
-    except FieldNotFound:
+    except FieldNotFound, QuestionnaireViolation:
         await query.answer(TEXTS[TextKey.FIELD_UNAVAILABLE], show_alert=True)
         return
     await state.set_state(None)

@@ -1,7 +1,10 @@
 import os
 from datetime import UTC, datetime
 
+import pytest
+
 from mood_tracker.application.commands import CreateEvent, RegisterUser
+from mood_tracker.application.errors import IdentifierCollision
 from mood_tracker.application.use_cases import CreateEventUseCase, RegisterUserUseCase
 from mood_tracker.domain.enums import QuestionnaireFieldRole, QuestionnaireKind
 from mood_tracker.domain.value_objects import UserTimezone
@@ -68,5 +71,26 @@ async def test_event_persists_without_questionnaire_snapshot() -> None:
 
         assert loaded is not None
         assert loaded.response.answers == {}
+    finally:
+        await engine.dispose()
+
+
+async def test_questionnaire_rejects_duplicate_field_order() -> None:
+    engine, session_factory = create_session_factory(os.environ["TEST_DATABASE_URL"])
+    try:
+        user = await RegisterUserUseCase(
+            SqlAlchemyUnitOfWork(session_factory), FixedClock(), Uuid7Generator()
+        ).execute(RegisterUser(345678, UserTimezone("Europe/Moscow")))
+
+        with pytest.raises(IdentifierCollision):
+            async with SqlAlchemyUnitOfWork(session_factory) as uow:
+                questionnaire = await uow.questionnaires.get(
+                    user.id, QuestionnaireKind.DAY
+                )
+                assert questionnaire is not None
+                first, second, *_ = questionnaire.ordered_fields()
+                second.sort_order = first.sort_order
+                await uow.questionnaires.save(questionnaire)
+                await uow.commit()
     finally:
         await engine.dispose()

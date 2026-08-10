@@ -9,7 +9,6 @@ from mood_tracker.application.commands import (
     DeleteField,
     DetachFieldFromQuestionnaire,
     ListQuestionnaireFields,
-    MoveDirection,
     MoveQuestionnaireField,
     QuestionnaireFieldItem,
     RenameField,
@@ -24,11 +23,7 @@ from mood_tracker.application.use_cases._transactions import (
     execute_write,
 )
 from mood_tracker.domain.entities import Field, FieldVersion, Questionnaire
-from mood_tracker.domain.entities.questionnaire import QuestionnaireField
-from mood_tracker.domain.enums import (
-    QuestionnaireFieldRole,
-    QuestionnaireKind,
-)
+from mood_tracker.domain.enums import QuestionnaireKind
 from mood_tracker.domain.errors import InvalidFieldVersion
 
 
@@ -99,9 +94,7 @@ class CreateFieldUseCase:
             questionnaire = await _get_questionnaire(
                 self._uow, command.user_id, command.kind
             )
-            questionnaire.fields[field.id] = QuestionnaireField(
-                field.id, command.sort_order
-            )
+            questionnaire.attach(field.id, is_required=True)
             await self._uow.questionnaires.save(questionnaire)
             return field
 
@@ -189,9 +182,7 @@ class QuestionnaireFieldUseCase:
             questionnaire = await _get_questionnaire(
                 self._uow, command.user_id, command.kind
             )
-            questionnaire.fields[command.field_id] = QuestionnaireField(
-                command.field_id, command.sort_order, is_required=command.is_required
-            )
+            questionnaire.attach(command.field_id, is_required=command.is_required)
             await self._uow.questionnaires.save(questionnaire)
             return field
 
@@ -203,14 +194,7 @@ class QuestionnaireFieldUseCase:
             questionnaire = await _get_questionnaire(
                 self._uow, command.user_id, command.kind
             )
-            placement = questionnaire.fields.get(field.id)
-            if placement is None:
-                raise FieldNotFound
-            if placement.role is not QuestionnaireFieldRole.ORDINARY:
-                raise InvalidFieldVersion(
-                    "System questionnaire field cannot be detached"
-                )
-            del questionnaire.fields[field.id]
+            questionnaire.detach(field.id)
             await self._uow.questionnaires.save(questionnaire)
             return field
 
@@ -222,10 +206,7 @@ class QuestionnaireFieldUseCase:
             questionnaire = await _get_questionnaire(
                 self._uow, command.user_id, command.kind
             )
-            placement = questionnaire.fields.get(field.id)
-            if placement is None:
-                raise FieldNotFound
-            placement.set_enabled(command.is_enabled)
+            questionnaire.set_enabled(field.id, command.is_enabled)
             await self._uow.questionnaires.save(questionnaire)
             return field
 
@@ -237,15 +218,7 @@ class QuestionnaireFieldUseCase:
             questionnaire = await _get_questionnaire(
                 self._uow, command.user_id, command.kind
             )
-            placement = questionnaire.fields.get(field.id)
-            if placement is None:
-                raise FieldNotFound
-            if (
-                placement.role is QuestionnaireFieldRole.DAY_STATE
-                and not command.is_required
-            ):
-                raise InvalidFieldVersion("Day state field must remain required")
-            placement.is_required = command.is_required
+            questionnaire.set_required(field.id, command.is_required)
             await self._uow.questionnaires.save(questionnaire)
             return field
 
@@ -260,27 +233,7 @@ class QuestionnaireFieldUseCase:
             questionnaire = await _get_questionnaire(
                 self._uow, command.user_id, command.kind
             )
-            placements = list(questionnaire.ordered_fields())
-            current_index = next(
-                (
-                    index
-                    for index, placement in enumerate(placements)
-                    if placement.field_id == command.field_id
-                ),
-                None,
-            )
-            if current_index is None:
-                raise FieldNotFound
-            target_index = current_index + (
-                -1 if command.direction is MoveDirection.UP else 1
-            )
-            if 0 <= target_index < len(placements):
-                placements[current_index], placements[target_index] = (
-                    placements[target_index],
-                    placements[current_index],
-                )
-            for index, placement in enumerate(placements):
-                placement.sort_order = index
+            questionnaire.move(command.field_id, command.direction)
             await self._uow.questionnaires.save(questionnaire)
             return await _questionnaire_fields(self._uow, command.user_id, command.kind)
 

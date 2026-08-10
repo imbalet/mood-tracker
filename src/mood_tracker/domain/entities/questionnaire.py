@@ -4,8 +4,16 @@ from dataclasses import dataclass, field
 from uuid import UUID
 
 from mood_tracker.domain.entities.field import FieldVersion
-from mood_tracker.domain.enums import QuestionnaireFieldRole, QuestionnaireKind
-from mood_tracker.domain.errors import CoreFieldViolation, InvalidFieldVersion
+from mood_tracker.domain.enums import (
+    MoveDirection,
+    QuestionnaireFieldRole,
+    QuestionnaireKind,
+)
+from mood_tracker.domain.errors import (
+    CoreFieldViolation,
+    InvalidFieldVersion,
+    QuestionnaireViolation,
+)
 
 
 @dataclass(slots=True)
@@ -48,6 +56,13 @@ class QuestionnaireField:
             raise CoreFieldViolation(msg)
         self.is_enabled = is_enabled
 
+    def set_required(self, is_required: bool) -> None:
+        """Change whether a questionnaire step must be completed."""
+        if self.role is QuestionnaireFieldRole.DAY_STATE and not is_required:
+            msg = "Day state field must remain required"
+            raise CoreFieldViolation(msg)
+        self.is_required = is_required
+
 
 @dataclass(slots=True)
 class Questionnaire:
@@ -58,8 +73,106 @@ class Questionnaire:
     kind: QuestionnaireKind
     fields: dict[UUID, QuestionnaireField] = field(default_factory=dict)
 
+    def __post_init__(self) -> None:
+        for field_id, placement in self.fields.items():
+            if field_id != placement.field_id:
+                msg = "Questionnaire field key must match placement field ID"
+                raise QuestionnaireViolation(msg)
+            self._validate_role(placement.role)
+        sort_orders = sorted(placement.sort_order for placement in self.fields.values())
+        if sort_orders != list(range(len(self.fields))):
+            msg = "Questionnaire field order must be contiguous and unique"
+            raise QuestionnaireViolation(msg)
+
     def ordered_fields(self) -> tuple[QuestionnaireField, ...]:
         return tuple(sorted(self.fields.values(), key=lambda item: item.sort_order))
+
+    def attach(
+        self,
+        field_id: UUID,
+        *,
+        is_required: bool = False,
+        role: QuestionnaireFieldRole = QuestionnaireFieldRole.ORDINARY,
+    ) -> QuestionnaireField:
+        """Append a new field placement to this questionnaire."""
+        if field_id in self.fields:
+            msg = "Field is already attached to this questionnaire"
+            raise QuestionnaireViolation(msg)
+        self._validate_role(role)
+        placement = QuestionnaireField(
+            field_id=field_id,
+            sort_order=len(self.fields),
+            is_required=is_required,
+            role=role,
+        )
+        self.fields[field_id] = placement
+        return placement
+
+    def detach(self, field_id: UUID) -> QuestionnaireField:
+        """Remove one ordinary field and close the resulting order gap."""
+        placement = self._placement(field_id)
+        if placement.role is not QuestionnaireFieldRole.ORDINARY:
+            msg = "System questionnaire field cannot be detached"
+            raise CoreFieldViolation(msg)
+        del self.fields[field_id]
+        self._normalize_order()
+        return placement
+
+    def set_enabled(self, field_id: UUID, is_enabled: bool) -> None:
+        """Change one placement's visibility in this questionnaire."""
+        self._placement(field_id).set_enabled(is_enabled)
+
+    def set_required(self, field_id: UUID, is_required: bool) -> None:
+        """Change one placement's completion requirement."""
+        self._placement(field_id).set_required(is_required)
+
+    def move(self, field_id: UUID, direction: MoveDirection) -> None:
+        """Move a placement by one position without creating order gaps."""
+        placements = list(self.ordered_fields())
+        current_index = next(
+            (
+                index
+                for index, placement in enumerate(placements)
+                if placement.field_id == field_id
+            ),
+            None,
+        )
+        if current_index is None:
+            msg = "Field is not attached to this questionnaire"
+            raise QuestionnaireViolation(msg)
+        target_index = current_index + (-1 if direction is MoveDirection.UP else 1)
+        if 0 <= target_index < len(placements):
+            placements[current_index], placements[target_index] = (
+                placements[target_index],
+                placements[current_index],
+            )
+        for index, placement in enumerate(placements):
+            placement.sort_order = index
+
+    def _placement(self, field_id: UUID) -> QuestionnaireField:
+        placement = self.fields.get(field_id)
+        if placement is None:
+            msg = "Field is not attached to this questionnaire"
+            raise QuestionnaireViolation(msg)
+        return placement
+
+    def _normalize_order(self) -> None:
+        for index, placement in enumerate(self.ordered_fields()):
+            placement.sort_order = index
+
+    def _validate_role(self, role: QuestionnaireFieldRole) -> None:
+        if (
+            role is QuestionnaireFieldRole.DAY_STATE
+            and self.kind is not QuestionnaireKind.DAY
+        ):
+            msg = "Day state field can only belong to a day questionnaire"
+            raise QuestionnaireViolation(msg)
+        if (
+            role is QuestionnaireFieldRole.EVENT_DESCRIPTION
+            and self.kind is not QuestionnaireKind.EVENT
+        ):
+            msg = "Event description field can only belong to an event questionnaire"
+            raise QuestionnaireViolation(msg)
 
 
 @dataclass(frozen=True, slots=True)

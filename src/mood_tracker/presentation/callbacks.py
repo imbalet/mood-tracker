@@ -8,10 +8,10 @@ from uuid import UUID
 from aiogram.filters.callback_data import CallbackData
 from pydantic import field_validator
 
-from mood_tracker.application.commands import MoveDirection
 from mood_tracker.domain.enums import (
     FieldStatus,
     FieldType,
+    MoveDirection,
     QuestionnaireKind,
     ReferenceType,
 )

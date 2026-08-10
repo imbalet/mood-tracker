@@ -6,7 +6,6 @@ import pytest
 from mood_tracker.application.commands import (
     AddFieldVersion,
     CreateField,
-    MoveDirection,
     MoveQuestionnaireField,
 )
 from mood_tracker.application.use_cases import (
@@ -21,7 +20,7 @@ from mood_tracker.domain.entities import (
     TextConfig,
 )
 from mood_tracker.domain.entities.questionnaire import QuestionnaireField
-from mood_tracker.domain.enums import QuestionnaireKind
+from mood_tracker.domain.enums import MoveDirection, QuestionnaireKind
 from mood_tracker.domain.errors import InvalidFieldVersion
 
 
@@ -41,7 +40,6 @@ async def test_create_field_persists_current_semantic_version(
             name="События дня",
             config=TextConfig(),
             display_config=FieldDisplayConfig(),
-            sort_order=4,
         )
     )
 
@@ -64,7 +62,6 @@ async def test_create_field_attaches_to_selected_questionnaire(
             name="Контекст",
             config=TextConfig(),
             display_config=FieldDisplayConfig(),
-            sort_order=0,
             kind=QuestionnaireKind.EVENT,
         )
     )
@@ -77,8 +74,8 @@ async def test_move_field_swaps_neighbours_and_normalizes_order(
     uow, clock, user_factory, field_factory
 ) -> None:
     user = user_factory.build()
-    first = field_factory.text(user_id=user.id, name="Первое", sort_order=3)
-    second = field_factory.text(user_id=user.id, name="Второе", sort_order=8)
+    first = field_factory.text(user_id=user.id, name="Первое")
+    second = field_factory.text(user_id=user.id, name="Второе")
     uow.users.get = AsyncMock(return_value=user)
     uow.fields.list_for_user = AsyncMock(return_value=(first, second))
 
@@ -87,8 +84,8 @@ async def test_move_field_swaps_neighbours_and_normalizes_order(
         user.id,
         QuestionnaireKind.DAY,
         {
-            first.id: QuestionnaireField(first.id, 3),
-            second.id: QuestionnaireField(second.id, 8),
+            first.id: QuestionnaireField(first.id, 0),
+            second.id: QuestionnaireField(second.id, 1),
         },
     )
     uow.questionnaires.get = AsyncMock(return_value=questionnaire)

@@ -16,7 +16,11 @@ from mood_tracker.application.commands import (
 from mood_tracker.application.errors import FieldNotFound
 from mood_tracker.domain.entities import FieldDisplayConfig, StatePalette
 from mood_tracker.domain.enums import FieldStatus
-from mood_tracker.domain.errors import CoreFieldViolation, InvalidFieldVersion
+from mood_tracker.domain.errors import (
+    CoreFieldViolation,
+    InvalidFieldVersion,
+    QuestionnaireViolation,
+)
 from mood_tracker.presentation.callback_query import CallbackQueryWithMessage
 from mood_tracker.presentation.callbacks import (
     FieldAction,
@@ -203,7 +207,7 @@ async def set_status(
                 callback_data.status is FieldStatus.ACTIVE,
             )
         )
-    except FieldNotFound, CoreFieldViolation:
+    except FieldNotFound, CoreFieldViolation, QuestionnaireViolation:
         await query.answer(TEXTS[TextKey.FIELD_UNAVAILABLE], show_alert=True)
         return
     await query.answer(TEXTS[TextKey.FIELD_CONFIG_SAVED])
@@ -252,7 +256,12 @@ async def change_questionnaire_placement(
                     profile.id, callback_data.field_id, callback_data.kind
                 )
             )
-    except FieldNotFound, CoreFieldViolation, InvalidFieldVersion:
+    except (
+        FieldNotFound,
+        CoreFieldViolation,
+        InvalidFieldVersion,
+        QuestionnaireViolation,
+    ):
         await query.answer(TEXTS[TextKey.FIELD_UNAVAILABLE], show_alert=True)
         return
     await state.set_state(None)
