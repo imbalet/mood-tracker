@@ -67,9 +67,13 @@ class TextKey(StrEnum):
     FIELD_CREATED = "field_created"
     FIELD_RENAMED = "field_renamed"
     FIELD_CONFIG_SAVED = "field_config_saved"
-    FIELD_STATUS_ACTIVE = "field_status_active"
-    FIELD_STATUS_INACTIVE = "field_status_inactive"
-    FIELD_STATUS_HIDDEN = "field_status_hidden"
+    FIELD_ENABLED = "field_enabled"
+    FIELD_DISABLED = "field_disabled"
+    FIELD_ENABLE = "field_enable"
+    FIELD_DISABLE = "field_disable"
+    FIELD_DELETE = "field_delete"
+    FIELD_DELETE_CONFIRM = "field_delete_confirm"
+    FIELD_DELETE_PROMPT = "field_delete_prompt"
     FIELD_RENAME = "field_rename"
     FIELD_NEW_VERSION = "field_new_version"
     FIELD_CHANGE_RANGE = "field_change_range"
@@ -174,9 +178,16 @@ _TEXTS: dict[TextKey, str] = {
     TextKey.FIELD_CREATED: "Поле создано.",
     TextKey.FIELD_RENAMED: "Название поля изменено.",
     TextKey.FIELD_CONFIG_SAVED: "Настройки сохранены.",
-    TextKey.FIELD_STATUS_ACTIVE: "Активно",
-    TextKey.FIELD_STATUS_INACTIVE: "Неактивно",
-    TextKey.FIELD_STATUS_HIDDEN: "Скрыто",
+    TextKey.FIELD_ENABLED: "Активно",
+    TextKey.FIELD_DISABLED: "Отключено",
+    TextKey.FIELD_ENABLE: "Включить в анкете",
+    TextKey.FIELD_DISABLE: "Отключить в анкете",
+    TextKey.FIELD_DELETE: "Удалить поле",
+    TextKey.FIELD_DELETE_CONFIRM: "Удалить",
+    TextKey.FIELD_DELETE_PROMPT: (
+        "Удалить поле? Оно исчезнет из обеих анкет и истории. "
+        "Данные останутся в базе для ручного восстановления."
+    ),
     TextKey.FIELD_RENAME: "Переименовать",
     TextKey.FIELD_NEW_VERSION: "Изменить значения",
     TextKey.FIELD_CHANGE_RANGE: "Изменить диапазон",

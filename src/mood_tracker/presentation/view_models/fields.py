@@ -6,7 +6,6 @@ from uuid import UUID
 from mood_tracker.domain.entities import Field, OrdinalConfig, ScaleConfig
 from mood_tracker.domain.entities.questionnaire import QuestionnaireField
 from mood_tracker.domain.enums import (
-    FieldStatus,
     FieldType,
     QuestionnaireFieldRole,
     QuestionnaireKind,
@@ -35,7 +34,7 @@ class FieldCardView:
 
     id: UUID
     name: str
-    status: FieldStatus
+    is_enabled: bool
     type: FieldType
     is_core: bool
     is_system: bool
@@ -114,11 +113,7 @@ def make_field_card_view(
     return FieldCardView(
         id=field.id,
         name=field.name,
-        status=(
-            FieldStatus.ACTIVE
-            if placement is None or placement.is_enabled
-            else FieldStatus.INACTIVE
-        ),
+        is_enabled=placement is None or placement.is_enabled,
         type=field.current_version.type,
         is_core=is_core,
         is_system=is_system,

@@ -6,6 +6,7 @@ import pytest
 from mood_tracker.application.commands import (
     AddFieldVersion,
     CreateField,
+    DeleteField,
     MoveQuestionnaireField,
 )
 from mood_tracker.application.use_cases import (
@@ -20,8 +21,12 @@ from mood_tracker.domain.entities import (
     TextConfig,
 )
 from mood_tracker.domain.entities.questionnaire import QuestionnaireField
-from mood_tracker.domain.enums import MoveDirection, QuestionnaireKind
-from mood_tracker.domain.errors import InvalidFieldVersion
+from mood_tracker.domain.enums import (
+    MoveDirection,
+    QuestionnaireFieldRole,
+    QuestionnaireKind,
+)
+from mood_tracker.domain.errors import CoreFieldViolation, InvalidFieldVersion
 
 
 async def test_create_field_persists_current_semantic_version(
@@ -114,6 +119,53 @@ async def test_add_field_version_rejects_type_change(
     with pytest.raises(InvalidFieldVersion):
         await AddFieldVersionUseCase(uow, clock, id_generator).execute(
             AddFieldVersion(user.id, field.id, ScaleConfig(0, 10))
+        )
+
+    uow.fields.save.assert_not_awaited()
+
+
+async def test_delete_field_soft_deletes_an_ordinary_field(
+    uow, clock, user_factory, field_factory
+) -> None:
+    user = user_factory.build()
+    field = field_factory.text(user_id=user.id)
+    day_questionnaire = Questionnaire(uuid7(), user.id, QuestionnaireKind.DAY)
+    event_questionnaire = Questionnaire(uuid7(), user.id, QuestionnaireKind.EVENT)
+    uow.fields.get = AsyncMock(return_value=field)
+    uow.questionnaires.get = AsyncMock(
+        side_effect=(day_questionnaire, event_questionnaire)
+    )
+
+    await QuestionnaireFieldUseCase(uow, clock).delete(DeleteField(user.id, field.id))
+
+    assert field.deleted_at == clock.now()
+    uow.fields.save.assert_awaited_once_with(field)
+
+
+async def test_delete_field_rejects_a_system_placement(
+    uow, clock, user_factory, field_factory
+) -> None:
+    user = user_factory.build()
+    field = field_factory.scale(user_id=user.id)
+    day_questionnaire = Questionnaire(
+        uuid7(),
+        user.id,
+        QuestionnaireKind.DAY,
+        {
+            field.id: QuestionnaireField(
+                field.id, 0, role=QuestionnaireFieldRole.DAY_STATE
+            )
+        },
+    )
+    event_questionnaire = Questionnaire(uuid7(), user.id, QuestionnaireKind.EVENT)
+    uow.fields.get = AsyncMock(return_value=field)
+    uow.questionnaires.get = AsyncMock(
+        side_effect=(day_questionnaire, event_questionnaire)
+    )
+
+    with pytest.raises(CoreFieldViolation):
+        await QuestionnaireFieldUseCase(uow, clock).delete(
+            DeleteField(user.id, field.id)
         )
 
     uow.fields.save.assert_not_awaited()

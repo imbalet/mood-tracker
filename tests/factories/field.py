@@ -13,7 +13,7 @@ from mood_tracker.domain.entities import (
     ScaleConfig,
     TextConfig,
 )
-from mood_tracker.domain.enums import FieldStatus, FieldType
+from mood_tracker.domain.enums import FieldType
 
 
 class FieldFactory:
@@ -28,7 +28,6 @@ class FieldFactory:
         name: str = "Состояние",
         minimum: int = 0,
         maximum: int = 10,
-        status: FieldStatus = FieldStatus.ACTIVE,
         is_core: bool = False,
         sort_order: int = 0,
         display_config: FieldDisplayConfig | None = None,
@@ -42,7 +41,6 @@ class FieldFactory:
             name=name,
             type=FieldType.SCALE,
             config=ScaleConfig(minimum, maximum),
-            status=status,
             is_core=is_core,
             sort_order=sort_order,
             display_config=display_config,
@@ -61,7 +59,6 @@ class FieldFactory:
             OrdinalOption(1, "Немного"),
             OrdinalOption(2, "Много"),
         ),
-        status: FieldStatus = FieldStatus.ACTIVE,
         sort_order: int = 0,
         display_config: FieldDisplayConfig | None = None,
         created_at: datetime = datetime(2025, 1, 2, tzinfo=UTC),
@@ -74,7 +71,6 @@ class FieldFactory:
             name=name,
             type=FieldType.ORDINAL,
             config=OrdinalConfig(options),
-            status=status,
             is_core=False,
             sort_order=sort_order,
             display_config=display_config,
@@ -88,7 +84,6 @@ class FieldFactory:
         user_id: UUID | None = None,
         version_id: UUID | None = None,
         name: str = "Комментарий",
-        status: FieldStatus = FieldStatus.ACTIVE,
         sort_order: int = 0,
         display_config: FieldDisplayConfig | None = None,
         created_at: datetime = datetime(2025, 1, 2, tzinfo=UTC),
@@ -101,7 +96,6 @@ class FieldFactory:
             name=name,
             type=FieldType.TEXT,
             config=TextConfig(),
-            status=status,
             is_core=False,
             sort_order=sort_order,
             display_config=display_config,
@@ -117,7 +111,6 @@ class FieldFactory:
         name: str,
         type: FieldType,
         config: FieldConfig,
-        status: FieldStatus,
         is_core: bool,
         sort_order: int,
         display_config: FieldDisplayConfig | None,

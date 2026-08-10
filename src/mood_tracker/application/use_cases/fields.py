@@ -23,8 +23,8 @@ from mood_tracker.application.use_cases._transactions import (
     execute_write,
 )
 from mood_tracker.domain.entities import Field, FieldVersion, Questionnaire
-from mood_tracker.domain.enums import QuestionnaireKind
-from mood_tracker.domain.errors import InvalidFieldVersion
+from mood_tracker.domain.enums import QuestionnaireFieldRole, QuestionnaireKind
+from mood_tracker.domain.errors import CoreFieldViolation, InvalidFieldVersion
 
 
 async def _get_owned_field(uow: UnitOfWork, user_id: UUID, field_id: UUID) -> Field:
@@ -242,6 +242,19 @@ class QuestionnaireFieldUseCase:
     async def delete(self, command: DeleteField) -> None:
         async def operation() -> None:
             field = await _get_owned_field(self._uow, command.user_id, command.field_id)
+            for kind in QuestionnaireKind:
+                questionnaire = await self._uow.questionnaires.get(
+                    command.user_id, kind
+                )
+                placement = (
+                    questionnaire.fields.get(field.id) if questionnaire else None
+                )
+                if (
+                    placement is not None
+                    and placement.role is not QuestionnaireFieldRole.ORDINARY
+                ):
+                    msg = "System questionnaire field cannot be deleted"
+                    raise CoreFieldViolation(msg)
             field.delete(self._clock.now())
             await self._uow.fields.save(field)
 

@@ -7,6 +7,7 @@ from aiogram.fsm.context import FSMContext
 from aiogram.types import Message
 
 from mood_tracker.application.commands import (
+    DeleteField,
     DetachFieldFromQuestionnaire,
     ListQuestionnaireFields,
     SetFieldDisplay,
@@ -15,7 +16,6 @@ from mood_tracker.application.commands import (
 )
 from mood_tracker.application.errors import FieldNotFound
 from mood_tracker.domain.entities import FieldDisplayConfig, StatePalette
-from mood_tracker.domain.enums import FieldStatus
 from mood_tracker.domain.errors import (
     CoreFieldViolation,
     InvalidFieldVersion,
@@ -25,7 +25,6 @@ from mood_tracker.presentation.callback_query import CallbackQueryWithMessage
 from mood_tracker.presentation.callbacks import (
     FieldAction,
     FieldCallback,
-    FieldStatusCallback,
     PaletteCallback,
     PalettePreset,
     QuestionnaireFieldAction,
@@ -41,6 +40,7 @@ from mood_tracker.presentation.handlers.fields.common import (
 )
 from mood_tracker.presentation.palettes import PALETTES
 from mood_tracker.presentation.queries import get_owned_field, get_user_profile
+from mood_tracker.presentation.screens.screen import Screen
 from mood_tracker.presentation.services import ApplicationServices
 from mood_tracker.presentation.state import (
     FieldDisplayChange,
@@ -48,7 +48,7 @@ from mood_tracker.presentation.state import (
     InvalidPresentationData,
     PresentationData,
 )
-from mood_tracker.presentation.utils import UpdateMainMessage
+from mood_tracker.presentation.utils import KeyboardBuilder, UpdateMainMessage
 from mood_tracker.presentation.view_models import make_palette_view
 
 router = Router(name="fields_display")
@@ -183,36 +183,74 @@ async def save_palette_preset(
     )
 
 
-@router.callback_query(FieldStatusCallback.filter())
-async def set_status(
+@router.callback_query(FieldCallback.filter(F.action == FieldAction.DELETE))
+async def delete_confirmation(
     query: CallbackQueryWithMessage,
-    callback_data: FieldStatusCallback,
+    callback_data: FieldCallback,
+    presentation_data: PresentationData,
+    update_main_message: UpdateMainMessage,
+) -> None:
+    """Ask the user to confirm a global soft-delete."""
+    builder = KeyboardBuilder()
+    builder.row_buttons_tuple(
+        (
+            TextKey.FIELD_DELETE_CONFIRM,
+            FieldCallback(
+                action=FieldAction.CONFIRM_DELETE,
+                field_id=callback_data.field_id,
+                kind=callback_data.kind,
+            ),
+        )
+    )
+    builder.row_buttons_tuple(
+        (
+            TextKey.BACK,
+            FieldCallback(
+                action=FieldAction.OPEN,
+                field_id=callback_data.field_id,
+                kind=callback_data.kind,
+            ),
+        )
+    )
+    await update_main_message(
+        presentation_data,
+        query,
+        Screen(TEXTS[TextKey.FIELD_DELETE_PROMPT], builder.as_markup()),
+    )
+
+
+@router.callback_query(FieldCallback.filter(F.action == FieldAction.CONFIRM_DELETE))
+async def delete_field(
+    query: CallbackQueryWithMessage,
+    callback_data: FieldCallback,
     state: FSMContext,
     presentation_data: PresentationData,
     telegram_id: int,
     services: ApplicationServices,
     update_main_message: UpdateMainMessage,
 ) -> None:
-    """Change lifecycle for an owned non-core field."""
+    """Soft-delete one ordinary field after confirmation."""
     profile = await get_user_profile(telegram_id, services)
     if profile is None:
         await query.answer(TEXTS[TextKey.START_FIRST], show_alert=True)
         return
     try:
-        field = await services.questionnaire_field().set_enabled(
-            SetQuestionnaireFieldEnabled(
-                profile.id,
-                callback_data.field_id,
-                callback_data.kind,
-                callback_data.status is FieldStatus.ACTIVE,
-            )
+        await services.questionnaire_field().delete(
+            DeleteField(profile.id, callback_data.field_id)
         )
     except FieldNotFound, CoreFieldViolation, QuestionnaireViolation:
         await query.answer(TEXTS[TextKey.FIELD_UNAVAILABLE], show_alert=True)
         return
+    await state.set_state(None)
+    await presentation_data.clear_flow()
     await query.answer(TEXTS[TextKey.FIELD_CONFIG_SAVED])
-    await render_field(
-        query, presentation_data, field, update_main_message, kind=callback_data.kind
+    await render_fields(
+        query,
+        presentation_data,
+        profile,
+        services,
+        update_main_message,
+        callback_data.kind,
     )
 
 
@@ -248,6 +286,18 @@ async def change_questionnaire_placement(
                     callback_data.field_id,
                     callback_data.kind,
                     not item.placement.is_required,
+                )
+            )
+        elif callback_data.action in (
+            QuestionnaireFieldAction.ENABLE,
+            QuestionnaireFieldAction.DISABLE,
+        ):
+            field = await services.questionnaire_field().set_enabled(
+                SetQuestionnaireFieldEnabled(
+                    profile.id,
+                    callback_data.field_id,
+                    callback_data.kind,
+                    callback_data.action is QuestionnaireFieldAction.ENABLE,
                 )
             )
         else:

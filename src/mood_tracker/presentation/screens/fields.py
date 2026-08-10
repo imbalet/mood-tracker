@@ -10,14 +10,13 @@ from aiogram.types import (
 )
 
 from mood_tracker.domain.entities import ScaleConfig, StatePalette
-from mood_tracker.domain.enums import FieldStatus, FieldType, MoveDirection
+from mood_tracker.domain.enums import FieldType, MoveDirection
 from mood_tracker.presentation.callbacks import (
     FieldAction,
     FieldCallback,
     FieldMoveCallback,
     FieldsListAction,
     FieldsListCallback,
-    FieldStatusCallback,
     MenuCallback,
     MenuSection,
     PaletteCallback,
@@ -80,10 +79,13 @@ def fields_list_screen(view: FieldsListView) -> Screen:
 
 def field_card_screen(view: FieldCardView) -> Screen:
     """Build a field's display and all actions valid for its type."""
+    enabled_text = TEXTS[
+        TextKey.FIELD_ENABLED if view.is_enabled else TextKey.FIELD_DISABLED
+    ]
     lines = [
         TEXTS[TextKey.FIELD_DETAILS].format(name=escape(view.name)),
         f"Тип: {_field_type_label(view.type)}",
-        f"Статус: <b>{_field_status_label(view.status)}</b>",
+        f"Статус: <b>{enabled_text}</b>",
         (
             f"В анкете: {'обязательное' if view.is_required else 'необязательное'}"
             if view.kind.value == "event"
@@ -243,14 +245,19 @@ def _field_card_keyboard(view: FieldCardView) -> InlineKeyboardMarkup:
         )
     elif not view.is_system:
         builder.row_buttons_text_tuple(
-            *(
-                (
-                    TEXTS[_field_status_key(status)],
-                    FieldStatusCallback(
-                        field_id=view.id, status=status, kind=view.kind
+            (
+                TEXTS[
+                    TextKey.FIELD_DISABLE if view.is_enabled else TextKey.FIELD_ENABLE
+                ],
+                QuestionnaireFieldCallback(
+                    action=(
+                        QuestionnaireFieldAction.DISABLE
+                        if view.is_enabled
+                        else QuestionnaireFieldAction.ENABLE
                     ),
-                )
-                for status in FieldStatus
+                    field_id=view.id,
+                    kind=view.kind,
+                ),
             )
         )
     if view.kind.value == "event":
@@ -277,20 +284,16 @@ def _field_card_keyboard(view: FieldCardView) -> InlineKeyboardMarkup:
                 ),
             )
         )
+        builder.row_buttons_tuple(
+            (
+                TextKey.FIELD_DELETE,
+                FieldCallback(
+                    action=FieldAction.DELETE, field_id=view.id, kind=view.kind
+                ),
+            )
+        )
     builder.row_buttons_tuple((TextKey.BACK, MenuCallback(section=MenuSection.FIELDS)))
     return builder.as_markup()
-
-
-def _field_status_key(status: FieldStatus) -> TextKey:
-    return {
-        FieldStatus.ACTIVE: TextKey.FIELD_STATUS_ACTIVE,
-        FieldStatus.INACTIVE: TextKey.FIELD_STATUS_INACTIVE,
-        FieldStatus.HIDDEN: TextKey.FIELD_STATUS_HIDDEN,
-    }[status]
-
-
-def _field_status_label(status: FieldStatus) -> str:
-    return TEXTS[_field_status_key(status)]
 
 
 def _field_type_label(type: FieldType) -> str:

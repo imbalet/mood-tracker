@@ -65,6 +65,38 @@ def test_core_field_keyboard_does_not_offer_status_changes(field_factory) -> Non
     assert "Палитра состояния" in texts
 
 
+def test_ordinary_field_keyboard_exposes_enablement_and_soft_delete(
+    field_factory,
+) -> None:
+    field = field_factory.text()
+
+    screen = field_card_screen(
+        make_field_card_view(field, QuestionnaireField(field.id, 0))
+    )
+
+    assert screen.reply_markup is not None
+    texts = {
+        button.text for row in screen.reply_markup.inline_keyboard for button in row
+    }
+    assert "Отключить в анкете" in texts
+    assert "Удалить поле" in texts
+    assert "Скрыто" not in texts
+
+
+def test_disabled_field_keyboard_offers_reenable(field_factory) -> None:
+    field = field_factory.text()
+
+    screen = field_card_screen(
+        make_field_card_view(field, QuestionnaireField(field.id, 0, is_enabled=False))
+    )
+
+    assert screen.reply_markup is not None
+    texts = {
+        button.text for row in screen.reply_markup.inline_keyboard for button in row
+    }
+    assert "Включить в анкете" in texts
+
+
 def test_first_ordered_field_has_no_up_button(field_factory) -> None:
     first = field_factory.text(name="Первое")
     second = field_factory.text(name="Второе")

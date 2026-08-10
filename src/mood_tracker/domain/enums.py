@@ -11,14 +11,6 @@ class FieldType(StrEnum):
     TEXT = "text"
 
 
-class FieldStatus(StrEnum):
-    """The current visibility and input lifecycle of a field."""
-
-    ACTIVE = "active"
-    INACTIVE = "inactive"
-    HIDDEN = "hidden"
-
-
 class QuestionnaireKind(StrEnum):
     """Built-in forms which independently select and order fields."""
 

@@ -9,7 +9,6 @@ from aiogram.filters.callback_data import CallbackData
 from pydantic import field_validator
 
 from mood_tracker.domain.enums import (
-    FieldStatus,
     FieldType,
     MoveDirection,
     QuestionnaireKind,
@@ -45,6 +44,8 @@ class FieldAction(StrEnum):
     CLEAR_EMOJI = "clear_emoji"
     TOGGLE_CALENDAR = "toggle_calendar"
     PALETTE = "palette"
+    DELETE = "delete"
+    CONFIRM_DELETE = "confirm_delete"
     BACK = "back"
 
 
@@ -89,6 +90,8 @@ class AttachFieldCallback(CallbackData, prefix="field_attach"):
 class QuestionnaireFieldAction(StrEnum):
     """Placement-only actions from a field card."""
 
+    ENABLE = "enable"
+    DISABLE = "disable"
     TOGGLE_REQUIRED = "toggle_required"
     DETACH = "detach"
 
@@ -99,14 +102,6 @@ class QuestionnaireFieldCallback(CallbackData, prefix="questionnaire_field"):
     action: QuestionnaireFieldAction
     field_id: UUID
     kind: QuestionnaireKind
-
-
-class FieldStatusCallback(CallbackData, prefix="field_status"):
-    """Set a non-core field lifecycle state."""
-
-    field_id: UUID
-    status: FieldStatus
-    kind: QuestionnaireKind = QuestionnaireKind.DAY
 
 
 class FieldMoveCallback(CallbackData, prefix="field_move"):
