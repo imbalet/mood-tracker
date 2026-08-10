@@ -1,6 +1,7 @@
 """Read and quick-capture event use cases."""
 
 from collections.abc import Sequence
+from datetime import UTC, datetime
 from uuid import UUID
 
 from mood_tracker.application.commands import (
@@ -27,6 +28,13 @@ from mood_tracker.domain.entities import (
 )
 from mood_tracker.domain.enums import QuestionnaireFieldRole, QuestionnaireKind
 from mood_tracker.domain.errors import IncompleteDay, InvalidFieldValue
+
+
+def _to_utc(value: datetime, label: str) -> datetime:
+    """Normalize an aware application input to the domain's UTC invariant."""
+    if value.tzinfo is None or value.utcoffset() is None:
+        raise InvalidFieldValue(f"{label} must include a timezone")
+    return value.astimezone(UTC)
 
 
 def _description_field(
@@ -79,7 +87,7 @@ class CreateQuickEventUseCase:
                 id=self._id_generator.new(),
                 user_id=user.id,
                 occurred_at=self._clock.now(),
-                occurred_timezone=user.timezone.name,
+                occurred_timezone=user.timezone,
             )
             questionnaire = await self._uow.questionnaires.get(
                 user.id, QuestionnaireKind.EVENT
@@ -130,7 +138,7 @@ class CreateEventUseCase:
             event = Event(
                 self._id_generator.new(),
                 command.user_id,
-                command.occurred_at,
+                _to_utc(command.occurred_at, "Event occurrence time"),
                 command.occurred_timezone,
             )
             await self._uow.events.add(event)
@@ -230,7 +238,7 @@ class ChangeEventTimeUseCase:
             event = await self._uow.events.get(command.user_id, command.event_id)
             if event is None:
                 raise EventNotFound
-            event.change_time(command.occurred_at)
+            event.change_time(_to_utc(command.occurred_at, "Event occurrence time"))
             await self._uow.events.save(event)
             return event
 

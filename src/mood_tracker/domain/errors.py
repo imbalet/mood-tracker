@@ -9,6 +9,10 @@ class InvalidTimezone(DomainError):
     """Raised when a timezone is not a valid IANA timezone name."""
 
 
+class InvalidTimestamp(DomainError):
+    """Raised when a timestamp is naive or not expressed in UTC."""
+
+
 class InvalidFieldVersion(DomainError):
     """Raised when a field version or its configuration is invalid."""
 

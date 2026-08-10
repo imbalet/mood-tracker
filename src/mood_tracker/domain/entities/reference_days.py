@@ -8,6 +8,7 @@ from uuid import UUID
 from mood_tracker.domain.entities.field import ScaleConfig
 from mood_tracker.domain.enums import ReferenceType
 from mood_tracker.domain.errors import ReferenceDayViolation
+from mood_tracker.domain.value_objects import require_utc
 
 
 @dataclass(frozen=True, slots=True)
@@ -20,6 +21,9 @@ class ReferenceDay:
     type: ReferenceType
     previous_reference_day_id: UUID | None
     created_at: datetime
+
+    def __post_init__(self) -> None:
+        require_utc(self.created_at, "Reference creation time")
 
 
 @dataclass(slots=True)
@@ -52,6 +56,7 @@ class ReferenceDays:
         if self.is_initialized:
             msg = "Reference days are already initialized"
             raise ReferenceDayViolation(msg)
+        created_at = require_utc(created_at, "Reference creation time")
         self.best_day_id = day_id
         self.worst_day_id = day_id
         best_reference = ReferenceDay(
@@ -84,6 +89,7 @@ class ReferenceDays:
         if not self.is_initialized:
             msg = "Reference days must be initialized before changing a reference"
             raise ReferenceDayViolation(msg)
+        created_at = require_utc(created_at, "Reference creation time")
         previous_reference_day_id = (
             self.best_day_id if type is ReferenceType.BEST else self.worst_day_id
         )
@@ -110,6 +116,7 @@ class ReferenceDays:
         created_at: datetime,
     ) -> ReferenceDay:
         """Set a missing directional reference without affecting the other one."""
+        created_at = require_utc(created_at, "Reference creation time")
         previous_reference_day_id = (
             self.best_day_id if type is ReferenceType.BEST else self.worst_day_id
         )

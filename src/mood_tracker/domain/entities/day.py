@@ -9,6 +9,7 @@ from mood_tracker.domain.entities.field import FieldVersion
 from mood_tracker.domain.entities.questionnaire import Answer, QuestionnaireResponse
 from mood_tracker.domain.enums import DayStatus, FieldType
 from mood_tracker.domain.errors import IncompleteDay, InvalidFieldValue
+from mood_tracker.domain.value_objects import require_utc
 
 
 @dataclass(slots=True)
@@ -21,6 +22,10 @@ class Day:
     status: DayStatus = DayStatus.DRAFT
     completed_at: datetime | None = None
     response: QuestionnaireResponse = field(default_factory=QuestionnaireResponse)
+
+    def __post_init__(self) -> None:
+        if self.completed_at is not None:
+            self.completed_at = require_utc(self.completed_at, "Day completion time")
 
     def save_value(self, field_version: FieldVersion, value: int | str) -> Answer:
         return self.response.answer(field_version=field_version, value=value)
@@ -45,4 +50,4 @@ class Day:
             raise IncompleteDay(msg)
 
         self.status = DayStatus.COMPLETE
-        self.completed_at = completed_at
+        self.completed_at = require_utc(completed_at, "Day completion time")

@@ -182,7 +182,7 @@ class CreateEvent:
 
     user_id: UUID
     occurred_at: datetime
-    occurred_timezone: str
+    occurred_timezone: UserTimezone
 
 
 @dataclass(frozen=True, slots=True)

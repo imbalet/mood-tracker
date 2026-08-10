@@ -1,4 +1,4 @@
-from datetime import UTC, datetime
+from datetime import UTC, datetime, timedelta, timezone
 from unittest.mock import AsyncMock
 from uuid import uuid7
 
@@ -22,7 +22,7 @@ from mood_tracker.application.use_cases.events import (
 from mood_tracker.domain.entities import Event, Questionnaire
 from mood_tracker.domain.entities.questionnaire import QuestionnaireField
 from mood_tracker.domain.enums import QuestionnaireKind
-from mood_tracker.domain.errors import InvalidFieldValue
+from mood_tracker.domain.errors import InvalidFieldValue, InvalidTimestamp
 
 
 async def test_quick_event_saves_text_as_a_draft(
@@ -36,7 +36,7 @@ async def test_quick_event_saves_text_as_a_draft(
 
     event = await use_case.execute(CreateQuickEvent(user.id, "Важная мысль"))
 
-    assert event.occurred_timezone == user.timezone.name
+    assert event.occurred_timezone == user.timezone
     assert event.response.answers[description.id].value == "Важная мысль"
     uow.events.add.assert_awaited_once_with(event)
 
@@ -63,7 +63,7 @@ async def test_regular_event_saves_value_completes_and_changes_time(
     uow.users.get = AsyncMock(return_value=user)
     uow.fields.list_for_user = AsyncMock(return_value=[field])
     event = await CreateEventUseCase(uow, id_generator).execute(
-        CreateEvent(user.id, occurred_at, user.timezone.name)
+        CreateEvent(user.id, occurred_at, user.timezone)
     )
     uow.events.get = AsyncMock(return_value=event)
 
@@ -76,12 +76,54 @@ async def test_regular_event_saves_value_completes_and_changes_time(
         CompleteEvent(user.id, event.id)
     )
     changed = await ChangeEventTimeUseCase(uow).execute(
-        ChangeEventTime(user.id, event.id, datetime(2025, 1, 2, 10, 0, tzinfo=UTC))
+        ChangeEventTime(
+            user.id,
+            event.id,
+            datetime(2025, 1, 2, 13, 0, tzinfo=timezone(timedelta(hours=3))),
+        )
     )
 
     assert saved.response.answers[field.id].value == "Важная мысль"
     assert completed.completed_at == clock.now()
     assert changed.occurred_at == datetime(2025, 1, 2, 10, 0, tzinfo=UTC)
+
+
+async def test_create_event_normalizes_aware_time_to_utc(
+    uow, id_generator, user_factory
+) -> None:
+    user = user_factory.build()
+    uow.users.get = AsyncMock(return_value=user)
+    local_time = datetime(2025, 1, 2, 12, 0, tzinfo=timezone(timedelta(hours=3)))
+
+    event = await CreateEventUseCase(uow, id_generator).execute(
+        CreateEvent(user.id, local_time, user.timezone)
+    )
+
+    assert event.occurred_at == datetime(2025, 1, 2, 9, 0, tzinfo=UTC)
+
+
+async def test_create_event_rejects_naive_time(uow, id_generator, user_factory) -> None:
+    user = user_factory.build()
+    uow.users.get = AsyncMock(return_value=user)
+
+    with pytest.raises(InvalidFieldValue):
+        await CreateEventUseCase(uow, id_generator).execute(
+            CreateEvent(user.id, datetime(2025, 1, 2, 12, 0), user.timezone)
+        )
+
+
+def test_event_rejects_non_utc_domain_time(user_factory) -> None:
+    user = user_factory.build()
+
+    with pytest.raises(InvalidTimestamp):
+        Event(
+            id=uuid7(),
+            user_id=user.id,
+            occurred_at=datetime(
+                2025, 1, 2, 12, 0, tzinfo=timezone(timedelta(hours=3))
+            ),
+            occurred_timezone=user.timezone,
+        )
 
 
 async def test_event_uses_current_questionnaire_placements(
@@ -93,7 +135,7 @@ async def test_event_uses_current_questionnaire_placements(
         id=uuid7(),
         user_id=user.id,
         occurred_at=datetime(2025, 1, 2, 9, 0, tzinfo=UTC),
-        occurred_timezone=user.timezone.name,
+        occurred_timezone=user.timezone,
     )
     questionnaire = Questionnaire(
         id=uuid7(),

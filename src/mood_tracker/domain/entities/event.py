@@ -7,6 +7,7 @@ from uuid import UUID
 from mood_tracker.domain.entities.field import FieldVersion
 from mood_tracker.domain.entities.questionnaire import Answer, QuestionnaireResponse
 from mood_tracker.domain.enums import EventStatus
+from mood_tracker.domain.value_objects import UserTimezone, require_utc
 
 
 @dataclass(slots=True)
@@ -16,16 +17,18 @@ class Event:
     id: UUID
     user_id: UUID
     occurred_at: datetime
-    occurred_timezone: str
+    occurred_timezone: UserTimezone
     status: EventStatus = EventStatus.DRAFT
     completed_at: datetime | None = None
     deleted_at: datetime | None = None
     response: QuestionnaireResponse = field(default_factory=QuestionnaireResponse)
 
     def __post_init__(self) -> None:
-        if self.occurred_at.tzinfo is None:
-            msg = "Event occurrence time must be timezone-aware"
-            raise ValueError(msg)
+        self.occurred_at = require_utc(self.occurred_at, "Event occurrence time")
+        if self.completed_at is not None:
+            self.completed_at = require_utc(self.completed_at, "Event completion time")
+        if self.deleted_at is not None:
+            self.deleted_at = require_utc(self.deleted_at, "Event deletion time")
 
     def save_value(self, field_version: FieldVersion, value: int | str) -> Answer:
         return self.response.answer(field_version=field_version, value=value)
@@ -38,13 +41,10 @@ class Event:
 
     def complete(self, completed_at: datetime) -> None:
         self.status = EventStatus.COMPLETE
-        self.completed_at = completed_at
+        self.completed_at = require_utc(completed_at, "Event completion time")
 
     def change_time(self, occurred_at: datetime) -> None:
-        if occurred_at.tzinfo is None:
-            msg = "Event occurrence time must be timezone-aware"
-            raise ValueError(msg)
-        self.occurred_at = occurred_at
+        self.occurred_at = require_utc(occurred_at, "Event occurrence time")
 
     def delete(self, deleted_at: datetime) -> None:
-        self.deleted_at = deleted_at
+        self.deleted_at = require_utc(deleted_at, "Event deletion time")

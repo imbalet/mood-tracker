@@ -11,6 +11,7 @@ from mood_tracker.domain.errors import (
     InvalidFieldValue,
     InvalidFieldVersion,
 )
+from mood_tracker.domain.value_objects import require_utc
 
 
 def _require_non_empty(value: str, label: str) -> None:
@@ -190,6 +191,7 @@ class FieldVersion:
         if self.type is not self.config.field_type:
             msg = f"{self.type} field version has incompatible config type"
             raise InvalidFieldVersion(msg)
+        require_utc(self.created_at, "Field version creation time")
 
     def validate_value(self, value: int | str) -> float | None:
         """Validate raw input using this version's immutable field semantics."""
@@ -218,6 +220,8 @@ class Field:
         if self.current_version not in self.versions:
             msg = "Current field version must belong to field history"
             raise InvalidFieldVersion(msg)
+        if self.deleted_at is not None:
+            require_utc(self.deleted_at, "Field deletion time")
 
     @property
     def current_version_id(self) -> UUID:
@@ -235,7 +239,7 @@ class Field:
 
     def delete(self, deleted_at: datetime) -> None:
         """Soft-delete this semantic field and all values that reference it."""
-        self.deleted_at = deleted_at
+        self.deleted_at = require_utc(deleted_at, "Field deletion time")
 
     def add_version(self, version: FieldVersion) -> None:
         """Append a new immutable meaning and make it current."""

@@ -63,13 +63,14 @@ async def test_event_persists_without_questionnaire_snapshot() -> None:
             CreateEvent(
                 user.id,
                 datetime(2025, 1, 2, 12, tzinfo=UTC),
-                user.timezone.name,
+                user.timezone,
             )
         )
         async with SqlAlchemyUnitOfWork(session_factory) as uow:
             loaded = await uow.events.get(user.id, event.id)
 
         assert loaded is not None
+        assert loaded.occurred_timezone == user.timezone
         assert loaded.response.answers == {}
     finally:
         await engine.dispose()

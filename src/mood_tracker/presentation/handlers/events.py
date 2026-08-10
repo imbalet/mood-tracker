@@ -204,7 +204,7 @@ async def change_time_prompt(
         GetEvent(profile.id, callback_data.event_id)
     )
     day_date = current.occurred_at.astimezone(
-        ZoneInfo(current.occurred_timezone)
+        ZoneInfo(current.occurred_timezone.name)
     ).date()
     await state.set_state(EventFlow.waiting_time)
     await presentation_data.write(EventInputData(current.id, day_date))
@@ -346,7 +346,7 @@ async def enter_time(
             GetEvent(profile.id, data.event_id)
         )
         changed_at = datetime.combine(
-            data.day_date, selected, ZoneInfo(current.occurred_timezone)
+            data.day_date, selected, ZoneInfo(current.occurred_timezone.name)
         ).astimezone(UTC)
         await services.change_event_time().execute(
             ChangeEventTime(profile.id, data.event_id, changed_at)
@@ -386,7 +386,7 @@ async def _create_and_prompt(
         day_date, selected_time, ZoneInfo(profile.timezone.name)
     ).astimezone(UTC)
     created = await services.create_event().execute(
-        CreateEvent(profile.id, occurred_at, profile.timezone.name)
+        CreateEvent(profile.id, occurred_at, profile.timezone)
     )
     await _prompt_next(
         event,
@@ -627,7 +627,7 @@ async def _render_event(
     update_main_message: UpdateMainMessage,
 ) -> None:
     current = await services.get_event().execute(GetEvent(profile.id, event_id))
-    local = current.occurred_at.astimezone(ZoneInfo(current.occurred_timezone))
+    local = current.occurred_at.astimezone(ZoneInfo(current.occurred_timezone.name))
     items = await services.list_questionnaire_fields().execute(
         ListQuestionnaireFields(profile.id, QuestionnaireKind.EVENT)
     )
@@ -636,8 +636,8 @@ async def _render_event(
         (
             f"{local:%d.%m.%Y %H:%M}"
             + (
-                f" ({current.occurred_timezone})"
-                if current.occurred_timezone != profile.timezone.name
+                f" ({current.occurred_timezone.name})"
+                if current.occurred_timezone != profile.timezone
                 else ""
             )
         ),

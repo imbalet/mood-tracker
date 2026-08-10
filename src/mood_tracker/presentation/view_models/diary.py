@@ -103,7 +103,7 @@ def make_day_card_view(form: DayForm, events: tuple[Event, ...] = ()) -> DayCard
                 event.id,
                 (
                     f"{'⏳ ' if event.status.value == 'draft' else ''}"
-                    f"{event.occurred_at.astimezone(ZoneInfo(event.occurred_timezone)):%H:%M}"
+                    f"{event.occurred_at.astimezone(ZoneInfo(event.occurred_timezone.name)):%H:%M}"
                 ),
             )
             for event in events

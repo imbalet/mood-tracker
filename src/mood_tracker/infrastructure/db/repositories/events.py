@@ -16,6 +16,7 @@ from mood_tracker.domain.entities import (
     QuestionProgress,
 )
 from mood_tracker.domain.enums import EventStatus
+from mood_tracker.domain.value_objects import UserTimezone
 from mood_tracker.infrastructure.db.models import (
     EventFieldProgressOrm,
     EventOrm,
@@ -60,7 +61,7 @@ class SqlAlchemyEventRepository:
                 id=event.id,
                 user_id=event.user_id,
                 occurred_at=event.occurred_at,
-                occurred_timezone=event.occurred_timezone,
+                occurred_timezone=event.occurred_timezone.name,
                 status=event.status.value,
                 completed_at=event.completed_at,
                 deleted_at=event.deleted_at,
@@ -79,7 +80,7 @@ class SqlAlchemyEventRepository:
                 row.deleted_at,
             ) = (
                 event.occurred_at,
-                event.occurred_timezone,
+                event.occurred_timezone.name,
                 event.status.value,
                 event.completed_at,
                 event.deleted_at,
@@ -138,7 +139,7 @@ class SqlAlchemyEventRepository:
             id=row.id,
             user_id=row.user_id,
             occurred_at=row.occurred_at,
-            occurred_timezone=row.occurred_timezone,
+            occurred_timezone=UserTimezone(row.occurred_timezone),
             status=EventStatus(row.status),
             completed_at=row.completed_at,
             deleted_at=row.deleted_at,
