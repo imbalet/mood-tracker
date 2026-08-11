@@ -30,6 +30,7 @@ from mood_tracker.domain.enums import QuestionnaireFieldRole, QuestionnaireKind
 from mood_tracker.domain.errors import IncompleteDay, InvalidFieldValue
 
 
+# TODO: здесь и везде продумать возможность не смешнивать сообщение исключений и логику
 def _to_utc(value: datetime, label: str) -> datetime:
     """Normalize an aware application input to the domain's UTC invariant."""
     if value.tzinfo is None or value.utcoffset() is None:
@@ -80,6 +81,8 @@ class CreateQuickEventUseCase:
             user = await self._uow.users.get(command.user_id)
             if user is None:
                 raise UserNotFound
+            # TODO: мб вынести подобные проверки на наличие текста в хенделеры \
+            # в виде мидлваря или в ДТО как пост инит
             if not command.text.strip():
                 msg = "Quick event text cannot be empty"
                 raise InvalidFieldValue(msg)

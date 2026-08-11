@@ -16,6 +16,7 @@ from mood_tracker.domain.enums import (
 )
 
 
+# TODO: divide to files
 class MenuSection(StrEnum):
     """Top-level screens available from the inline interface."""
 

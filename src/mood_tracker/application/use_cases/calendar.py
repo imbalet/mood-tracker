@@ -26,9 +26,9 @@ class GetMonthCalendarUseCase:
             )
             references = await self._uow.reference_days.get(user.id)
             return MonthCalendar(
-                month,
-                tuple(days),
-                tuple(fields),
-                references,
-                {} if questionnaire is None else questionnaire.fields,
+                month=month,
+                days=tuple(days),
+                fields=tuple(fields),
+                references=references,
+                placements=({} if questionnaire is None else questionnaire.fields),
             )

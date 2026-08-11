@@ -36,6 +36,7 @@ from mood_tracker.domain.enums import (
 def _sorted_fields(
     fields: Sequence[Field], questionnaire: Questionnaire
 ) -> tuple[Field, ...]:
+    # TODO: docstring
     return tuple(
         sorted(
             (field for field in fields if field.id in questionnaire.fields),
@@ -159,10 +160,12 @@ class GetDayUseCase:
     async def execute(self, command: GetDay) -> DayForm:
         """Return an existing day or an empty form for its user-local date."""
         async with self._uow:
+            # TODO: create private helper
             user = await self._uow.users.get(command.user_id)
             if user is None:
                 raise UserNotFound
             day_date = (
+                # TODO: refactor
                 command.day_date
                 or self._clock.now().astimezone(ZoneInfo(user.timezone.name)).date()
             )
@@ -170,6 +173,7 @@ class GetDayUseCase:
             questionnaire = await self._uow.questionnaires.get(
                 user.id, QuestionnaireKind.DAY
             )
+            # TODO: create private helper
             if questionnaire is None:
                 raise FieldNotFound
             fields = _sorted_fields(
@@ -240,6 +244,7 @@ class SaveDayValueUseCase:
     async def _handle_core_value(
         self, user_id: UUID, day: Day, core_field: Field
     ) -> ReferenceReview | None:
+        # TODO: maybe extract to separate use case
         reference_days = await self._uow.reference_days.get(user_id)
         if reference_days is None:
             reference_days = ReferenceDays(user_id=user_id)
@@ -304,6 +309,7 @@ class SkipDayTextUseCase:
         """Create or update a day after a deliberate Text skip."""
 
         async def operation() -> None:
+            # TODO: unify with SaveDayValueUseCase
             field, day, is_new = await _load_day_for_edit(
                 self._uow,
                 self._id_generator,

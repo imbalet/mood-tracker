@@ -32,6 +32,7 @@ async def execute_write[ResultT](
                 await uow.commit()
                 return result
         except IdentifierCollision:
+            # TODO: add logging
             if attempt == MAX_IDENTIFIER_ATTEMPTS - 1:
                 raise IdentifierGenerationExhausted from None
     raise AssertionError("Identifier retry loop must return or raise")

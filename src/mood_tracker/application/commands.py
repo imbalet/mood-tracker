@@ -298,7 +298,7 @@ class ReferenceHistory:
     all_events: tuple[ReferenceDay, ...]
 
 
-@dataclass(frozen=True, slots=True)
+@dataclass(frozen=True, slots=True, kw_only=True)
 class MonthCalendar:
     """Owned days and fields used by calendar presentation."""
 

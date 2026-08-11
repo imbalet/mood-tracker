@@ -14,6 +14,7 @@ _MAX_COLUMNS = 11
 _BACKGROUND = "#FFFFFF"
 
 
+# TODO move to renderer
 def render_palette_preview(
     config: ScaleConfig, palette: StatePalette
 ) -> BufferedInputFile:

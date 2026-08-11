@@ -11,6 +11,7 @@ from mood_tracker.domain.enums import QuestionnaireKind
 from mood_tracker.presentation.services import ApplicationServices
 
 
+# TODO: move
 async def get_user_profile(
     telegram_id: int, services: ApplicationServices
 ) -> UserProfile | None:

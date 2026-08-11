@@ -1,3 +1,4 @@
+# TODO: delete
 def normalize_integer(value: int, minimum: int, maximum: int) -> float:
     """Normalize an inclusive integer scale value into the range 0..1."""
     if minimum >= maximum:
