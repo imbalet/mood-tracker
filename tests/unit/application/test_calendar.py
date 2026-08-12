@@ -1,7 +1,7 @@
 from datetime import date
 from unittest.mock import AsyncMock
 
-from mood_tracker.application.commands import GetMonthCalendar
+from mood_tracker.application.contracts.calendar import GetMonthCalendar
 from mood_tracker.application.use_cases import GetMonthCalendarUseCase
 
 

@@ -1,6 +1,9 @@
 """Read models for current and historical reference-day views."""
 
-from mood_tracker.application.commands import GetReferenceHistory, ReferenceHistory
+from mood_tracker.application.contracts.references import (
+    GetReferenceHistory,
+    ReferenceHistory,
+)
 from mood_tracker.application.errors import UserNotFound
 from mood_tracker.application.ports import UnitOfWork
 from mood_tracker.domain.entities import ReferenceDay, ReferenceDays

@@ -1,7 +1,7 @@
 from datetime import date
 from unittest.mock import AsyncMock
 
-from mood_tracker.application.commands import ConfirmReference, SaveDayValue
+from mood_tracker.application.contracts.diary import ConfirmReference, SaveDayValue
 from mood_tracker.application.use_cases import (
     ConfirmReferenceUseCase,
     SaveDayValueUseCase,

@@ -5,7 +5,7 @@ from uuid import UUID
 from aiogram.fsm.context import FSMContext
 from aiogram.types import Message
 
-from mood_tracker.application.commands import ListQuestionnaireFields
+from mood_tracker.application.contracts.questionnaires import ListQuestionnaireFields
 from mood_tracker.domain.entities import Field, UserProfile
 from mood_tracker.domain.entities.questionnaire import QuestionnaireField
 from mood_tracker.domain.enums import QuestionnaireKind

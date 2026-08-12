@@ -8,14 +8,14 @@ from aiogram.filters import Command
 from aiogram.fsm.context import FSMContext
 from aiogram.types import Message
 
-from mood_tracker.application.commands import (
+from mood_tracker.application.contracts.diary import (
     ConfirmReference,
     DayForm,
     GetDay,
-    GetEventsForDate,
     SaveDayValue,
     SkipDayText,
 )
+from mood_tracker.application.contracts.events import GetEventsForDate
 from mood_tracker.application.errors import DayNotFound, FieldNotFound
 from mood_tracker.domain.entities import Field, UserProfile
 from mood_tracker.domain.errors import InvalidFieldValue

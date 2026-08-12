@@ -1,6 +1,6 @@
 """Read a user's diary data for one calendar month."""
 
-from mood_tracker.application.commands import GetMonthCalendar, MonthCalendar
+from mood_tracker.application.contracts.calendar import GetMonthCalendar, MonthCalendar
 from mood_tracker.application.errors import UserNotFound
 from mood_tracker.application.ports import UnitOfWork
 from mood_tracker.domain.enums import QuestionnaireKind

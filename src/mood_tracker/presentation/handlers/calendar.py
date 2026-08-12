@@ -11,7 +11,7 @@ from aiogram.fsm.context import FSMContext
 from aiogram.types import BufferedInputFile, InlineKeyboardMarkup, Message
 from aiogram_calendar.schemas import SimpleCalAct, SimpleCalendarCallback
 
-from mood_tracker.application.commands import GetMonthCalendar
+from mood_tracker.application.contracts.calendar import GetMonthCalendar
 from mood_tracker.presentation.callback_query import CallbackQueryWithMessage
 from mood_tracker.presentation.callbacks import (
     CalendarImageAction,

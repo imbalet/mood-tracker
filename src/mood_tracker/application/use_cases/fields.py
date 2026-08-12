@@ -2,7 +2,7 @@
 
 from uuid import UUID
 
-from mood_tracker.application.commands import (
+from mood_tracker.application.contracts.questionnaires import (
     AddFieldVersion,
     AttachFieldToQuestionnaire,
     CreateField,

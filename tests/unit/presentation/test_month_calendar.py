@@ -4,7 +4,7 @@ from uuid import uuid4
 
 from PIL import Image
 
-from mood_tracker.application.commands import MonthCalendar
+from mood_tracker.application.contracts.calendar import MonthCalendar
 from mood_tracker.domain.entities import FieldDisplayConfig, ReferenceDays, StatePalette
 from mood_tracker.domain.entities.questionnaire import QuestionnaireField
 from mood_tracker.domain.enums import DayStatus, QuestionnaireFieldRole

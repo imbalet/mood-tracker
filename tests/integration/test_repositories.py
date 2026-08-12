@@ -3,7 +3,8 @@ from datetime import UTC, datetime
 
 import pytest
 
-from mood_tracker.application.commands import CreateEvent, RegisterUser
+from mood_tracker.application.contracts.events import CreateEvent
+from mood_tracker.application.contracts.users import RegisterUser
 from mood_tracker.application.errors import IdentifierCollision
 from mood_tracker.application.use_cases import CreateEventUseCase, RegisterUserUseCase
 from mood_tracker.domain.enums import QuestionnaireFieldRole, QuestionnaireKind

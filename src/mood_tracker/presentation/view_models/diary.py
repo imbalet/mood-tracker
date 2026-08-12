@@ -5,7 +5,7 @@ from enum import StrEnum
 from uuid import UUID
 from zoneinfo import ZoneInfo
 
-from mood_tracker.application.commands import DayForm, ReferenceReview
+from mood_tracker.application.contracts.diary import DayForm, ReferenceReview
 from mood_tracker.domain.entities import Event, Field, OrdinalConfig, ScaleConfig
 from mood_tracker.domain.enums import DayStatus, ReferenceType
 

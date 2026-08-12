@@ -7,7 +7,7 @@ from aiogram.filters import CommandStart
 from aiogram.fsm.context import FSMContext
 from aiogram.types import CallbackQuery, Message
 
-from mood_tracker.application.commands import RegisterUser
+from mood_tracker.application.contracts.users import RegisterUser
 from mood_tracker.domain.errors import InvalidTimezone
 from mood_tracker.domain.value_objects import UserTimezone
 from mood_tracker.presentation.callback_query import CallbackQueryWithMessage

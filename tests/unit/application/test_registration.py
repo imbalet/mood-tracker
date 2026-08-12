@@ -1,6 +1,6 @@
 from unittest.mock import AsyncMock
 
-from mood_tracker.application.commands import RegisterUser
+from mood_tracker.application.contracts.users import RegisterUser
 from mood_tracker.application.errors import IdentifierCollision
 from mood_tracker.application.use_cases import RegisterUserUseCase
 from mood_tracker.domain.value_objects import UserTimezone

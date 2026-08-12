@@ -2,10 +2,8 @@
 
 from uuid import UUID
 
-from mood_tracker.application.commands import (
-    GetUserByTelegramId,
-    ListQuestionnaireFields,
-)
+from mood_tracker.application.contracts.questionnaires import ListQuestionnaireFields
+from mood_tracker.application.contracts.users import GetUserByTelegramId
 from mood_tracker.domain.entities import Field, UserProfile
 from mood_tracker.domain.enums import QuestionnaireKind
 from mood_tracker.presentation.services import ApplicationServices

@@ -7,7 +7,7 @@ from uuid import uuid4
 import pytest
 from aiogram.types import BufferedInputFile
 
-from mood_tracker.application.commands import MonthCalendar
+from mood_tracker.application.contracts.calendar import MonthCalendar
 from mood_tracker.presentation.handlers.calendar import _month_image
 from mood_tracker.presentation.rendering.calendar import MonthCalendarImageService
 from mood_tracker.presentation.services import ApplicationServices

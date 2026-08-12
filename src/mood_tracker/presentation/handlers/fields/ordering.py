@@ -3,7 +3,7 @@
 from aiogram import F, Router
 from aiogram.fsm.context import FSMContext
 
-from mood_tracker.application.commands import (
+from mood_tracker.application.contracts.questionnaires import (
     ListQuestionnaireFields,
     MoveQuestionnaireField,
 )

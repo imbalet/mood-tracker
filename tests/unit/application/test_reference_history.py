@@ -1,6 +1,6 @@
 from unittest.mock import AsyncMock
 
-from mood_tracker.application.commands import GetReferenceHistory
+from mood_tracker.application.contracts.references import GetReferenceHistory
 from mood_tracker.application.use_cases import GetReferenceHistoryUseCase
 from mood_tracker.domain.entities import ReferenceDays
 from mood_tracker.domain.enums import ReferenceType

@@ -4,7 +4,7 @@ from uuid import uuid7
 
 import pytest
 
-from mood_tracker.application.commands import (
+from mood_tracker.application.contracts.events import (
     ChangeEventTime,
     CompleteEvent,
     CreateEvent,

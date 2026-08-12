@@ -1,6 +1,6 @@
 from uuid import uuid7
 
-from mood_tracker.application.commands import DayForm
+from mood_tracker.application.contracts.diary import DayForm
 from mood_tracker.domain.entities import (
     Answer,
     FieldVersion,

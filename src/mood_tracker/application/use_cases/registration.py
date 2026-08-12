@@ -1,6 +1,6 @@
 """User registration and profile-settings use cases."""
 
-from mood_tracker.application.commands import (
+from mood_tracker.application.contracts.users import (
     GetUserByTelegramId,
     RegisterUser,
     SetTimezone,

@@ -4,7 +4,7 @@ from collections.abc import Sequence
 from datetime import UTC, datetime
 from uuid import UUID
 
-from mood_tracker.application.commands import (
+from mood_tracker.application.contracts.events import (
     ChangeEventTime,
     CompleteEvent,
     CreateEvent,

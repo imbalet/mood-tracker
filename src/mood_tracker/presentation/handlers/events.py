@@ -9,17 +9,17 @@ from aiogram.filters import Command, CommandObject
 from aiogram.fsm.context import FSMContext
 from aiogram.types import Message
 
-from mood_tracker.application.commands import (
+from mood_tracker.application.contracts.events import (
     ChangeEventTime,
     CompleteEvent,
     CreateEvent,
     CreateQuickEvent,
     DeleteEvent,
     GetEvent,
-    ListQuestionnaireFields,
     SaveEventValue,
     SkipEventField,
 )
+from mood_tracker.application.contracts.questionnaires import ListQuestionnaireFields
 from mood_tracker.application.errors import FieldNotFound
 from mood_tracker.domain.entities import Field, OrdinalConfig, ScaleConfig, UserProfile
 from mood_tracker.domain.enums import EventStatus, QuestionnaireKind

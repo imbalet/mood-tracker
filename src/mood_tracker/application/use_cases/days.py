@@ -6,7 +6,7 @@ from functools import partial
 from uuid import UUID
 from zoneinfo import ZoneInfo
 
-from mood_tracker.application.commands import (
+from mood_tracker.application.contracts.diary import (
     ConfirmReference,
     DayForm,
     GetDay,

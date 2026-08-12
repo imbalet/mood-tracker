@@ -1,7 +1,7 @@
 from datetime import date
 from unittest.mock import AsyncMock
 
-from mood_tracker.application.commands import GetDay, SaveDayValue, SkipDayText
+from mood_tracker.application.contracts.diary import GetDay, SaveDayValue, SkipDayText
 from mood_tracker.application.use_cases import (
     GetDayUseCase,
     SaveDayValueUseCase,

@@ -6,7 +6,7 @@ from uuid import UUID
 
 from aiogram.types import BufferedInputFile
 
-from mood_tracker.application.commands import MonthCalendar
+from mood_tracker.application.contracts.calendar import MonthCalendar
 from mood_tracker.domain.entities import Field
 from mood_tracker.domain.entities.questionnaire import QuestionnaireField
 from mood_tracker.domain.enums import (
