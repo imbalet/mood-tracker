@@ -17,7 +17,7 @@ from mood_tracker.presentation.services import ApplicationServices
 async def test_month_image_handler_reads_calendar_and_uses_injected_renderer() -> None:
     user_id = uuid4()
     month = date(2025, 2, 1)
-    data = MonthCalendar(month, (), (), None)
+    data = MonthCalendar(month=month, days=(), fields=(), references=None)
     use_case = SimpleNamespace(execute=AsyncMock(return_value=data))
     services = cast(
         ApplicationServices,

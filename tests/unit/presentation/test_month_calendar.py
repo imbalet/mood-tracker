@@ -40,11 +40,11 @@ def test_month_calendar_renders_a_png_with_state_color(
 
     image_file = MonthCalendarImageService().render(
         MonthCalendar(
-            date(2025, 2, 1),
-            (day,),
-            (state,),
-            None,
-            {
+            month=date(2025, 2, 1),
+            days=(day,),
+            fields=(state,),
+            references=None,
+            placements={
                 state.id: QuestionnaireField(
                     state.id, 0, role=QuestionnaireFieldRole.DAY_STATE
                 )
@@ -62,7 +62,9 @@ def test_mapper_builds_visual_info_for_every_day_of_the_month(
 ) -> None:
     state = field_factory.scale(is_core=True)
     day = day_factory.build(day_date=date(2025, 2, 3))
-    source = MonthCalendar(date(2025, 2, 1), (day,), (state,), None)
+    source = MonthCalendar(
+        month=date(2025, 2, 1), days=(day,), fields=(state,), references=None
+    )
     theme = CalendarTheme.default()
 
     result = MonthCalendarMapper(theme, len(theme.renderer.emoji.positions)).map(
@@ -78,10 +80,10 @@ def test_current_best_and_worst_on_one_day_do_not_draw_a_record_border(
     state = field_factory.scale(is_core=True)
     day = day_factory.build(day_date=date(2025, 2, 3))
     source = MonthCalendar(
-        date(2025, 2, 1),
-        (day,),
-        (state,),
-        ReferenceDays(uuid4(), best_day_id=day.id, worst_day_id=day.id),
+        month=date(2025, 2, 1),
+        days=(day,),
+        fields=(state,),
+        references=ReferenceDays(uuid4(), best_day_id=day.id, worst_day_id=day.id),
     )
     theme = CalendarTheme.default()
 
@@ -107,11 +109,11 @@ def test_field_emoji_keeps_its_slot_when_an_earlier_field_is_empty(
     day.save_value(hydration.current_version, 0)
     day.save_value(exercise.current_version, 2)
     source = MonthCalendar(
-        date(2025, 2, 1),
-        (day,),
-        (hydration, exercise),
-        None,
-        {
+        month=date(2025, 2, 1),
+        days=(day,),
+        fields=(hydration, exercise),
+        references=None,
+        placements={
             hydration.id: QuestionnaireField(hydration.id, 0),
             exercise.id: QuestionnaireField(exercise.id, 1),
         },
