@@ -1,12 +1,11 @@
 """Public core application use cases."""
 
 from mood_tracker.application.use_cases.calendar import GetMonthCalendarUseCase
-from mood_tracker.application.use_cases.day_form import GetDayUseCase
-from mood_tracker.application.use_cases.days import (
-    ConfirmReferenceUseCase,
+from mood_tracker.application.use_cases.day_answers import (
     SaveDayValueUseCase,
     SkipDayTextUseCase,
 )
+from mood_tracker.application.use_cases.day_form import GetDayUseCase
 from mood_tracker.application.use_cases.events import (
     ChangeEventTimeUseCase,
     CompleteEventUseCase,
@@ -26,7 +25,10 @@ from mood_tracker.application.use_cases.fields import (
     RenameFieldUseCase,
     SetFieldDisplayUseCase,
 )
-from mood_tracker.application.use_cases.references import GetReferenceHistoryUseCase
+from mood_tracker.application.use_cases.references import (
+    ConfirmReferenceUseCase,
+    GetReferenceHistoryUseCase,
+)
 from mood_tracker.application.use_cases.registration import (
     GetUserByTelegramIdUseCase,
     RegisterUserUseCase,
