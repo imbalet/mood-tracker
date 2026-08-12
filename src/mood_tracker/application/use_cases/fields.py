@@ -1,7 +1,5 @@
 """Use cases for mutable field presentation and semantic versions."""
 
-from uuid import UUID
-
 from mood_tracker.application.contracts.questionnaires import (
     AddFieldVersion,
     AttachFieldToQuestionnaire,
@@ -16,48 +14,20 @@ from mood_tracker.application.contracts.questionnaires import (
     SetQuestionnaireFieldEnabled,
     SetQuestionnaireFieldRequired,
 )
-from mood_tracker.application.errors import FieldNotFound, UserNotFound
 from mood_tracker.application.ports import Clock, IdGenerator, UnitOfWork
+from mood_tracker.application.use_cases._loaders import (
+    list_questionnaire_fields,
+    require_owned_field,
+    require_questionnaire,
+    require_user,
+)
 from mood_tracker.application.use_cases._transactions import (
     execute_transaction,
     execute_write,
 )
-from mood_tracker.domain.entities import Field, FieldVersion, Questionnaire
+from mood_tracker.domain.entities import Field, FieldVersion
 from mood_tracker.domain.enums import QuestionnaireFieldRole, QuestionnaireKind
 from mood_tracker.domain.errors import CoreFieldViolation, InvalidFieldVersion
-
-
-async def _get_owned_field(uow: UnitOfWork, user_id: UUID, field_id: UUID) -> Field:
-    field = await uow.fields.get(user_id, field_id)
-    if field is None:
-        raise FieldNotFound
-    return field
-
-
-async def _ensure_user_exists(uow: UnitOfWork, user_id: UUID) -> None:
-    if await uow.users.get(user_id) is None:
-        raise UserNotFound
-
-
-async def _get_questionnaire(
-    uow: UnitOfWork, user_id: UUID, kind: QuestionnaireKind
-) -> Questionnaire:
-    questionnaire = await uow.questionnaires.get(user_id, kind)
-    if questionnaire is None:
-        raise FieldNotFound
-    return questionnaire
-
-
-async def _questionnaire_fields(
-    uow: UnitOfWork, user_id: UUID, kind: QuestionnaireKind
-) -> tuple[QuestionnaireFieldItem, ...]:
-    questionnaire = await _get_questionnaire(uow, user_id, kind)
-    fields = {field.id: field for field in await uow.fields.list_for_user(user_id)}
-    return tuple(
-        QuestionnaireFieldItem(fields[placement.field_id], placement)
-        for placement in questionnaire.ordered_fields()
-        if placement.field_id in fields
-    )
 
 
 class CreateFieldUseCase:
@@ -74,7 +44,7 @@ class CreateFieldUseCase:
         """Create a field and its initial immutable semantic version."""
 
         async def operation() -> Field:
-            await _ensure_user_exists(self._uow, command.user_id)
+            await require_user(self._uow, command.user_id)
             field_id = self._id_generator.new()
             version = FieldVersion(
                 id=self._id_generator.new(),
@@ -91,7 +61,7 @@ class CreateFieldUseCase:
                 current_version=version,
             )
             await self._uow.fields.add(field)
-            questionnaire = await _get_questionnaire(
+            questionnaire = await require_questionnaire(
                 self._uow, command.user_id, command.kind
             )
             questionnaire.attach(field.id, is_required=True)
@@ -111,7 +81,9 @@ class RenameFieldUseCase:
         """Persist a display-name change."""
 
         async def operation() -> Field:
-            field = await _get_owned_field(self._uow, command.user_id, command.field_id)
+            field = await require_owned_field(
+                self._uow, command.user_id, command.field_id
+            )
             field.rename(command.name)
             await self._uow.fields.save(field)
             return field
@@ -129,7 +101,9 @@ class SetFieldDisplayUseCase:
         """Persist display-only configuration without making a new version."""
 
         async def operation() -> Field:
-            field = await _get_owned_field(self._uow, command.user_id, command.field_id)
+            field = await require_owned_field(
+                self._uow, command.user_id, command.field_id
+            )
             field.set_display_config(command.display_config)
             await self._uow.fields.save(field)
             return field
@@ -151,7 +125,9 @@ class AddFieldVersionUseCase:
         """Make a new semantic field version current."""
 
         async def operation() -> Field:
-            field = await _get_owned_field(self._uow, command.user_id, command.field_id)
+            field = await require_owned_field(
+                self._uow, command.user_id, command.field_id
+            )
             if command.config.field_type is not field.current_version.type:
                 msg = "A new field version must retain the original field type"
                 raise InvalidFieldVersion(msg)
@@ -178,8 +154,10 @@ class QuestionnaireFieldUseCase:
 
     async def attach(self, command: AttachFieldToQuestionnaire) -> Field:
         async def operation() -> Field:
-            field = await _get_owned_field(self._uow, command.user_id, command.field_id)
-            questionnaire = await _get_questionnaire(
+            field = await require_owned_field(
+                self._uow, command.user_id, command.field_id
+            )
+            questionnaire = await require_questionnaire(
                 self._uow, command.user_id, command.kind
             )
             questionnaire.attach(command.field_id, is_required=command.is_required)
@@ -190,8 +168,10 @@ class QuestionnaireFieldUseCase:
 
     async def detach(self, command: DetachFieldFromQuestionnaire) -> Field:
         async def operation() -> Field:
-            field = await _get_owned_field(self._uow, command.user_id, command.field_id)
-            questionnaire = await _get_questionnaire(
+            field = await require_owned_field(
+                self._uow, command.user_id, command.field_id
+            )
+            questionnaire = await require_questionnaire(
                 self._uow, command.user_id, command.kind
             )
             questionnaire.detach(field.id)
@@ -202,8 +182,10 @@ class QuestionnaireFieldUseCase:
 
     async def set_enabled(self, command: SetQuestionnaireFieldEnabled) -> Field:
         async def operation() -> Field:
-            field = await _get_owned_field(self._uow, command.user_id, command.field_id)
-            questionnaire = await _get_questionnaire(
+            field = await require_owned_field(
+                self._uow, command.user_id, command.field_id
+            )
+            questionnaire = await require_questionnaire(
                 self._uow, command.user_id, command.kind
             )
             questionnaire.set_enabled(field.id, command.is_enabled)
@@ -214,8 +196,10 @@ class QuestionnaireFieldUseCase:
 
     async def set_required(self, command: SetQuestionnaireFieldRequired) -> Field:
         async def operation() -> Field:
-            field = await _get_owned_field(self._uow, command.user_id, command.field_id)
-            questionnaire = await _get_questionnaire(
+            field = await require_owned_field(
+                self._uow, command.user_id, command.field_id
+            )
+            questionnaire = await require_questionnaire(
                 self._uow, command.user_id, command.kind
             )
             questionnaire.set_required(field.id, command.is_required)
@@ -230,18 +214,23 @@ class QuestionnaireFieldUseCase:
         """Move one placement and normalize only that questionnaire's order."""
 
         async def operation() -> tuple[QuestionnaireFieldItem, ...]:
-            questionnaire = await _get_questionnaire(
+            await require_owned_field(self._uow, command.user_id, command.field_id)
+            questionnaire = await require_questionnaire(
                 self._uow, command.user_id, command.kind
             )
             questionnaire.move(command.field_id, command.direction)
             await self._uow.questionnaires.save(questionnaire)
-            return await _questionnaire_fields(self._uow, command.user_id, command.kind)
+            return await list_questionnaire_fields(
+                self._uow, command.user_id, questionnaire
+            )
 
         return await execute_transaction(self._uow, operation)
 
     async def delete(self, command: DeleteField) -> None:
         async def operation() -> None:
-            field = await _get_owned_field(self._uow, command.user_id, command.field_id)
+            field = await require_owned_field(
+                self._uow, command.user_id, command.field_id
+            )
             for kind in QuestionnaireKind:
                 questionnaire = await self._uow.questionnaires.get(
                     command.user_id, kind
@@ -271,5 +260,10 @@ class ListQuestionnaireFieldsUseCase:
         self, command: ListQuestionnaireFields
     ) -> tuple[QuestionnaireFieldItem, ...]:
         async with self._uow:
-            await _ensure_user_exists(self._uow, command.user_id)
-            return await _questionnaire_fields(self._uow, command.user_id, command.kind)
+            await require_user(self._uow, command.user_id)
+            questionnaire = await require_questionnaire(
+                self._uow, command.user_id, command.kind
+            )
+            return await list_questionnaire_fields(
+                self._uow, command.user_id, questionnaire
+            )

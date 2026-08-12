@@ -61,6 +61,7 @@ async def test_regular_event_saves_value_completes_and_changes_time(
     field = field_factory.text(user_id=user.id, name="Описание")
     occurred_at = datetime(2025, 1, 2, 9, 0, tzinfo=UTC)
     uow.users.get = AsyncMock(return_value=user)
+    uow.fields.get = AsyncMock(return_value=field)
     uow.fields.list_for_user = AsyncMock(return_value=[field])
     event = await CreateEventUseCase(uow, id_generator).execute(
         CreateEvent(user.id, occurred_at, user.timezone)
@@ -144,6 +145,8 @@ async def test_event_uses_current_questionnaire_placements(
         fields={field.id: QuestionnaireField(field.id, 0)},
     )
     uow.events.get = AsyncMock(return_value=event)
+    uow.users.get = AsyncMock(return_value=user)
+    uow.fields.get = AsyncMock(return_value=field)
     uow.fields.list_for_user = AsyncMock(return_value=[field])
     uow.questionnaires.get = AsyncMock(return_value=questionnaire)
     use_case = SaveEventValueUseCase(uow)

@@ -14,8 +14,13 @@ from mood_tracker.application.contracts.diary import (
     SaveDayValue,
     SkipDayText,
 )
-from mood_tracker.application.errors import DayNotFound, FieldNotFound, UserNotFound
+from mood_tracker.application.errors import DayNotFound, FieldNotFound
 from mood_tracker.application.ports import Clock, IdGenerator, UnitOfWork
+from mood_tracker.application.use_cases._loaders import (
+    require_enabled_questionnaire_field,
+    require_questionnaire,
+    require_user,
+)
 from mood_tracker.application.use_cases._transactions import execute_write
 from mood_tracker.domain.entities import (
     Day,
@@ -110,19 +115,16 @@ async def _load_day_for_edit(
     day_date: date,
     field_id: UUID,
 ) -> tuple[Field, Day, bool]:
-    """Load an owned field and date, creating an in-memory draft when absent."""
-    user = await uow.users.get(user_id)
-    if user is None:
-        raise UserNotFound
-    field = await uow.fields.get(user.id, field_id)
-    if field is None:
-        raise FieldNotFound
-    day = await uow.days.get_by_date(user.id, day_date)
+    """Load an enabled day field and date, creating an in-memory draft when absent."""
+    _, field, _ = await require_enabled_questionnaire_field(
+        uow, user_id, QuestionnaireKind.DAY, field_id
+    )
+    day = await uow.days.get_by_date(user_id, day_date)
     if day is not None:
         return field, day, False
     return (
         field,
-        Day(id=id_generator.new(), user_id=user.id, date=day_date),
+        Day(id=id_generator.new(), user_id=user_id, date=day_date),
         True,
     )
 
@@ -161,21 +163,16 @@ class GetDayUseCase:
         """Return an existing day or an empty form for its user-local date."""
         async with self._uow:
             # TODO: create private helper
-            user = await self._uow.users.get(command.user_id)
-            if user is None:
-                raise UserNotFound
+            user = await require_user(self._uow, command.user_id)
             day_date = (
                 # TODO: refactor
                 command.day_date
                 or self._clock.now().astimezone(ZoneInfo(user.timezone.name)).date()
             )
             day = await self._uow.days.get_by_date(user.id, day_date)
-            questionnaire = await self._uow.questionnaires.get(
-                user.id, QuestionnaireKind.DAY
+            questionnaire = await require_questionnaire(
+                self._uow, user.id, QuestionnaireKind.DAY
             )
-            # TODO: create private helper
-            if questionnaire is None:
-                raise FieldNotFound
             fields = _sorted_fields(
                 await self._uow.fields.list_for_user(user.id), questionnaire
             )
@@ -210,11 +207,9 @@ class SaveDayValueUseCase:
                 command.field_id,
             )
             day.save_value(field.current_version, command.value)
-            questionnaire = await self._uow.questionnaires.get(
-                command.user_id, QuestionnaireKind.DAY
+            questionnaire = await require_questionnaire(
+                self._uow, command.user_id, QuestionnaireKind.DAY
             )
-            if questionnaire is None:
-                raise FieldNotFound
             fields = _sorted_fields(
                 await self._uow.fields.list_for_user(command.user_id), questionnaire
             )
@@ -318,11 +313,9 @@ class SkipDayTextUseCase:
                 command.field_id,
             )
             day.skip_text(field.current_version)
-            questionnaire = await self._uow.questionnaires.get(
-                command.user_id, QuestionnaireKind.DAY
+            questionnaire = await require_questionnaire(
+                self._uow, command.user_id, QuestionnaireKind.DAY
             )
-            if questionnaire is None:
-                raise FieldNotFound
             fields = _sorted_fields(
                 await self._uow.fields.list_for_user(command.user_id), questionnaire
             )
@@ -357,17 +350,13 @@ class ConfirmReferenceUseCase:
         """Confirm a new record or roll back a rejected current reference."""
 
         async def operation() -> None:
-            user = await self._uow.users.get(command.user_id)
-            if user is None:
-                raise UserNotFound
+            user = await require_user(self._uow, command.user_id)
             day = await self._uow.days.get(user.id, command.day_id)
             if day is None:
                 raise DayNotFound
-            questionnaire = await self._uow.questionnaires.get(
-                user.id, QuestionnaireKind.DAY
+            questionnaire = await require_questionnaire(
+                self._uow, user.id, QuestionnaireKind.DAY
             )
-            if questionnaire is None:
-                raise FieldNotFound
             fields = await self._uow.fields.list_for_user(user.id)
             core_field = next(
                 (

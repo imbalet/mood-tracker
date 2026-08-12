@@ -15,8 +15,14 @@ from mood_tracker.application.contracts.events import (
     SaveEventValue,
     SkipEventField,
 )
-from mood_tracker.application.errors import EventNotFound, FieldNotFound, UserNotFound
+from mood_tracker.application.errors import EventNotFound
 from mood_tracker.application.ports import Clock, IdGenerator, UnitOfWork
+from mood_tracker.application.use_cases._loaders import (
+    list_questionnaire_fields,
+    require_enabled_questionnaire_field,
+    require_questionnaire,
+    require_user,
+)
 from mood_tracker.application.use_cases._transactions import (
     execute_transaction,
     execute_write,
@@ -78,9 +84,7 @@ class CreateQuickEventUseCase:
 
     async def execute(self, command: CreateQuickEvent) -> Event:
         async def operation() -> Event:
-            user = await self._uow.users.get(command.user_id)
-            if user is None:
-                raise UserNotFound
+            user = await require_user(self._uow, command.user_id)
             # TODO: мб вынести подобные проверки на наличие текста в хенделеры \
             # в виде мидлваря или в ДТО как пост инит
             if not command.text.strip():
@@ -98,7 +102,12 @@ class CreateQuickEventUseCase:
             if questionnaire is None:
                 msg = "Event questionnaire is unavailable"
                 raise InvalidFieldValue(msg)
-            fields = tuple(await self._uow.fields.list_for_user(user.id))
+            fields = tuple(
+                item.field
+                for item in await list_questionnaire_fields(
+                    self._uow, user.id, questionnaire
+                )
+            )
             event.save_value(
                 _description_field(fields, questionnaire).current_version, command.text
             )
@@ -108,25 +117,11 @@ class CreateQuickEventUseCase:
         return await execute_write(self._uow, operation)
 
 
-async def _event_and_fields(
-    uow: UnitOfWork, user_id: UUID, event_id: UUID
-) -> tuple[Event, Questionnaire, dict[UUID, Field]]:
+async def _require_event(uow: UnitOfWork, user_id: UUID, event_id: UUID) -> Event:
     event = await uow.events.get(user_id, event_id)
     if event is None:
         raise EventNotFound
-    questionnaire = await uow.questionnaires.get(user_id, QuestionnaireKind.EVENT)
-    if questionnaire is None:
-        raise FieldNotFound
-    fields = {field.id: field for field in await uow.fields.list_for_user(user_id)}
-    return (
-        event,
-        questionnaire,
-        {
-            field_id: fields[field_id]
-            for field_id in questionnaire.fields
-            if field_id in fields
-        },
-    )
+    return event
 
 
 class CreateEventUseCase:
@@ -136,8 +131,7 @@ class CreateEventUseCase:
 
     async def execute(self, command: CreateEvent) -> Event:
         async def operation() -> Event:
-            if await self._uow.users.get(command.user_id) is None:
-                raise UserNotFound
+            await require_user(self._uow, command.user_id)
             event = Event(
                 self._id_generator.new(),
                 command.user_id,
@@ -168,13 +162,13 @@ class SaveEventValueUseCase:
 
     async def execute(self, command: SaveEventValue) -> Event:
         async def operation() -> Event:
-            event, questionnaire, fields = await _event_and_fields(
-                self._uow, command.user_id, command.event_id
+            event = await _require_event(self._uow, command.user_id, command.event_id)
+            _, field, _ = await require_enabled_questionnaire_field(
+                self._uow,
+                command.user_id,
+                QuestionnaireKind.EVENT,
+                command.field_id,
             )
-            field = fields.get(command.field_id)
-            placement = questionnaire.fields.get(command.field_id)
-            if field is None or placement is None or not placement.is_enabled:
-                raise FieldNotFound
             event.save_value(field.current_version, command.value)
             await self._uow.events.save(event)
             return event
@@ -188,13 +182,13 @@ class SkipEventFieldUseCase:
 
     async def execute(self, command: SkipEventField) -> Event:
         async def operation() -> Event:
-            event, questionnaire, fields = await _event_and_fields(
-                self._uow, command.user_id, command.event_id
+            event = await _require_event(self._uow, command.user_id, command.event_id)
+            _, field, placement = await require_enabled_questionnaire_field(
+                self._uow,
+                command.user_id,
+                QuestionnaireKind.EVENT,
+                command.field_id,
             )
-            field = fields.get(command.field_id)
-            placement = questionnaire.fields.get(command.field_id)
-            if field is None or placement is None or not placement.is_enabled:
-                raise FieldNotFound
             if placement.is_required:
                 raise InvalidFieldValue("Required event field cannot be skipped")
             event.skip_field(field.current_version)
@@ -211,9 +205,16 @@ class CompleteEventUseCase:
 
     async def execute(self, command: CompleteEvent) -> Event:
         async def operation() -> Event:
-            event, questionnaire, fields = await _event_and_fields(
-                self._uow, command.user_id, command.event_id
+            event = await _require_event(self._uow, command.user_id, command.event_id)
+            questionnaire = await require_questionnaire(
+                self._uow, command.user_id, QuestionnaireKind.EVENT
             )
+            fields = {
+                item.field.id: item.field
+                for item in await list_questionnaire_fields(
+                    self._uow, command.user_id, questionnaire
+                )
+            }
             required = [
                 fields[field_id]
                 for field_id, placement in questionnaire.fields.items()
