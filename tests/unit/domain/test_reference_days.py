@@ -24,6 +24,8 @@ def test_first_state_day_initializes_both_reference_directions(
         ReferenceType.BEST,
         ReferenceType.WORST,
     }
+    assert reference_days.current_day_id(ReferenceType.BEST) == day_id
+    assert reference_days.current_day_id(ReferenceType.WORST) == day_id
 
 
 def test_boundary_reference_candidate_only_exists_at_scale_edges(
@@ -53,3 +55,22 @@ def test_rollback_keeps_history_and_restores_previous_reference() -> None:
     assert restored_day_id == first_day_id
     assert reference_days.worst_day_id == first_day_id
     assert any(event.day_id == current_day_id for event in reference_days.history)
+
+
+def test_active_chain_excludes_retracted_references() -> None:
+    reference_days = ReferenceDays(user_id=uuid7())
+    first_day_id = uuid7()
+    retracted_day_id = uuid7()
+    reference_days.initialize(first_day_id, uuid7(), uuid7(), datetime.now(UTC))
+    reference_days.apply_confirmed_change(
+        uuid7(), retracted_day_id, ReferenceType.WORST, datetime.now(UTC)
+    )
+    reference_days.rollback_current(
+        ReferenceType.WORST, lambda day_id: day_id == first_day_id
+    )
+
+    worst_chain = reference_days.active_chain(ReferenceType.WORST)
+    best_chain = reference_days.active_chain(ReferenceType.BEST)
+
+    assert [event.day_id for event in worst_chain] == [first_day_id]
+    assert [event.day_id for event in best_chain] == [first_day_id]

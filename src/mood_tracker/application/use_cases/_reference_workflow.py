@@ -9,15 +9,6 @@ from mood_tracker.domain.entities.reference_days import boundary_reference_candi
 from mood_tracker.domain.enums import ReferenceType
 
 
-def reference_day_id(reference_days: ReferenceDays, type: ReferenceType) -> UUID | None:
-    """Return the current reference day for one direction."""
-    return (
-        reference_days.best_day_id
-        if type is ReferenceType.BEST
-        else reference_days.worst_day_id
-    )
-
-
 def is_boundary_for(day: Day, core_field: Field, type: ReferenceType) -> bool:
     """Whether a saved historical state value reaches one scale boundary."""
     value = day.response.answers.get(core_field.id)
@@ -56,7 +47,7 @@ async def rollback_invalid_current_references(
     """Roll back current pointers when the edited day no longer reaches a boundary."""
     changed = False
     for type in ReferenceType:
-        if reference_day_id(reference_days, type) == day.id and not is_boundary_for(
+        if reference_days.current_day_id(type) == day.id and not is_boundary_for(
             day, core_field, type
         ):
             valid_ids = await valid_day_ids(
@@ -105,7 +96,7 @@ async def review_state_change(
         if rolled_back:
             await uow.reference_days.save(reference_days)
         return None
-    previous_reference_day_id = reference_day_id(reference_days, type)
+    previous_reference_day_id = reference_days.current_day_id(type)
     if previous_reference_day_id is None:
         reference_days.establish_baseline(id_generator.new(), day.id, type, clock.now())
         await uow.reference_days.save(reference_days)
@@ -140,7 +131,7 @@ async def confirm_reference_change(
     reference_days = await uow.reference_days.get(user_id)
     if reference_days is None or not is_boundary_for(day, core_field, type):
         return
-    current = reference_day_id(reference_days, type)
+    current = reference_days.current_day_id(type)
     if is_new_record:
         if current is None:
             reference_days.establish_baseline(

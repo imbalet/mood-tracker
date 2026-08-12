@@ -45,6 +45,14 @@ class ReferenceDays:
         """Whether the user has ever had a confirmed reference point."""
         return bool(self.history)
 
+    def current_day_id(self, reference_type: ReferenceType) -> UUID | None:
+        """Return the current reference day for one direction."""
+        return (
+            self.best_day_id
+            if reference_type is ReferenceType.BEST
+            else self.worst_day_id
+        )
+
     def initialize(
         self,
         day_id: UUID,
@@ -90,9 +98,7 @@ class ReferenceDays:
             msg = "Reference days must be initialized before changing a reference"
             raise ReferenceDayViolation(msg)
         created_at = require_utc(created_at, "Reference creation time")
-        previous_reference_day_id = (
-            self.best_day_id if type is ReferenceType.BEST else self.worst_day_id
-        )
+        previous_reference_day_id = self.current_day_id(type)
         reference = ReferenceDay(
             id=reference_id,
             user_id=self.user_id,
@@ -117,9 +123,7 @@ class ReferenceDays:
     ) -> ReferenceDay:
         """Set a missing directional reference without affecting the other one."""
         created_at = require_utc(created_at, "Reference creation time")
-        previous_reference_day_id = (
-            self.best_day_id if type is ReferenceType.BEST else self.worst_day_id
-        )
+        previous_reference_day_id = self.current_day_id(type)
         if previous_reference_day_id is not None:
             msg = "A baseline can only be established for a missing direction"
             raise ReferenceDayViolation(msg)
@@ -142,9 +146,7 @@ class ReferenceDays:
         self, type: ReferenceType, is_valid: Callable[[UUID], bool]
     ) -> UUID | None:
         """Move a current pointer back to the nearest valid prior reference."""
-        current_day_id = (
-            self.best_day_id if type is ReferenceType.BEST else self.worst_day_id
-        )
+        current_day_id = self.current_day_id(type)
         candidate_day_id = self._previous_day_id(current_day_id, type)
         while candidate_day_id is not None:
             if is_valid(candidate_day_id):
@@ -159,6 +161,25 @@ class ReferenceDays:
         else:
             self.worst_day_id = None
         return None
+
+    def active_chain(self, reference_type: ReferenceType) -> tuple[ReferenceDay, ...]:
+        """Return the current non-retracted history chain for one direction."""
+        current_day_id = self.current_day_id(reference_type)
+        chain: list[ReferenceDay] = []
+        while current_day_id is not None:
+            reference = next(
+                (
+                    event
+                    for event in reversed(self.history)
+                    if event.type is reference_type and event.day_id == current_day_id
+                ),
+                None,
+            )
+            if reference is None:
+                break
+            chain.append(reference)
+            current_day_id = reference.previous_reference_day_id
+        return tuple(reversed(chain))
 
     def _previous_day_id(self, day_id: UUID | None, type: ReferenceType) -> UUID | None:
         if day_id is None:
