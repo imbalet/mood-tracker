@@ -20,7 +20,6 @@ from mood_tracker.domain.entities import (
 )
 from mood_tracker.domain.entities.questionnaire import QuestionnaireField
 from mood_tracker.domain.enums import (
-    FieldType,
     QuestionnaireFieldRole,
     QuestionnaireKind,
 )
@@ -80,18 +79,13 @@ def _create_default_fields(
 ) -> tuple[Field, Field, Field, Field]:
     """Create the two independent default questionnaires' reusable fields."""
 
-    def version(
-        field_id: UUID, version_id: UUID, type: FieldType, config: FieldConfig
-    ) -> FieldVersion:
-        return FieldVersion(version_id, field_id, type, config, created_at)
+    def version(field_id: UUID, version_id: UUID, config: FieldConfig) -> FieldVersion:
+        return FieldVersion(version_id, field_id, config, created_at)
 
-    state = version(
-        ids.state_field, ids.state_version, FieldType.SCALE, ScaleConfig(0, 10)
-    )
+    state = version(ids.state_field, ids.state_version, ScaleConfig(0, 10))
     thoughts = version(
         ids.thoughts_field,
         ids.thoughts_version,
-        FieldType.ORDINAL,
         OrdinalConfig(
             (
                 OrdinalOption(0, "Нет"),
@@ -101,13 +95,10 @@ def _create_default_fields(
             )
         ),
     )
-    comment = version(
-        ids.comment_field, ids.comment_version, FieldType.TEXT, TextConfig()
-    )
+    comment = version(ids.comment_field, ids.comment_version, TextConfig())
     description = version(
         ids.event_description_field,
         ids.event_description_version,
-        FieldType.TEXT,
         TextConfig(),
     )
     return (

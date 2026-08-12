@@ -49,7 +49,6 @@ class CreateFieldUseCase:
             version = FieldVersion(
                 id=self._id_generator.new(),
                 field_id=field_id,
-                type=command.config.field_type,
                 config=command.config,
                 created_at=self._clock.now(),
             )
@@ -134,7 +133,6 @@ class AddFieldVersionUseCase:
             version = FieldVersion(
                 id=self._id_generator.new(),
                 field_id=field.id,
-                type=command.config.field_type,
                 config=command.config,
                 created_at=self._clock.now(),
             )

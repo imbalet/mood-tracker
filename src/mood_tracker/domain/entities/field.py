@@ -183,15 +183,16 @@ class FieldVersion:
 
     id: UUID
     field_id: UUID
-    type: FieldType
     config: FieldConfig
     created_at: datetime
 
     def __post_init__(self) -> None:
-        if self.type is not self.config.field_type:
-            msg = f"{self.type} field version has incompatible config type"
-            raise InvalidFieldVersion(msg)
         require_utc(self.created_at, "Field version creation time")
+
+    @property
+    def type(self) -> FieldType:
+        """Return the semantic type derived from the version configuration."""
+        return self.config.field_type
 
     def validate_value(self, value: int | str) -> float | None:
         """Validate raw input using this version's immutable field semantics."""

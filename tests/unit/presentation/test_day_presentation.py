@@ -10,7 +10,7 @@ from mood_tracker.domain.entities import (
     QuestionProgress,
 )
 from mood_tracker.domain.entities.questionnaire import QuestionnaireField
-from mood_tracker.domain.enums import DayStatus, FieldType
+from mood_tracker.domain.enums import DayStatus
 from mood_tracker.presentation.screens import day_card_screen, day_value_prompt_screen
 from mood_tracker.presentation.view_models import (
     make_day_card_view,
@@ -87,7 +87,6 @@ def test_day_view_uses_the_saved_ordinal_version(day_factory, field_factory) -> 
         FieldVersion(
             id=uuid7(),
             field_id=field.id,
-            type=FieldType.ORDINAL,
             config=OrdinalConfig(
                 (
                     OrdinalOption(0, "Нет"),

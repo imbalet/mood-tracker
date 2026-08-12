@@ -13,7 +13,6 @@ from mood_tracker.domain.entities import (
     ScaleConfig,
     TextConfig,
 )
-from mood_tracker.domain.enums import FieldType
 
 
 class FieldFactory:
@@ -39,7 +38,6 @@ class FieldFactory:
             user_id=user_id,
             version_id=version_id,
             name=name,
-            type=FieldType.SCALE,
             config=ScaleConfig(minimum, maximum),
             is_core=is_core,
             sort_order=sort_order,
@@ -69,7 +67,6 @@ class FieldFactory:
             user_id=user_id,
             version_id=version_id,
             name=name,
-            type=FieldType.ORDINAL,
             config=OrdinalConfig(options),
             is_core=False,
             sort_order=sort_order,
@@ -94,7 +91,6 @@ class FieldFactory:
             user_id=user_id,
             version_id=version_id,
             name=name,
-            type=FieldType.TEXT,
             config=TextConfig(),
             is_core=False,
             sort_order=sort_order,
@@ -109,7 +105,6 @@ class FieldFactory:
         user_id: UUID | None,
         version_id: UUID | None,
         name: str,
-        type: FieldType,
         config: FieldConfig,
         is_core: bool,
         sort_order: int,
@@ -120,7 +115,6 @@ class FieldFactory:
         version = FieldVersion(
             id=version_id or uuid7(),
             field_id=field_id,
-            type=type,
             config=config,
             created_at=created_at,
         )

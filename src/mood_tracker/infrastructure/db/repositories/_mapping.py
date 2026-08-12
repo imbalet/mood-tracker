@@ -76,5 +76,5 @@ def version_to_orm(version: FieldVersion) -> FieldVersionOrm:
 def version_from_orm(row: FieldVersionOrm) -> FieldVersion:
     type = FieldType(row.type)
     return FieldVersion(
-        row.id, row.field_id, type, config_from_json(type, row.config), row.created_at
+        row.id, row.field_id, config_from_json(type, row.config), row.created_at
     )
