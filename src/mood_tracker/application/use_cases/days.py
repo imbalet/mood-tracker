@@ -1,15 +1,11 @@
 """Day flow and reference-day use cases."""
 
-from collections.abc import Sequence
 from datetime import date
 from functools import partial
 from uuid import UUID
-from zoneinfo import ZoneInfo
 
 from mood_tracker.application.contracts.diary import (
     ConfirmReference,
-    DayForm,
-    GetDay,
     ReferenceReview,
     SaveDayValue,
     SkipDayText,
@@ -17,6 +13,7 @@ from mood_tracker.application.contracts.diary import (
 from mood_tracker.application.errors import DayNotFound, FieldNotFound
 from mood_tracker.application.ports import Clock, IdGenerator, UnitOfWork
 from mood_tracker.application.use_cases._loaders import (
+    list_questionnaire_fields,
     require_enabled_questionnaire_field,
     require_questionnaire,
     require_user,
@@ -25,7 +22,6 @@ from mood_tracker.application.use_cases._transactions import execute_write
 from mood_tracker.domain.entities import (
     Day,
     Field,
-    Questionnaire,
     ReferenceDays,
     ScaleConfig,
 )
@@ -36,36 +32,6 @@ from mood_tracker.domain.enums import (
     QuestionnaireKind,
     ReferenceType,
 )
-
-
-def _sorted_fields(
-    fields: Sequence[Field], questionnaire: Questionnaire
-) -> tuple[Field, ...]:
-    # TODO: docstring
-    return tuple(
-        sorted(
-            (field for field in fields if field.id in questionnaire.fields),
-            key=lambda field: questionnaire.fields[field.id].sort_order,
-        )
-    )
-
-
-def _next_field(
-    day: Day | None, fields: Sequence[Field], questionnaire: Questionnaire
-) -> Field | None:
-    if day is not None and day.status is DayStatus.COMPLETE:
-        return None
-    return next(
-        (
-            field
-            for field in _sorted_fields(fields, questionnaire)
-            if (
-                questionnaire.fields[field.id].is_enabled
-                and (day is None or not day.has_completed_step(field.id))
-            )
-        ),
-        None,
-    )
 
 
 def _reference_day_id(
@@ -152,39 +118,6 @@ async def _rollback_if_invalid_current(
     return changed
 
 
-class GetDayUseCase:
-    """Read a day and the next active questionnaire step without writing."""
-
-    def __init__(self, uow: UnitOfWork, clock: Clock) -> None:
-        self._uow = uow
-        self._clock = clock
-
-    async def execute(self, command: GetDay) -> DayForm:
-        """Return an existing day or an empty form for its user-local date."""
-        async with self._uow:
-            # TODO: create private helper
-            user = await require_user(self._uow, command.user_id)
-            day_date = (
-                # TODO: refactor
-                command.day_date
-                or self._clock.now().astimezone(ZoneInfo(user.timezone.name)).date()
-            )
-            day = await self._uow.days.get_by_date(user.id, day_date)
-            questionnaire = await require_questionnaire(
-                self._uow, user.id, QuestionnaireKind.DAY
-            )
-            fields = _sorted_fields(
-                await self._uow.fields.list_for_user(user.id), questionnaire
-            )
-            return DayForm(
-                day_date=day_date,
-                day=day,
-                fields=fields,
-                placements=questionnaire.fields,
-                next_field=_next_field(day, fields, questionnaire),
-            )
-
-
 class SaveDayValueUseCase:
     """Save an answer, advance the draft and surface reference decisions."""
 
@@ -210,8 +143,11 @@ class SaveDayValueUseCase:
             questionnaire = await require_questionnaire(
                 self._uow, command.user_id, QuestionnaireKind.DAY
             )
-            fields = _sorted_fields(
-                await self._uow.fields.list_for_user(command.user_id), questionnaire
+            fields = tuple(
+                item.field
+                for item in await list_questionnaire_fields(
+                    self._uow, command.user_id, questionnaire
+                )
             )
             active_field_ids = tuple(
                 candidate.id
@@ -316,8 +252,11 @@ class SkipDayTextUseCase:
             questionnaire = await require_questionnaire(
                 self._uow, command.user_id, QuestionnaireKind.DAY
             )
-            fields = _sorted_fields(
-                await self._uow.fields.list_for_user(command.user_id), questionnaire
+            fields = tuple(
+                item.field
+                for item in await list_questionnaire_fields(
+                    self._uow, command.user_id, questionnaire
+                )
             )
             active_field_ids = tuple(
                 candidate.id
