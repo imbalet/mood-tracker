@@ -13,9 +13,7 @@ from mood_tracker.application.use_cases._loaders import (
     require_questionnaire,
     require_user,
 )
-from mood_tracker.application.use_cases._reference_workflow import (
-    confirm_reference_change,
-)
+from mood_tracker.application.use_cases._reference_workflow import ReferenceWorkflow
 from mood_tracker.application.use_cases._transactions import execute_write
 from mood_tracker.domain.enums import (
     QuestionnaireFieldRole,
@@ -70,15 +68,12 @@ class ConfirmReferenceUseCase:
             )
             if core_field is None:
                 raise FieldNotFound
-            await confirm_reference_change(
-                self._uow,
-                self._clock,
-                self._id_generator,
-                command.user_id,
-                day,
-                core_field,
-                command.type,
-                command.is_new_record,
+            update = await ReferenceWorkflow(
+                self._uow, self._clock, self._id_generator
+            ).confirm(
+                command.user_id, day, core_field, command.type, command.is_new_record
             )
+            if update.changed and update.reference_days is not None:
+                await self._uow.reference_days.save(update.reference_days)
 
         await execute_write(self._uow, operation)

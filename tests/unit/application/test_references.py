@@ -123,6 +123,39 @@ async def test_editing_current_reference_rolls_back_to_previous_valid_day(
     assert references.worst_day_id == previous_day.id
 
 
+async def test_state_save_loads_reference_history_once_and_persists_one_update(
+    uow, clock, id_generator, user_factory, field_factory, day_factory
+) -> None:
+    user = user_factory.build()
+    state = field_factory.scale(user_id=user.id, is_core=True)
+    previous_day = day_factory.build(user_id=user.id, day_date=date(2025, 1, 1))
+    current_day = day_factory.build(user_id=user.id, day_date=date(2025, 1, 2))
+    previous_day.save_value(state.current_version, 0)
+    current_day.save_value(state.current_version, 0)
+    references = ReferenceDays(user.id)
+    references.initialize(
+        previous_day.id, id_generator.new(), id_generator.new(), clock.now()
+    )
+    references.apply_confirmed_change(
+        id_generator.new(), current_day.id, ReferenceType.WORST, clock.now()
+    )
+    uow.users.get = AsyncMock(return_value=user)
+    uow.fields.get = AsyncMock(return_value=state)
+    uow.fields.list_for_user = AsyncMock(return_value=[state])
+    uow.days.get_by_date = AsyncMock(return_value=current_day)
+    uow.days.get_many = AsyncMock(return_value=[previous_day, current_day])
+    uow.reference_days.get = AsyncMock(return_value=references)
+
+    review = await SaveDayValueUseCase(uow, clock, id_generator).execute(
+        SaveDayValue(user.id, current_day.date, state.id, 10)
+    )
+
+    assert review is not None
+    assert references.worst_day_id == previous_day.id
+    uow.days.get_many.assert_awaited_once()
+    uow.reference_days.save.assert_awaited_once_with(references)
+
+
 async def test_rejected_reference_restores_previous_valid_day(
     uow, clock, id_generator, user_factory, field_factory, day_factory
 ) -> None:
@@ -176,6 +209,7 @@ async def test_repeated_reference_confirmation_does_not_append_duplicates(
 
     assert references.worst_day_id == new_day.id
     assert len(references.history) == 3
+    uow.reference_days.save.assert_awaited_once_with(references)
 
 
 async def test_confirm_reference_reports_missing_state_system_field(

@@ -1,5 +1,6 @@
-"""Reference-day decisions derived from saved daily state values."""
+"""Application workflow for reference-day decisions."""
 
+from dataclasses import dataclass
 from uuid import UUID
 
 from mood_tracker.application.contracts.diary import ReferenceReview
@@ -12,125 +13,156 @@ from mood_tracker.domain.entities.reference_days import (
 from mood_tracker.domain.enums import ReferenceType
 
 
-async def valid_day_ids(
-    uow: UnitOfWork,
-    user_id: UUID,
-    core_field: Field,
-    reference_days: ReferenceDays,
-    type: ReferenceType,
-) -> set[UUID]:
-    """Return historical reference days that still match their stored boundary."""
-    day_ids = tuple({reference.day_id for reference in reference_days.history})
-    days = await uow.days.get_many(user_id, day_ids)
-    return {day.id for day in days if is_reference_boundary(day, core_field, type)}
+@dataclass(frozen=True, slots=True)
+class ReferenceUpdate:
+    """The reference aggregate mutation produced by one workflow scenario."""
+
+    changed: bool
+    review: ReferenceReview | None = None
+    reference_days: ReferenceDays | None = None
 
 
-async def rollback_invalid_current_references(
-    uow: UnitOfWork,
-    user_id: UUID,
-    day: Day,
-    core_field: Field,
-    reference_days: ReferenceDays,
-) -> bool:
-    """Roll back current pointers when the edited day no longer reaches a boundary."""
-    changed = False
-    for type in ReferenceType:
-        if reference_days.current_day_id(type) == day.id and not is_reference_boundary(
-            day, core_field, type
-        ):
-            valid_ids = await valid_day_ids(
-                uow, user_id, core_field, reference_days, type
+class ReferenceWorkflow:
+    """Coordinate reference rules while keeping persistence in use cases."""
+
+    def __init__(
+        self, uow: UnitOfWork, clock: Clock, id_generator: IdGenerator
+    ) -> None:
+        self._uow = uow
+        self._clock = clock
+        self._id_generator = id_generator
+
+    async def on_state_saved(
+        self, user_id: UUID, day: Day, core_field: Field
+    ) -> ReferenceUpdate:
+        """Reconcile edited references and evaluate a newly saved state value."""
+        reference_days = await self._uow.reference_days.get(user_id)
+        if reference_days is None:
+            reference_days = ReferenceDays(user_id=user_id)
+        if not reference_days.has_history:
+            reference_days.initialize(
+                day.id,
+                self._id_generator.new(),
+                self._id_generator.new(),
+                self._clock.now(),
             )
-            reference_days.rollback_current(type, valid_ids.__contains__)
-            changed = True
-    return changed
+            return ReferenceUpdate(True, reference_days=reference_days)
 
-
-async def review_state_change(
-    uow: UnitOfWork,
-    clock: Clock,
-    id_generator: IdGenerator,
-    user_id: UUID,
-    day: Day,
-    core_field: Field,
-) -> ReferenceReview | None:
-    """Persist automatic reference changes or request a user confirmation."""
-    # TODO: maybe refactor
-    reference_days = await uow.reference_days.get(user_id)
-    if reference_days is None:
-        reference_days = ReferenceDays(user_id=user_id)
-    if not reference_days.has_history:
-        reference_days.initialize(
-            day.id,
-            id_generator.new(),
-            id_generator.new(),
-            clock.now(),
+        valid_ids = await self._valid_day_ids_by_type(
+            user_id, core_field, reference_days
         )
-        await uow.reference_days.save(reference_days)
-        return None
-
-    rolled_back = await rollback_invalid_current_references(
-        uow, user_id, day, core_field, reference_days
-    )
-    value = day.response.answers[core_field.id].value
-    if not isinstance(value, int) or not isinstance(
-        core_field.current_version.config, ScaleConfig
-    ):
-        if rolled_back:
-            await uow.reference_days.save(reference_days)
-        return None
-    type = boundary_reference_candidate(value, core_field.current_version.config)
-    if type is None:
-        if rolled_back:
-            await uow.reference_days.save(reference_days)
-        return None
-    previous_reference_day_id = reference_days.current_day_id(type)
-    if previous_reference_day_id is None:
-        reference_days.establish_baseline(id_generator.new(), day.id, type, clock.now())
-        await uow.reference_days.save(reference_days)
-        return None
-    if rolled_back:
-        await uow.reference_days.save(reference_days)
-    if previous_reference_day_id == day.id:
-        return None
-    valid_boundary_ids = await valid_day_ids(
-        uow, user_id, core_field, reference_days, type
-    )
-    if not valid_boundary_ids:
-        reference_days.apply_confirmed_change(
-            id_generator.new(), day.id, type, clock.now()
+        changed = self._reconcile_current_references(
+            day, core_field, reference_days, valid_ids
         )
-        await uow.reference_days.save(reference_days)
-        return None
-    return ReferenceReview(day.id, type, previous_reference_day_id)
+        candidate_type = self._candidate_type(day, core_field)
+        if candidate_type is None:
+            return ReferenceUpdate(changed, reference_days=reference_days)
 
-
-async def confirm_reference_change(
-    uow: UnitOfWork,
-    clock: Clock,
-    id_generator: IdGenerator,
-    user_id: UUID,
-    day: Day,
-    core_field: Field,
-    type: ReferenceType,
-    is_new_record: bool,
-) -> None:
-    """Apply a user's confirmation or rejection of a reference change."""
-    # TODO: maybe move back to use case
-    reference_days = await uow.reference_days.get(user_id)
-    if reference_days is None or not is_reference_boundary(day, core_field, type):
-        return
-    current = reference_days.current_day_id(type)
-    if is_new_record:
-        if current is None:
+        previous_day_id = reference_days.current_day_id(candidate_type)
+        if previous_day_id is None:
             reference_days.establish_baseline(
-                id_generator.new(), day.id, type, clock.now()
+                self._id_generator.new(), day.id, candidate_type, self._clock.now()
             )
-        elif current != day.id:
+            return ReferenceUpdate(True, reference_days=reference_days)
+        if previous_day_id == day.id:
+            return ReferenceUpdate(changed, reference_days=reference_days)
+        if not valid_ids[candidate_type]:
             reference_days.apply_confirmed_change(
-                id_generator.new(), day.id, type, clock.now()
+                self._id_generator.new(), day.id, candidate_type, self._clock.now()
             )
-    elif current == day.id:
-        valid_ids = await valid_day_ids(uow, user_id, core_field, reference_days, type)
-        reference_days.rollback_current(type, valid_ids.__contains__)
-    await uow.reference_days.save(reference_days)
+            return ReferenceUpdate(True, reference_days=reference_days)
+        return ReferenceUpdate(
+            changed,
+            ReferenceReview(day.id, candidate_type, previous_day_id),
+            reference_days,
+        )
+
+    async def confirm(
+        self,
+        user_id: UUID,
+        day: Day,
+        core_field: Field,
+        reference_type: ReferenceType,
+        is_new_record: bool,
+    ) -> ReferenceUpdate:
+        """Apply an idempotent confirmation or rejection of a proposed change."""
+        reference_days = await self._uow.reference_days.get(user_id)
+        if reference_days is None or not is_reference_boundary(
+            day, core_field, reference_type
+        ):
+            return ReferenceUpdate(False)
+
+        current_day_id = reference_days.current_day_id(reference_type)
+        if is_new_record:
+            if current_day_id is None:
+                reference_days.establish_baseline(
+                    self._id_generator.new(),
+                    day.id,
+                    reference_type,
+                    self._clock.now(),
+                )
+            elif current_day_id != day.id:
+                reference_days.apply_confirmed_change(
+                    self._id_generator.new(),
+                    day.id,
+                    reference_type,
+                    self._clock.now(),
+                )
+            else:
+                return ReferenceUpdate(False)
+            return ReferenceUpdate(True, reference_days=reference_days)
+
+        if current_day_id != day.id:
+            return ReferenceUpdate(False)
+        valid_ids = await self._valid_day_ids_by_type(
+            user_id, core_field, reference_days
+        )
+        reference_days.rollback_current(
+            reference_type, valid_ids[reference_type].__contains__
+        )
+        return ReferenceUpdate(True, reference_days=reference_days)
+
+    async def _valid_day_ids_by_type(
+        self, user_id: UUID, core_field: Field, reference_days: ReferenceDays
+    ) -> dict[ReferenceType, set[UUID]]:
+        """Load history once and classify which recorded references remain valid."""
+        day_ids = tuple({reference.day_id for reference in reference_days.history})
+        days = await self._uow.days.get_many(user_id, day_ids)
+        return {
+            reference_type: {
+                day.id
+                for day in days
+                if is_reference_boundary(day, core_field, reference_type)
+            }
+            for reference_type in ReferenceType
+        }
+
+    @staticmethod
+    def _reconcile_current_references(
+        day: Day,
+        core_field: Field,
+        reference_days: ReferenceDays,
+        valid_ids: dict[ReferenceType, set[UUID]],
+    ) -> bool:
+        """Restore pointers whose edited current day is no longer a boundary."""
+        changed = False
+        for reference_type in ReferenceType:
+            if reference_days.current_day_id(
+                reference_type
+            ) == day.id and not is_reference_boundary(day, core_field, reference_type):
+                reference_days.rollback_current(
+                    reference_type, valid_ids[reference_type].__contains__
+                )
+                changed = True
+        return changed
+
+    @staticmethod
+    def _candidate_type(day: Day, core_field: Field) -> ReferenceType | None:
+        """Return the boundary type for the newly saved current field value."""
+        answer = day.response.answers.get(core_field.id)
+        if answer is None or not isinstance(answer.value, int):
+            return None
+        config = core_field.current_version.config
+        if not isinstance(config, ScaleConfig):
+            return None
+        return boundary_reference_candidate(answer.value, config)

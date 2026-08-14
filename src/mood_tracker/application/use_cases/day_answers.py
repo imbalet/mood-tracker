@@ -11,7 +11,7 @@ from mood_tracker.application.use_cases._day_workflow import (
     load_day_for_edit,
 )
 from mood_tracker.application.use_cases._loaders import require_questionnaire
-from mood_tracker.application.use_cases._reference_workflow import review_state_change
+from mood_tracker.application.use_cases._reference_workflow import ReferenceWorkflow
 from mood_tracker.application.use_cases._transactions import execute_write
 from mood_tracker.domain.enums import QuestionnaireFieldRole, QuestionnaireKind
 
@@ -50,14 +50,12 @@ class SaveDayValueUseCase:
                 or placement.role is not QuestionnaireFieldRole.DAY_STATE
             ):
                 return None
-            return await review_state_change(
-                self._uow,
-                self._clock,
-                self._id_generator,
-                command.user_id,
-                day,
-                field,
-            )
+            update = await ReferenceWorkflow(
+                self._uow, self._clock, self._id_generator
+            ).on_state_saved(command.user_id, day, field)
+            if update.changed and update.reference_days is not None:
+                await self._uow.reference_days.save(update.reference_days)
+            return update.review
 
         return await execute_write(self._uow, operation)
 
