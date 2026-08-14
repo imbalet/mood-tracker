@@ -5,10 +5,11 @@ from mood_tracker.application.contracts.references import (
     GetReferenceHistory,
     ReferenceHistory,
 )
-from mood_tracker.application.errors import DayNotFound, FieldNotFound, UserNotFound
+from mood_tracker.application.errors import FieldNotFound
 from mood_tracker.application.ports import Clock, IdGenerator, UnitOfWork
 from mood_tracker.application.use_cases._loaders import (
-    list_questionnaire_fields,
+    find_system_questionnaire_field,
+    require_owned_day,
     require_questionnaire,
     require_user,
 )
@@ -32,11 +33,10 @@ class GetReferenceHistoryUseCase:
     async def execute(self, command: GetReferenceHistory) -> ReferenceHistory:
         """Return an empty history for a user without any state values yet."""
         async with self._uow:
-            if await self._uow.users.get(command.user_id) is None:
-                raise UserNotFound
+            await require_user(self._uow, command.user_id)
             reference_days = await self._uow.reference_days.get(command.user_id)
             if reference_days is None:
-                return ReferenceHistory((), (), ())
+                return ReferenceHistory()
             return ReferenceHistory(
                 best_chain=reference_days.active_chain(ReferenceType.BEST),
                 worst_chain=reference_days.active_chain(ReferenceType.WORST),
@@ -58,21 +58,15 @@ class ConfirmReferenceUseCase:
         """Confirm a new record or roll back a rejected current reference."""
 
         async def operation() -> None:
-            user = await require_user(self._uow, command.user_id)
-            day = await self._uow.days.get(user.id, command.day_id)
-            if day is None:
-                raise DayNotFound
+            day = await require_owned_day(self._uow, command.user_id, command.day_id)
             questionnaire = await require_questionnaire(
-                self._uow, user.id, QuestionnaireKind.DAY
+                self._uow, command.user_id, QuestionnaireKind.DAY
             )
-            items = await list_questionnaire_fields(self._uow, user.id, questionnaire)
-            core_field = next(
-                (
-                    item.field
-                    for item in items
-                    if item.placement.role is QuestionnaireFieldRole.DAY_STATE
-                ),
-                None,
+            core_field = await find_system_questionnaire_field(
+                self._uow,
+                command.user_id,
+                questionnaire,
+                QuestionnaireFieldRole.DAY_STATE,
             )
             if core_field is None:
                 raise FieldNotFound
@@ -80,7 +74,7 @@ class ConfirmReferenceUseCase:
                 self._uow,
                 self._clock,
                 self._id_generator,
-                user.id,
+                command.user_id,
                 day,
                 core_field,
                 command.type,

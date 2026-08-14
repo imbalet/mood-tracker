@@ -5,8 +5,8 @@ from mood_tracker.application.contracts.users import (
     RegisterUser,
     SetTimezone,
 )
-from mood_tracker.application.errors import UserNotFound
 from mood_tracker.application.ports import Clock, IdGenerator, UnitOfWork
+from mood_tracker.application.use_cases._loaders import require_user
 from mood_tracker.application.use_cases._transactions import (
     execute_transaction,
     execute_write,
@@ -19,7 +19,7 @@ from mood_tracker.domain.factories import (
 
 
 class RegisterUserUseCase:
-    """Create an idempotent profile with the standard fields."""
+    """Create a profile with the standard fields."""
 
     def __init__(
         self, uow: UnitOfWork, clock: Clock, id_generator: IdGenerator
@@ -35,6 +35,7 @@ class RegisterUserUseCase:
             existing = await self._uow.users.get_by_telegram_id(command.telegram_id)
             if existing is not None:
                 return existing
+
             user = UserProfile(
                 id=self._id_generator.new(),
                 telegram_id=command.telegram_id,
@@ -47,6 +48,7 @@ class RegisterUserUseCase:
             fields = setup.fields
             questionnaires = setup.questionnaires
             await self._uow.users.add(user)
+            # TODO: maybe refactor
             for field in fields:
                 await self._uow.fields.add(field)
             for questionnaire in questionnaires:
@@ -78,9 +80,7 @@ class SetTimezoneUseCase:
         """Persist a validated timezone change."""
 
         async def operation() -> UserProfile:
-            user = await self._uow.users.get(command.user_id)
-            if user is None:
-                raise UserNotFound
+            user = await require_user(self._uow, command.user_id)
             user.set_timezone(command.timezone)
             await self._uow.users.save(user)
             return user

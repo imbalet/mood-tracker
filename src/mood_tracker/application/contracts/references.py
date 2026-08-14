@@ -1,6 +1,6 @@
 """Reference-history application contracts."""
 
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from uuid import UUID
 
 from mood_tracker.domain.entities import ReferenceDay
@@ -17,6 +17,6 @@ class GetReferenceHistory:
 class ReferenceHistory:
     """Current best/worst chains alongside every confirmed historical event."""
 
-    best_chain: tuple[ReferenceDay, ...]
-    worst_chain: tuple[ReferenceDay, ...]
-    all_events: tuple[ReferenceDay, ...]
+    best_chain: tuple[ReferenceDay, ...] = field(default_factory=tuple)
+    worst_chain: tuple[ReferenceDay, ...] = field(default_factory=tuple)
+    all_events: tuple[ReferenceDay, ...] = field(default_factory=tuple)

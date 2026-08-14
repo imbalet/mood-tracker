@@ -1,8 +1,8 @@
 """Read a user's diary data for one calendar month."""
 
 from mood_tracker.application.contracts.calendar import GetMonthCalendar, MonthCalendar
-from mood_tracker.application.errors import UserNotFound
 from mood_tracker.application.ports import UnitOfWork
+from mood_tracker.application.use_cases._loaders import require_user
 from mood_tracker.domain.enums import QuestionnaireKind
 
 
@@ -16,9 +16,7 @@ class GetMonthCalendarUseCase:
         """Load days and current field display settings for a month."""
         month = command.month.replace(day=1)
         async with self._uow:
-            user = await self._uow.users.get(command.user_id)
-            if user is None:
-                raise UserNotFound
+            user = await require_user(self._uow, command.user_id)
             days = await self._uow.days.list_for_month(user.id, month)
             fields = await self._uow.fields.list_for_user(user.id)
             questionnaire = await self._uow.questionnaires.get(

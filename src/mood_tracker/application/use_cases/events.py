@@ -2,7 +2,6 @@
 
 from collections.abc import Sequence
 from datetime import UTC, datetime
-from uuid import UUID
 
 from mood_tracker.application.contracts.events import (
     ChangeEventTime,
@@ -15,11 +14,11 @@ from mood_tracker.application.contracts.events import (
     SaveEventValue,
     SkipEventField,
 )
-from mood_tracker.application.errors import EventNotFound
 from mood_tracker.application.ports import Clock, IdGenerator, UnitOfWork
 from mood_tracker.application.use_cases._loaders import (
-    list_questionnaire_fields,
+    find_system_questionnaire_field,
     require_enabled_questionnaire_field,
+    require_owned_event,
     require_questionnaire,
     require_user,
 )
@@ -48,6 +47,7 @@ class GetEventsForDateUseCase:
 
     async def execute(self, command: GetEventsForDate) -> Sequence[Event]:
         async with self._uow:
+            await require_user(self._uow, command.user_id)
             return await self._uow.events.list_for_date(
                 command.user_id, command.event_date
             )
@@ -83,17 +83,11 @@ class CreateQuickEventUseCase:
             if questionnaire is None:
                 msg = "Event questionnaire is unavailable"
                 raise InvalidFieldValue(msg)
-            fields = tuple(
-                item.field
-                for item in await list_questionnaire_fields(
-                    self._uow, user.id, questionnaire
-                )
-            )
-            description_field_id = questionnaire.system_field_id(
-                QuestionnaireFieldRole.EVENT_DESCRIPTION
-            )
-            description_field = next(
-                (field for field in fields if field.id == description_field_id), None
+            description_field = await find_system_questionnaire_field(
+                self._uow,
+                user.id,
+                questionnaire,
+                QuestionnaireFieldRole.EVENT_DESCRIPTION,
             )
             if description_field is None:
                 msg = "Event description field is unavailable"
@@ -103,13 +97,6 @@ class CreateQuickEventUseCase:
             return event
 
         return await execute_write(self._uow, operation)
-
-
-async def _require_event(uow: UnitOfWork, user_id: UUID, event_id: UUID) -> Event:
-    event = await uow.events.get(user_id, event_id)
-    if event is None:
-        raise EventNotFound
-    return event
 
 
 class CreateEventUseCase:
@@ -138,10 +125,9 @@ class GetEventUseCase:
 
     async def execute(self, command: GetEvent) -> Event:
         async with self._uow:
-            event = await self._uow.events.get(command.user_id, command.event_id)
-            if event is None:
-                raise EventNotFound
-            return event
+            return await require_owned_event(
+                self._uow, command.user_id, command.event_id
+            )
 
 
 class SaveEventValueUseCase:
@@ -150,7 +136,9 @@ class SaveEventValueUseCase:
 
     async def execute(self, command: SaveEventValue) -> Event:
         async def operation() -> Event:
-            event = await _require_event(self._uow, command.user_id, command.event_id)
+            event = await require_owned_event(
+                self._uow, command.user_id, command.event_id
+            )
             _, field, _ = await require_enabled_questionnaire_field(
                 self._uow,
                 command.user_id,
@@ -170,7 +158,9 @@ class SkipEventFieldUseCase:
 
     async def execute(self, command: SkipEventField) -> Event:
         async def operation() -> Event:
-            event = await _require_event(self._uow, command.user_id, command.event_id)
+            event = await require_owned_event(
+                self._uow, command.user_id, command.event_id
+            )
             _, field, placement = await require_enabled_questionnaire_field(
                 self._uow,
                 command.user_id,
@@ -193,7 +183,9 @@ class CompleteEventUseCase:
 
     async def execute(self, command: CompleteEvent) -> Event:
         async def operation() -> Event:
-            event = await _require_event(self._uow, command.user_id, command.event_id)
+            event = await require_owned_event(
+                self._uow, command.user_id, command.event_id
+            )
             questionnaire = await require_questionnaire(
                 self._uow, command.user_id, QuestionnaireKind.EVENT
             )
@@ -219,9 +211,9 @@ class ChangeEventTimeUseCase:
 
     async def execute(self, command: ChangeEventTime) -> Event:
         async def operation() -> Event:
-            event = await self._uow.events.get(command.user_id, command.event_id)
-            if event is None:
-                raise EventNotFound
+            event = await require_owned_event(
+                self._uow, command.user_id, command.event_id
+            )
             event.change_time(_to_utc(command.occurred_at, "Event occurrence time"))
             await self._uow.events.save(event)
             return event
@@ -236,9 +228,9 @@ class DeleteEventUseCase:
 
     async def execute(self, command: DeleteEvent) -> None:
         async def operation() -> None:
-            event = await self._uow.events.get(command.user_id, command.event_id)
-            if event is None:
-                raise EventNotFound
+            event = await require_owned_event(
+                self._uow, command.user_id, command.event_id
+            )
             event.delete(self._clock.now())
             await self._uow.events.save(event)
 

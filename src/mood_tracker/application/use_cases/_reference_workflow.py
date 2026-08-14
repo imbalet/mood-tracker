@@ -116,6 +116,7 @@ async def confirm_reference_change(
     is_new_record: bool,
 ) -> None:
     """Apply a user's confirmation or rejection of a reference change."""
+    # TODO: maybe move back to use case
     reference_days = await uow.reference_days.get(user_id)
     if reference_days is None or not is_reference_boundary(day, core_field, type):
         return

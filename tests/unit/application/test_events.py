@@ -1,4 +1,4 @@
-from datetime import UTC, datetime, timedelta, timezone
+from datetime import UTC, date, datetime, timedelta, timezone
 from unittest.mock import AsyncMock
 from uuid import uuid7
 
@@ -9,14 +9,20 @@ from mood_tracker.application.contracts.events import (
     CompleteEvent,
     CreateEvent,
     CreateQuickEvent,
+    DeleteEvent,
+    GetEvent,
+    GetEventsForDate,
     SaveEventValue,
 )
-from mood_tracker.application.errors import FieldNotFound
+from mood_tracker.application.errors import EventNotFound, FieldNotFound, UserNotFound
 from mood_tracker.application.use_cases.events import (
     ChangeEventTimeUseCase,
     CompleteEventUseCase,
     CreateEventUseCase,
     CreateQuickEventUseCase,
+    DeleteEventUseCase,
+    GetEventsForDateUseCase,
+    GetEventUseCase,
     SaveEventValueUseCase,
 )
 from mood_tracker.domain.entities import Event, Questionnaire
@@ -52,6 +58,56 @@ async def test_quick_event_rejects_blank_text(
         await use_case.execute(CreateQuickEvent(user.id, "  "))
 
     uow.events.add.assert_not_awaited()
+
+
+async def test_quick_event_reports_missing_description_system_field(
+    uow, clock, id_generator, user_factory, field_factory
+) -> None:
+    user = user_factory.build()
+    field = field_factory.text(user_id=user.id, name="Заметка")
+    uow.users.get = AsyncMock(return_value=user)
+    uow.fields.list_for_user = AsyncMock(return_value=[field])
+
+    with pytest.raises(InvalidFieldValue, match="description field"):
+        await CreateQuickEventUseCase(uow, clock, id_generator).execute(
+            CreateQuickEvent(user.id, "Важная мысль")
+        )
+
+
+async def test_event_reads_and_writes_reject_unknown_user(
+    uow, clock, user_factory, field_factory
+) -> None:
+    user = user_factory.build()
+    field = field_factory.text(user_id=user.id)
+    uow.users.get = AsyncMock(return_value=None)
+
+    with pytest.raises(UserNotFound):
+        await GetEventsForDateUseCase(uow).execute(
+            GetEventsForDate(user.id, date.today())
+        )
+    with pytest.raises(UserNotFound):
+        await GetEventUseCase(uow).execute(GetEvent(user.id, uuid7()))
+    with pytest.raises(UserNotFound):
+        await SaveEventValueUseCase(uow).execute(
+            SaveEventValue(user.id, uuid7(), field.id, "Текст")
+        )
+    with pytest.raises(UserNotFound):
+        await ChangeEventTimeUseCase(uow).execute(
+            ChangeEventTime(user.id, uuid7(), datetime.now(UTC))
+        )
+    with pytest.raises(UserNotFound):
+        await DeleteEventUseCase(uow, clock).execute(DeleteEvent(user.id, uuid7()))
+
+
+async def test_get_event_conceals_missing_event_for_existing_user(
+    uow, user_factory
+) -> None:
+    user = user_factory.build()
+    uow.users.get = AsyncMock(return_value=user)
+    uow.events.get = AsyncMock(return_value=None)
+
+    with pytest.raises(EventNotFound):
+        await GetEventUseCase(uow).execute(GetEvent(user.id, uuid7()))
 
 
 async def test_regular_event_saves_value_completes_and_changes_time(
