@@ -6,6 +6,7 @@ from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 
 from mood_tracker.application.use_cases import (
     AddFieldVersionUseCase,
+    AttachFieldToQuestionnaireUseCase,
     ChangeEventTimeUseCase,
     CompleteEventUseCase,
     ConfirmReferenceUseCase,
@@ -13,18 +14,22 @@ from mood_tracker.application.use_cases import (
     CreateFieldUseCase,
     CreateQuickEventUseCase,
     DeleteEventUseCase,
+    DeleteFieldUseCase,
+    DetachFieldFromQuestionnaireUseCase,
     GetDayUseCase,
     GetEventsForDateUseCase,
     GetEventUseCase,
     GetMonthCalendarUseCase,
     GetUserByTelegramIdUseCase,
     ListQuestionnaireFieldsUseCase,
-    QuestionnaireFieldUseCase,
+    MoveQuestionnaireFieldUseCase,
     RegisterUserUseCase,
     RenameFieldUseCase,
     SaveDayValueUseCase,
     SaveEventValueUseCase,
     SetFieldDisplayUseCase,
+    SetQuestionnaireFieldEnabledUseCase,
+    SetQuestionnaireFieldRequiredUseCase,
     SkipDayTextUseCase,
     SkipEventFieldUseCase,
 )
@@ -90,8 +95,23 @@ class ApplicationServices:
     def list_questionnaire_fields(self) -> ListQuestionnaireFieldsUseCase:
         return ListQuestionnaireFieldsUseCase(self._uow())
 
-    def questionnaire_field(self) -> QuestionnaireFieldUseCase:
-        return QuestionnaireFieldUseCase(self._uow(), SystemClock())
+    def attach_field_to_questionnaire(self) -> AttachFieldToQuestionnaireUseCase:
+        return AttachFieldToQuestionnaireUseCase(self._uow())
+
+    def detach_field_from_questionnaire(self) -> DetachFieldFromQuestionnaireUseCase:
+        return DetachFieldFromQuestionnaireUseCase(self._uow())
+
+    def set_questionnaire_field_enabled(self) -> SetQuestionnaireFieldEnabledUseCase:
+        return SetQuestionnaireFieldEnabledUseCase(self._uow())
+
+    def set_questionnaire_field_required(self) -> SetQuestionnaireFieldRequiredUseCase:
+        return SetQuestionnaireFieldRequiredUseCase(self._uow())
+
+    def move_questionnaire_field(self) -> MoveQuestionnaireFieldUseCase:
+        return MoveQuestionnaireFieldUseCase(self._uow())
+
+    def delete_field(self) -> DeleteFieldUseCase:
+        return DeleteFieldUseCase(self._uow(), SystemClock())
 
     def create_field(self) -> CreateFieldUseCase:
         return CreateFieldUseCase(self._uow(), SystemClock(), Uuid7IdGenerator())

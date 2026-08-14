@@ -235,7 +235,7 @@ async def delete_field(
         await query.answer(TEXTS[TextKey.START_FIRST], show_alert=True)
         return
     try:
-        await services.questionnaire_field().delete(
+        await services.delete_field().execute(
             DeleteField(profile.id, callback_data.field_id)
         )
     except FieldNotFound, CoreFieldViolation, QuestionnaireViolation:
@@ -280,7 +280,7 @@ async def change_questionnaire_placement(
             )
             if item is None:
                 raise FieldNotFound
-            field = await services.questionnaire_field().set_required(
+            field = await services.set_questionnaire_field_required().execute(
                 SetQuestionnaireFieldRequired(
                     profile.id,
                     callback_data.field_id,
@@ -292,7 +292,7 @@ async def change_questionnaire_placement(
             QuestionnaireFieldAction.ENABLE,
             QuestionnaireFieldAction.DISABLE,
         ):
-            field = await services.questionnaire_field().set_enabled(
+            field = await services.set_questionnaire_field_enabled().execute(
                 SetQuestionnaireFieldEnabled(
                     profile.id,
                     callback_data.field_id,
@@ -301,7 +301,7 @@ async def change_questionnaire_placement(
                 )
             )
         else:
-            field = await services.questionnaire_field().detach(
+            field = await services.detach_field_from_questionnaire().execute(
                 DetachFieldFromQuestionnaire(
                     profile.id, callback_data.field_id, callback_data.kind
                 )

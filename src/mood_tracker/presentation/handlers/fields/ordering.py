@@ -97,7 +97,7 @@ async def move_field(
         await query.answer()
         return
     try:
-        items = await services.questionnaire_field().move(
+        items = await services.move_questionnaire_field().execute(
             MoveQuestionnaireField(
                 profile.id,
                 callback_data.field_id,

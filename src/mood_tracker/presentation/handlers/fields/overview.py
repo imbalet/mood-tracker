@@ -186,7 +186,7 @@ async def attach_field(
         await query.answer(TEXTS[TextKey.START_FIRST], show_alert=True)
         return
     try:
-        await services.questionnaire_field().attach(
+        await services.attach_field_to_questionnaire().execute(
             AttachFieldToQuestionnaire(
                 profile.id,
                 callback_data.field_id,

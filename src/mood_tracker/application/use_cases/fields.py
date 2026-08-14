@@ -140,14 +140,13 @@ class AddFieldVersionUseCase:
         return await execute_write(self._uow, operation)
 
 
-class QuestionnaireFieldUseCase:
-    """Configure a field's participation in an explicitly selected questionnaire."""
+class AttachFieldToQuestionnaireUseCase:
+    """Attach an owned field to one explicitly selected questionnaire."""
 
-    def __init__(self, uow: UnitOfWork, clock: Clock) -> None:
+    def __init__(self, uow: UnitOfWork) -> None:
         self._uow = uow
-        self._clock = clock
 
-    async def attach(self, command: AttachFieldToQuestionnaire) -> Field:
+    async def execute(self, command: AttachFieldToQuestionnaire) -> Field:
         async def operation() -> Field:
             field = await require_owned_field(
                 self._uow, command.user_id, command.field_id
@@ -161,7 +160,14 @@ class QuestionnaireFieldUseCase:
 
         return await execute_transaction(self._uow, operation)
 
-    async def detach(self, command: DetachFieldFromQuestionnaire) -> Field:
+
+class DetachFieldFromQuestionnaireUseCase:
+    """Detach an ordinary field from one explicitly selected questionnaire."""
+
+    def __init__(self, uow: UnitOfWork) -> None:
+        self._uow = uow
+
+    async def execute(self, command: DetachFieldFromQuestionnaire) -> Field:
         async def operation() -> Field:
             field = await require_owned_field(
                 self._uow, command.user_id, command.field_id
@@ -175,7 +181,14 @@ class QuestionnaireFieldUseCase:
 
         return await execute_transaction(self._uow, operation)
 
-    async def set_enabled(self, command: SetQuestionnaireFieldEnabled) -> Field:
+
+class SetQuestionnaireFieldEnabledUseCase:
+    """Change an owned field placement's visibility."""
+
+    def __init__(self, uow: UnitOfWork) -> None:
+        self._uow = uow
+
+    async def execute(self, command: SetQuestionnaireFieldEnabled) -> Field:
         async def operation() -> Field:
             field = await require_owned_field(
                 self._uow, command.user_id, command.field_id
@@ -189,7 +202,14 @@ class QuestionnaireFieldUseCase:
 
         return await execute_transaction(self._uow, operation)
 
-    async def set_required(self, command: SetQuestionnaireFieldRequired) -> Field:
+
+class SetQuestionnaireFieldRequiredUseCase:
+    """Change whether one owned placement is required."""
+
+    def __init__(self, uow: UnitOfWork) -> None:
+        self._uow = uow
+
+    async def execute(self, command: SetQuestionnaireFieldRequired) -> Field:
         async def operation() -> Field:
             field = await require_owned_field(
                 self._uow, command.user_id, command.field_id
@@ -203,7 +223,14 @@ class QuestionnaireFieldUseCase:
 
         return await execute_transaction(self._uow, operation)
 
-    async def move(
+
+class MoveQuestionnaireFieldUseCase:
+    """Move an owned field within one explicitly selected questionnaire."""
+
+    def __init__(self, uow: UnitOfWork) -> None:
+        self._uow = uow
+
+    async def execute(
         self, command: MoveQuestionnaireField
     ) -> tuple[QuestionnaireFieldItem, ...]:
         """Move one placement and normalize only that questionnaire's order."""
@@ -221,7 +248,15 @@ class QuestionnaireFieldUseCase:
 
         return await execute_transaction(self._uow, operation)
 
-    async def delete(self, command: DeleteField) -> None:
+
+class DeleteFieldUseCase:
+    """Soft-delete one owned field after protecting system placements."""
+
+    def __init__(self, uow: UnitOfWork, clock: Clock) -> None:
+        self._uow = uow
+        self._clock = clock
+
+    async def execute(self, command: DeleteField) -> None:
         async def operation() -> None:
             field = await require_owned_field(
                 self._uow, command.user_id, command.field_id
