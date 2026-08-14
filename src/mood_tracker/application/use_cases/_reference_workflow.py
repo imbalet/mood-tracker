@@ -5,23 +5,11 @@ from uuid import UUID
 from mood_tracker.application.contracts.diary import ReferenceReview
 from mood_tracker.application.ports import Clock, IdGenerator, UnitOfWork
 from mood_tracker.domain.entities import Day, Field, ReferenceDays, ScaleConfig
-from mood_tracker.domain.entities.reference_days import boundary_reference_candidate
+from mood_tracker.domain.entities.reference_days import (
+    boundary_reference_candidate,
+    is_reference_boundary,
+)
 from mood_tracker.domain.enums import ReferenceType
-
-
-def is_boundary_for(day: Day, core_field: Field, type: ReferenceType) -> bool:
-    """Whether a saved historical state value reaches one scale boundary."""
-    value = day.response.answers.get(core_field.id)
-    if value is None or not isinstance(value.value, int):
-        return False
-    version = core_field.get_version(value.field_version_id)
-    if version is None or not isinstance(version.config, ScaleConfig):
-        return False
-    return (
-        value.value == version.config.maximum
-        if type is ReferenceType.BEST
-        else value.value == version.config.minimum
-    )
 
 
 async def valid_day_ids(
@@ -34,7 +22,7 @@ async def valid_day_ids(
     """Return historical reference days that still match their stored boundary."""
     day_ids = tuple({reference.day_id for reference in reference_days.history})
     days = await uow.days.get_many(user_id, day_ids)
-    return {day.id for day in days if is_boundary_for(day, core_field, type)}
+    return {day.id for day in days if is_reference_boundary(day, core_field, type)}
 
 
 async def rollback_invalid_current_references(
@@ -47,7 +35,7 @@ async def rollback_invalid_current_references(
     """Roll back current pointers when the edited day no longer reaches a boundary."""
     changed = False
     for type in ReferenceType:
-        if reference_days.current_day_id(type) == day.id and not is_boundary_for(
+        if reference_days.current_day_id(type) == day.id and not is_reference_boundary(
             day, core_field, type
         ):
             valid_ids = await valid_day_ids(
@@ -129,7 +117,7 @@ async def confirm_reference_change(
 ) -> None:
     """Apply a user's confirmation or rejection of a reference change."""
     reference_days = await uow.reference_days.get(user_id)
-    if reference_days is None or not is_boundary_for(day, core_field, type):
+    if reference_days is None or not is_reference_boundary(day, core_field, type):
         return
     current = reference_days.current_day_id(type)
     if is_new_record:

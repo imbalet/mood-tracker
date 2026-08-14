@@ -84,3 +84,32 @@ def test_questionnaire_protects_system_placements() -> None:
         questionnaire.set_enabled(core.field_id, False)
     with pytest.raises(CoreFieldViolation):
         questionnaire.set_required(core.field_id, False)
+
+
+def test_questionnaire_lists_enabled_and_required_fields_in_order() -> None:
+    questionnaire = Questionnaire(uuid7(), uuid7(), QuestionnaireKind.DAY)
+    first = questionnaire.attach(uuid7(), is_required=True)
+    second = questionnaire.attach(uuid7(), is_required=False)
+    third = questionnaire.attach(uuid7(), is_required=True)
+    questionnaire.set_enabled(second.field_id, False)
+
+    assert questionnaire.enabled_field_ids() == (first.field_id, third.field_id)
+    assert questionnaire.required_enabled_field_ids() == (
+        first.field_id,
+        third.field_id,
+    )
+
+
+def test_questionnaire_returns_its_single_system_field_id() -> None:
+    questionnaire = Questionnaire(uuid7(), uuid7(), QuestionnaireKind.EVENT)
+    description = questionnaire.attach(
+        uuid7(), role=QuestionnaireFieldRole.EVENT_DESCRIPTION
+    )
+
+    assert (
+        questionnaire.system_field_id(QuestionnaireFieldRole.EVENT_DESCRIPTION)
+        == description.field_id
+    )
+
+    with pytest.raises(QuestionnaireViolation):
+        questionnaire.system_field_id(QuestionnaireFieldRole.DAY_STATE)

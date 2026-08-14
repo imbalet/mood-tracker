@@ -1,10 +1,12 @@
 from datetime import UTC, datetime
 from uuid import uuid7
 
+from mood_tracker.domain.entities import Day
 from mood_tracker.domain.entities.field import ScaleConfig
 from mood_tracker.domain.entities.reference_days import (
     ReferenceDays,
     boundary_reference_candidate,
+    is_reference_boundary,
 )
 from mood_tracker.domain.enums import ReferenceType
 from tests.factories import FieldFactory
@@ -37,6 +39,17 @@ def test_boundary_reference_candidate_only_exists_at_scale_edges(
     assert boundary_reference_candidate(0, config) is ReferenceType.WORST
     assert boundary_reference_candidate(10, config) is ReferenceType.BEST
     assert boundary_reference_candidate(5, config) is None
+
+
+def test_reference_boundary_uses_the_saved_field_version(
+    field_factory: FieldFactory,
+) -> None:
+    field = field_factory.scale(minimum=0, maximum=10)
+    day = Day(uuid7(), field.user_id, datetime.now(UTC).date())
+    day.save_value(field.current_version, 10)
+
+    assert is_reference_boundary(day, field, ReferenceType.BEST)
+    assert not is_reference_boundary(day, field, ReferenceType.WORST)
 
 
 def test_rollback_keeps_history_and_restores_previous_reference() -> None:

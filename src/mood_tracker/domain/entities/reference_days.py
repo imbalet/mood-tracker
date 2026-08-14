@@ -5,7 +5,8 @@ from dataclasses import dataclass, field
 from datetime import datetime
 from uuid import UUID
 
-from mood_tracker.domain.entities.field import ScaleConfig
+from mood_tracker.domain.entities.day import Day
+from mood_tracker.domain.entities.field import Field, ScaleConfig
 from mood_tracker.domain.enums import ReferenceType
 from mood_tracker.domain.errors import ReferenceDayViolation
 from mood_tracker.domain.value_objects import require_utc
@@ -200,3 +201,20 @@ def boundary_reference_candidate(
     if value == config.maximum:
         return ReferenceType.BEST
     return None
+
+
+def is_reference_boundary(
+    day: Day, core_field: Field, reference_type: ReferenceType
+) -> bool:
+    """Whether a saved core-field answer reaches one reference boundary."""
+    value = day.response.answers.get(core_field.id)
+    if value is None or not isinstance(value.value, int):
+        return False
+    version = core_field.get_version(value.field_version_id)
+    if version is None or not isinstance(version.config, ScaleConfig):
+        return False
+    return (
+        value.value == version.config.maximum
+        if reference_type is ReferenceType.BEST
+        else value.value == version.config.minimum
+    )

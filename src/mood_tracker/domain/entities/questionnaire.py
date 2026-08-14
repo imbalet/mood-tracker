@@ -87,6 +87,37 @@ class Questionnaire:
     def ordered_fields(self) -> tuple[QuestionnaireField, ...]:
         return tuple(sorted(self.fields.values(), key=lambda item: item.sort_order))
 
+    def enabled_field_ids(self) -> tuple[UUID, ...]:
+        """Return enabled field IDs in questionnaire order."""
+        return tuple(
+            placement.field_id
+            for placement in self.ordered_fields()
+            if placement.is_enabled
+        )
+
+    def required_enabled_field_ids(self) -> tuple[UUID, ...]:
+        """Return enabled required field IDs in questionnaire order."""
+        return tuple(
+            placement.field_id
+            for placement in self.ordered_fields()
+            if placement.is_enabled and placement.is_required
+        )
+
+    def system_field_id(self, role: QuestionnaireFieldRole) -> UUID:
+        """Return the single field ID assigned to a non-ordinary system role."""
+        if role is QuestionnaireFieldRole.ORDINARY:
+            msg = "Ordinary fields do not have a single system placement"
+            raise QuestionnaireViolation(msg)
+        field_ids = tuple(
+            placement.field_id
+            for placement in self.fields.values()
+            if placement.role is role
+        )
+        if len(field_ids) != 1:
+            msg = f"Questionnaire must have exactly one {role} field"
+            raise QuestionnaireViolation(msg)
+        return field_ids[0]
+
     def attach(
         self,
         field_id: UUID,

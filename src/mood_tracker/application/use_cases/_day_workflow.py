@@ -5,7 +5,6 @@ from uuid import UUID
 
 from mood_tracker.application.ports import Clock, IdGenerator, UnitOfWork
 from mood_tracker.application.use_cases._loaders import (
-    list_questionnaire_fields,
     require_enabled_questionnaire_field,
     require_questionnaire,
 )
@@ -39,10 +38,7 @@ async def complete_and_persist_day(
 ) -> None:
     """Complete an eligible draft and persist it as new or existing data."""
     questionnaire = await require_questionnaire(uow, user_id, QuestionnaireKind.DAY)
-    items = await list_questionnaire_fields(uow, user_id, questionnaire)
-    active_field_ids = tuple(
-        item.field.id for item in items if item.placement.is_enabled
-    )
+    active_field_ids = questionnaire.enabled_field_ids()
     if day.status is DayStatus.DRAFT and all(
         day.has_completed_step(field_id) for field_id in active_field_ids
     ):

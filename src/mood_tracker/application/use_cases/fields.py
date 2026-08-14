@@ -27,7 +27,7 @@ from mood_tracker.application.use_cases._transactions import (
 )
 from mood_tracker.domain.entities import Field, FieldVersion
 from mood_tracker.domain.enums import QuestionnaireFieldRole, QuestionnaireKind
-from mood_tracker.domain.errors import CoreFieldViolation, InvalidFieldVersion
+from mood_tracker.domain.errors import CoreFieldViolation
 
 
 class CreateFieldUseCase:
@@ -127,9 +127,6 @@ class AddFieldVersionUseCase:
             field = await require_owned_field(
                 self._uow, command.user_id, command.field_id
             )
-            if command.config.field_type is not field.current_version.type:
-                msg = "A new field version must retain the original field type"
-                raise InvalidFieldVersion(msg)
             version = FieldVersion(
                 id=self._id_generator.new(),
                 field_id=field.id,

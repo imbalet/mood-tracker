@@ -27,11 +27,7 @@ from mood_tracker.application.use_cases._transactions import (
     execute_transaction,
     execute_write,
 )
-from mood_tracker.domain.entities import (
-    Event,
-    Field,
-    Questionnaire,
-)
+from mood_tracker.domain.entities import Event
 from mood_tracker.domain.enums import QuestionnaireFieldRole, QuestionnaireKind
 from mood_tracker.domain.errors import IncompleteDay, InvalidFieldValue
 
@@ -42,21 +38,6 @@ def _to_utc(value: datetime, label: str) -> datetime:
     if value.tzinfo is None or value.utcoffset() is None:
         raise InvalidFieldValue(f"{label} must include a timezone")
     return value.astimezone(UTC)
-
-
-def _description_field(
-    fields: tuple[Field, ...], questionnaire: Questionnaire
-) -> Field:
-    field_ids = {
-        placement.field_id
-        for placement in questionnaire.fields.values()
-        if placement.role is QuestionnaireFieldRole.EVENT_DESCRIPTION
-    }
-    field = next((candidate for candidate in fields if candidate.id in field_ids), None)
-    if field is None:
-        msg = "Event description field is unavailable"
-        raise InvalidFieldValue(msg)
-    return field
 
 
 class GetEventsForDateUseCase:
@@ -108,9 +89,16 @@ class CreateQuickEventUseCase:
                     self._uow, user.id, questionnaire
                 )
             )
-            event.save_value(
-                _description_field(fields, questionnaire).current_version, command.text
+            description_field_id = questionnaire.system_field_id(
+                QuestionnaireFieldRole.EVENT_DESCRIPTION
             )
+            description_field = next(
+                (field for field in fields if field.id == description_field_id), None
+            )
+            if description_field is None:
+                msg = "Event description field is unavailable"
+                raise InvalidFieldValue(msg)
+            event.save_value(description_field.current_version, command.text)
             await self._uow.events.add(event)
             return event
 
@@ -209,18 +197,10 @@ class CompleteEventUseCase:
             questionnaire = await require_questionnaire(
                 self._uow, command.user_id, QuestionnaireKind.EVENT
             )
-            fields = {
-                item.field.id: item.field
-                for item in await list_questionnaire_fields(
-                    self._uow, command.user_id, questionnaire
-                )
-            }
-            required = [
-                fields[field_id]
-                for field_id, placement in questionnaire.fields.items()
-                if placement.is_enabled and placement.is_required and field_id in fields
-            ]
-            if any(not event.has_completed_step(field.id) for field in required):
+            if any(
+                not event.has_completed_step(field_id)
+                for field_id in questionnaire.required_enabled_field_ids()
+            ):
                 raise IncompleteDay("Required event fields are unfinished")
             if not event.response.answers:
                 event.delete(self._clock.now())

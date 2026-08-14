@@ -247,6 +247,9 @@ class Field:
         if version.field_id != self.id:
             msg = "New field version belongs to another field"
             raise InvalidFieldVersion(msg)
+        if version.type is not self.current_version.type:
+            msg = "A new field version must retain the original field type"
+            raise InvalidFieldVersion(msg)
         if any(existing.id == version.id for existing in self.versions):
             msg = "Field version ID already exists in this field"
             raise InvalidFieldVersion(msg)

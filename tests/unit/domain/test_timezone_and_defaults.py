@@ -1,4 +1,4 @@
-from datetime import datetime
+from datetime import UTC, date, datetime
 from uuid import uuid7
 
 import pytest
@@ -20,6 +20,14 @@ def test_timezone_requires_iana_identifier() -> None:
 
     with pytest.raises(InvalidTimezone):
         UserTimezone("+03:00")
+
+
+def test_timezone_calculates_local_date_from_utc_instant() -> None:
+    timezone = UserTimezone("Asia/Vladivostok")
+
+    assert timezone.local_date_at(datetime(2025, 1, 2, 16, tzinfo=UTC)) == date(
+        2025, 1, 3
+    )
 
 
 def test_default_field_factory_creates_expected_core_and_order(
