@@ -1,4 +1,4 @@
-from datetime import date
+from datetime import UTC, date, datetime
 from io import BytesIO
 from uuid import uuid4
 
@@ -125,6 +125,30 @@ def test_field_emoji_keeps_its_slot_when_an_earlier_field_is_empty(
     )
 
     assert result[3].emojis == (None, "B")
+
+
+def test_soft_deleted_field_is_not_in_calendar_data(day_factory, field_factory) -> None:
+    field = field_factory.ordinal(display_config=FieldDisplayConfig(emoji="A"))
+    day = day_factory.build(day_date=date(2025, 2, 3))
+    day.save_value(field.current_version, 1)
+    source = MonthCalendar(
+        month=date(2025, 2, 1),
+        days=(day,),
+        fields=(field,),
+        references=None,
+        placements={
+            field.id: QuestionnaireField(
+                field.id, 0, deleted_at=datetime(2025, 1, 1, tzinfo=UTC)
+            )
+        },
+    )
+    theme = CalendarTheme.default()
+
+    result = MonthCalendarMapper(theme, len(theme.renderer.emoji.positions)).map(
+        MonthCalendarRequest(source.month, _to_visualization_data(source))
+    )
+
+    assert result[3].emojis == ()
 
 
 def test_renderer_keeps_day_number_and_emoji_grid_configuration() -> None:

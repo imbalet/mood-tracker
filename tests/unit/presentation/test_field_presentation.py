@@ -79,7 +79,7 @@ def test_ordinary_field_keyboard_exposes_enablement_and_soft_delete(
         button.text for row in screen.reply_markup.inline_keyboard for button in row
     }
     assert "Отключить в анкете" in texts
-    assert "Удалить поле" in texts
+    assert "Удалить из анкеты" in texts
     assert "Скрыто" not in texts
 
 

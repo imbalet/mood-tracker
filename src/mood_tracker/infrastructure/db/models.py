@@ -70,7 +70,6 @@ class FieldOrm(Timestamped, Base):
     display_config: Mapped[dict[str, Any]] = mapped_column(
         postgresql.JSONB, nullable=False
     )
-    deleted_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
 
 
 class FieldVersionOrm(Base):
@@ -121,6 +120,7 @@ class QuestionnaireFieldOrm(Base):
     is_enabled: Mapped[bool] = mapped_column(Boolean, nullable=False, default=True)
     is_required: Mapped[bool] = mapped_column(Boolean, nullable=False, default=True)
     role: Mapped[str] = mapped_column(String(24), nullable=False)
+    deleted_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
 
 
 class DayOrm(Timestamped, Base):

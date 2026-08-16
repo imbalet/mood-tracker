@@ -67,7 +67,7 @@ async def list_questionnaire_fields(
     return tuple(
         QuestionnaireFieldItem(fields[placement.field_id], placement)
         for placement in questionnaire.ordered_fields()
-        if placement.field_id in fields
+        if placement.field_id in fields and placement.deleted_at is None
     )
 
 
@@ -100,6 +100,10 @@ async def require_enabled_questionnaire_field(
     questionnaire = await require_questionnaire(uow, user_id, kind)
     field = await require_owned_field(uow, user_id, field_id)
     placement = questionnaire.fields.get(field.id)
-    if placement is None or not placement.is_enabled:
+    if (
+        placement is None
+        or placement.deleted_at is not None
+        or not placement.is_enabled
+    ):
         raise FieldNotFound
     return questionnaire, field, placement

@@ -182,11 +182,11 @@ _TEXTS: dict[TextKey, str] = {
     TextKey.FIELD_DISABLED: "Отключено",
     TextKey.FIELD_ENABLE: "Включить в анкете",
     TextKey.FIELD_DISABLE: "Отключить в анкете",
-    TextKey.FIELD_DELETE: "Удалить поле",
+    TextKey.FIELD_DELETE: "Удалить из анкеты",
     TextKey.FIELD_DELETE_CONFIRM: "Удалить",
     TextKey.FIELD_DELETE_PROMPT: (
-        "Удалить поле? Оно исчезнет из обеих анкет и истории. "
-        "Данные останутся в базе для ручного восстановления."
+        "Удалить поле из этой анкеты? Оно не будет показываться в анкете, "
+        "карточках и календаре. Данные останутся в базе."
     ),
     TextKey.FIELD_RENAME: "Переименовать",
     TextKey.FIELD_NEW_VERSION: "Изменить значения",

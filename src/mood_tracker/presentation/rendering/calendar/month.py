@@ -226,6 +226,10 @@ def _to_visualization_data(source: MonthCalendar) -> DiaryVisualizationData:
         fields=tuple(
             _field_data(field, source.placements.get(field.id))
             for field in source.fields
+            if (
+                (placement := source.placements.get(field.id)) is not None
+                and placement.deleted_at is None
+            )
         ),
     )
 

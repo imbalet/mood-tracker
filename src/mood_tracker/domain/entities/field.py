@@ -209,7 +209,6 @@ class Field:
     display_config: FieldDisplayConfig
     current_version: FieldVersion
     versions: list[FieldVersion] = field(default_factory=list)
-    deleted_at: datetime | None = None
 
     def __post_init__(self) -> None:
         _require_non_empty(self.name, "Field name")
@@ -221,8 +220,6 @@ class Field:
         if self.current_version not in self.versions:
             msg = "Current field version must belong to field history"
             raise InvalidFieldVersion(msg)
-        if self.deleted_at is not None:
-            require_utc(self.deleted_at, "Field deletion time")
 
     @property
     def current_version_id(self) -> UUID:
@@ -237,10 +234,6 @@ class Field:
     def set_display_config(self, display_config: FieldDisplayConfig) -> None:
         """Replace current presentation without changing any semantic version."""
         self.display_config = display_config
-
-    def delete(self, deleted_at: datetime) -> None:
-        """Soft-delete this semantic field and all values that reference it."""
-        self.deleted_at = require_utc(deleted_at, "Field deletion time")
 
     def add_version(self, version: FieldVersion) -> None:
         """Append a new immutable meaning and make it current."""

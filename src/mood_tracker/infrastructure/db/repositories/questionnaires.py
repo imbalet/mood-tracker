@@ -67,6 +67,7 @@ class SqlAlchemyQuestionnaireRepository:
                         is_enabled=placement.is_enabled,
                         is_required=placement.is_required,
                         role=placement.role.value,
+                        deleted_at=placement.deleted_at,
                     )
                 )
             else:
@@ -74,6 +75,7 @@ class SqlAlchemyQuestionnaireRepository:
                 row.is_enabled = placement.is_enabled
                 row.is_required = placement.is_required
                 row.role = placement.role.value
+                row.deleted_at = placement.deleted_at
         for row in existing.values():
             await self._session.delete(row)
 
@@ -96,6 +98,7 @@ class SqlAlchemyQuestionnaireRepository:
                     is_enabled=field.is_enabled,
                     is_required=field.is_required,
                     role=QuestionnaireFieldRole(field.role),
+                    deleted_at=field.deleted_at,
                 )
                 for field in field_rows
             },

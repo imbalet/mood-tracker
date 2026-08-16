@@ -1,3 +1,4 @@
+from datetime import UTC, datetime
 from uuid import uuid7
 
 import pytest
@@ -28,23 +29,33 @@ def test_questionnaire_attaches_fields_in_order_and_rejects_duplicates() -> None
         questionnaire.attach(first.field_id)
 
 
-def test_questionnaire_detach_and_move_normalize_order() -> None:
+def test_questionnaire_delete_keeps_absolute_order_and_restore_reenables() -> None:
     questionnaire = Questionnaire(uuid7(), uuid7(), QuestionnaireKind.DAY)
     first = questionnaire.attach(uuid7())
     second = questionnaire.attach(uuid7())
     third = questionnaire.attach(uuid7())
 
+    deleted_at = datetime(2025, 1, 1, tzinfo=UTC)
+    questionnaire.delete(second.field_id, deleted_at)
     questionnaire.move(third.field_id, MoveDirection.UP)
-    questionnaire.detach(first.field_id)
 
     assert [placement.field_id for placement in questionnaire.ordered_fields()] == [
         third.field_id,
         second.field_id,
+        first.field_id,
     ]
     assert [placement.sort_order for placement in questionnaire.ordered_fields()] == [
         0,
         1,
+        2,
     ]
+    assert questionnaire.fields[second.field_id].deleted_at == deleted_at
+
+    restored = questionnaire.attach(second.field_id)
+
+    assert restored.is_enabled
+    assert restored.deleted_at is None
+    assert restored.sort_order == 1
 
 
 def test_questionnaire_rejects_invalid_placement_state() -> None:
@@ -79,7 +90,7 @@ def test_questionnaire_protects_system_placements() -> None:
     )
 
     with pytest.raises(CoreFieldViolation):
-        questionnaire.detach(core.field_id)
+        questionnaire.delete(core.field_id, datetime(2025, 1, 1, tzinfo=UTC))
     with pytest.raises(CoreFieldViolation):
         questionnaire.set_enabled(core.field_id, False)
     with pytest.raises(CoreFieldViolation):

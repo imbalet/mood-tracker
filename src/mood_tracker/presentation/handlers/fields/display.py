@@ -7,8 +7,7 @@ from aiogram.fsm.context import FSMContext
 from aiogram.types import Message
 
 from mood_tracker.application.contracts.questionnaires import (
-    DeleteField,
-    DetachFieldFromQuestionnaire,
+    DeleteQuestionnaireField,
     ListQuestionnaireFields,
     SetFieldDisplay,
     SetQuestionnaireFieldEnabled,
@@ -190,7 +189,7 @@ async def delete_confirmation(
     presentation_data: PresentationData,
     update_main_message: UpdateMainMessage,
 ) -> None:
-    """Ask the user to confirm a global soft-delete."""
+    """Ask the user to confirm removal from the selected questionnaire."""
     builder = KeyboardBuilder()
     builder.row_buttons_tuple(
         (
@@ -229,14 +228,16 @@ async def delete_field(
     services: ApplicationServices,
     update_main_message: UpdateMainMessage,
 ) -> None:
-    """Soft-delete one ordinary field after confirmation."""
+    """Soft-delete one ordinary placement after confirmation."""
     profile = await get_user_profile(telegram_id, services)
     if profile is None:
         await query.answer(TEXTS[TextKey.START_FIRST], show_alert=True)
         return
     try:
-        await services.delete_field().execute(
-            DeleteField(profile.id, callback_data.field_id)
+        await services.delete_questionnaire_field().execute(
+            DeleteQuestionnaireField(
+                profile.id, callback_data.field_id, callback_data.kind
+            )
         )
     except FieldNotFound, CoreFieldViolation, QuestionnaireViolation:
         await query.answer(TEXTS[TextKey.FIELD_UNAVAILABLE], show_alert=True)
@@ -288,22 +289,13 @@ async def change_questionnaire_placement(
                     not item.placement.is_required,
                 )
             )
-        elif callback_data.action in (
-            QuestionnaireFieldAction.ENABLE,
-            QuestionnaireFieldAction.DISABLE,
-        ):
+        else:
             field = await services.set_questionnaire_field_enabled().execute(
                 SetQuestionnaireFieldEnabled(
                     profile.id,
                     callback_data.field_id,
                     callback_data.kind,
                     callback_data.action is QuestionnaireFieldAction.ENABLE,
-                )
-            )
-        else:
-            field = await services.detach_field_from_questionnaire().execute(
-                DetachFieldFromQuestionnaire(
-                    profile.id, callback_data.field_id, callback_data.kind
                 )
             )
     except (
@@ -317,16 +309,6 @@ async def change_questionnaire_placement(
     await state.set_state(None)
     await presentation_data.clear_flow()
     await query.answer(TEXTS[TextKey.FIELD_CONFIG_SAVED])
-    if callback_data.action is QuestionnaireFieldAction.DETACH:
-        await render_fields(
-            query,
-            presentation_data,
-            profile,
-            services,
-            update_main_message,
-            callback_data.kind,
-        )
-        return
     items = await services.list_questionnaire_fields().execute(
         ListQuestionnaireFields(profile.id, callback_data.kind)
     )

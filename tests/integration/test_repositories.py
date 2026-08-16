@@ -96,3 +96,30 @@ async def test_questionnaire_rejects_duplicate_field_order() -> None:
                 await uow.commit()
     finally:
         await engine.dispose()
+
+
+async def test_questionnaire_persists_soft_deleted_placement() -> None:
+    engine, session_factory = create_session_factory(os.environ["TEST_DATABASE_URL"])
+    try:
+        user = await RegisterUserUseCase(
+            SqlAlchemyUnitOfWork(session_factory), FixedClock(), Uuid7Generator()
+        ).execute(RegisterUser(456789, UserTimezone("Europe/Moscow")))
+        async with SqlAlchemyUnitOfWork(session_factory) as uow:
+            questionnaire = await uow.questionnaires.get(user.id, QuestionnaireKind.DAY)
+            assert questionnaire is not None
+            placement = next(
+                item
+                for item in questionnaire.fields.values()
+                if item.role is QuestionnaireFieldRole.ORDINARY
+            )
+            questionnaire.delete(placement.field_id, FixedClock().now())
+            await uow.questionnaires.save(questionnaire)
+            await uow.commit()
+
+        async with SqlAlchemyUnitOfWork(session_factory) as uow:
+            restored = await uow.questionnaires.get(user.id, QuestionnaireKind.DAY)
+
+        assert restored is not None
+        assert restored.fields[placement.field_id].deleted_at == FixedClock().now()
+    finally:
+        await engine.dispose()

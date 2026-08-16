@@ -1,3 +1,4 @@
+from datetime import UTC, datetime
 from unittest.mock import AsyncMock
 from uuid import uuid7
 
@@ -7,8 +8,7 @@ from mood_tracker.application.contracts.questionnaires import (
     AddFieldVersion,
     AttachFieldToQuestionnaire,
     CreateField,
-    DeleteField,
-    DetachFieldFromQuestionnaire,
+    DeleteQuestionnaireField,
     MoveQuestionnaireField,
     SetQuestionnaireFieldEnabled,
     SetQuestionnaireFieldRequired,
@@ -17,8 +17,7 @@ from mood_tracker.application.use_cases import (
     AddFieldVersionUseCase,
     AttachFieldToQuestionnaireUseCase,
     CreateFieldUseCase,
-    DeleteFieldUseCase,
-    DetachFieldFromQuestionnaireUseCase,
+    DeleteQuestionnaireFieldUseCase,
     MoveQuestionnaireFieldUseCase,
     SetQuestionnaireFieldEnabledUseCase,
     SetQuestionnaireFieldRequiredUseCase,
@@ -102,8 +101,39 @@ async def test_attach_field_to_questionnaire_uses_execute(
     uow.questionnaires.save.assert_awaited_once_with(questionnaire)
 
 
-async def test_detach_field_from_questionnaire_uses_execute(
+async def test_attach_field_restores_a_soft_deleted_placement(
     uow, user_factory, field_factory
+) -> None:
+    user = user_factory.build()
+    field = field_factory.text(user_id=user.id)
+    questionnaire = Questionnaire(
+        uuid7(),
+        user.id,
+        QuestionnaireKind.EVENT,
+        {
+            field.id: QuestionnaireField(
+                field.id,
+                0,
+                is_enabled=False,
+                deleted_at=datetime(2025, 1, 1, tzinfo=UTC),
+            )
+        },
+    )
+    uow.fields.get = AsyncMock(return_value=field)
+    uow.questionnaires.get = AsyncMock(return_value=questionnaire)
+
+    await AttachFieldToQuestionnaireUseCase(uow).execute(
+        AttachFieldToQuestionnaire(user.id, field.id, QuestionnaireKind.EVENT)
+    )
+
+    placement = questionnaire.fields[field.id]
+    assert placement.deleted_at is None
+    assert placement.is_enabled
+    assert placement.sort_order == 0
+
+
+async def test_delete_questionnaire_field_soft_deletes_only_its_placement(
+    uow, clock, user_factory, field_factory
 ) -> None:
     user = user_factory.build()
     field = field_factory.text(user_id=user.id)
@@ -116,12 +146,12 @@ async def test_detach_field_from_questionnaire_uses_execute(
     uow.fields.get = AsyncMock(return_value=field)
     uow.questionnaires.get = AsyncMock(return_value=questionnaire)
 
-    result = await DetachFieldFromQuestionnaireUseCase(uow).execute(
-        DetachFieldFromQuestionnaire(user.id, field.id, QuestionnaireKind.DAY)
+    result = await DeleteQuestionnaireFieldUseCase(uow, clock).execute(
+        DeleteQuestionnaireField(user.id, field.id, QuestionnaireKind.DAY)
     )
 
     assert result is field
-    assert questionnaire.fields == {}
+    assert questionnaire.fields[field.id].deleted_at == clock.now()
     uow.questionnaires.save.assert_awaited_once_with(questionnaire)
 
 
@@ -220,25 +250,7 @@ async def test_add_field_version_rejects_type_change(
     uow.fields.save.assert_not_awaited()
 
 
-async def test_delete_field_soft_deletes_an_ordinary_field(
-    uow, clock, user_factory, field_factory
-) -> None:
-    user = user_factory.build()
-    field = field_factory.text(user_id=user.id)
-    day_questionnaire = Questionnaire(uuid7(), user.id, QuestionnaireKind.DAY)
-    event_questionnaire = Questionnaire(uuid7(), user.id, QuestionnaireKind.EVENT)
-    uow.fields.get = AsyncMock(return_value=field)
-    uow.questionnaires.get = AsyncMock(
-        side_effect=(day_questionnaire, event_questionnaire)
-    )
-
-    await DeleteFieldUseCase(uow, clock).execute(DeleteField(user.id, field.id))
-
-    assert field.deleted_at == clock.now()
-    uow.fields.save.assert_awaited_once_with(field)
-
-
-async def test_delete_field_rejects_a_system_placement(
+async def test_delete_questionnaire_field_rejects_a_system_placement(
     uow, clock, user_factory, field_factory
 ) -> None:
     user = user_factory.build()
@@ -253,13 +265,12 @@ async def test_delete_field_rejects_a_system_placement(
             )
         },
     )
-    event_questionnaire = Questionnaire(uuid7(), user.id, QuestionnaireKind.EVENT)
     uow.fields.get = AsyncMock(return_value=field)
-    uow.questionnaires.get = AsyncMock(
-        side_effect=(day_questionnaire, event_questionnaire)
-    )
+    uow.questionnaires.get = AsyncMock(return_value=day_questionnaire)
 
     with pytest.raises(CoreFieldViolation):
-        await DeleteFieldUseCase(uow, clock).execute(DeleteField(user.id, field.id))
+        await DeleteQuestionnaireFieldUseCase(uow, clock).execute(
+            DeleteQuestionnaireField(user.id, field.id, QuestionnaireKind.DAY)
+        )
 
-    uow.fields.save.assert_not_awaited()
+    uow.questionnaires.save.assert_not_awaited()

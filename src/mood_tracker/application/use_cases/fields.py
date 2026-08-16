@@ -4,8 +4,7 @@ from mood_tracker.application.contracts.questionnaires import (
     AddFieldVersion,
     AttachFieldToQuestionnaire,
     CreateField,
-    DeleteField,
-    DetachFieldFromQuestionnaire,
+    DeleteQuestionnaireField,
     ListQuestionnaireFields,
     MoveQuestionnaireField,
     QuestionnaireFieldItem,
@@ -26,8 +25,6 @@ from mood_tracker.application.use_cases._transactions import (
     execute_write,
 )
 from mood_tracker.domain.entities import Field, FieldVersion
-from mood_tracker.domain.enums import QuestionnaireFieldRole, QuestionnaireKind
-from mood_tracker.domain.errors import CoreFieldViolation
 
 
 class CreateFieldUseCase:
@@ -161,13 +158,14 @@ class AttachFieldToQuestionnaireUseCase:
         return await execute_transaction(self._uow, operation)
 
 
-class DetachFieldFromQuestionnaireUseCase:
-    """Detach an ordinary field from one explicitly selected questionnaire."""
+class DeleteQuestionnaireFieldUseCase:
+    """Soft-delete an ordinary placement from one explicitly selected questionnaire."""
 
-    def __init__(self, uow: UnitOfWork) -> None:
+    def __init__(self, uow: UnitOfWork, clock: Clock) -> None:
         self._uow = uow
+        self._clock = clock
 
-    async def execute(self, command: DetachFieldFromQuestionnaire) -> Field:
+    async def execute(self, command: DeleteQuestionnaireField) -> Field:
         async def operation() -> Field:
             field = await require_owned_field(
                 self._uow, command.user_id, command.field_id
@@ -175,7 +173,7 @@ class DetachFieldFromQuestionnaireUseCase:
             questionnaire = await require_questionnaire(
                 self._uow, command.user_id, command.kind
             )
-            questionnaire.detach(field.id)
+            questionnaire.delete(field.id, self._clock.now())
             await self._uow.questionnaires.save(questionnaire)
             return field
 
@@ -247,37 +245,6 @@ class MoveQuestionnaireFieldUseCase:
             )
 
         return await execute_transaction(self._uow, operation)
-
-
-class DeleteFieldUseCase:
-    """Soft-delete one owned field after protecting system placements."""
-
-    def __init__(self, uow: UnitOfWork, clock: Clock) -> None:
-        self._uow = uow
-        self._clock = clock
-
-    async def execute(self, command: DeleteField) -> None:
-        async def operation() -> None:
-            field = await require_owned_field(
-                self._uow, command.user_id, command.field_id
-            )
-            for kind in QuestionnaireKind:
-                questionnaire = await self._uow.questionnaires.get(
-                    command.user_id, kind
-                )
-                placement = (
-                    questionnaire.fields.get(field.id) if questionnaire else None
-                )
-                if (
-                    placement is not None
-                    and placement.role is not QuestionnaireFieldRole.ORDINARY
-                ):
-                    msg = "System questionnaire field cannot be deleted"
-                    raise CoreFieldViolation(msg)
-            field.delete(self._clock.now())
-            await self._uow.fields.save(field)
-
-        await execute_transaction(self._uow, operation)
 
 
 class ListQuestionnaireFieldsUseCase:

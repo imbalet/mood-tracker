@@ -274,16 +274,6 @@ def _field_card_keyboard(view: FieldCardView) -> InlineKeyboardMarkup:
             )
         )
     if view.can_detach:
-        builder.row_buttons_text_tuple(
-            (
-                "Убрать из анкеты",
-                QuestionnaireFieldCallback(
-                    action=QuestionnaireFieldAction.DETACH,
-                    field_id=view.id,
-                    kind=view.kind,
-                ),
-            )
-        )
         builder.row_buttons_tuple(
             (
                 TextKey.FIELD_DELETE,

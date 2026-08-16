@@ -1,6 +1,7 @@
 """User questionnaires and their independent field placements."""
 
 from dataclasses import dataclass, field
+from datetime import datetime
 from uuid import UUID
 
 from mood_tracker.domain.entities.field import FieldVersion
@@ -14,6 +15,7 @@ from mood_tracker.domain.errors import (
     InvalidFieldVersion,
     QuestionnaireViolation,
 )
+from mood_tracker.domain.value_objects import require_utc
 
 
 @dataclass(slots=True)
@@ -25,19 +27,24 @@ class QuestionnaireField:
     is_enabled: bool = True
     is_required: bool = True
     role: QuestionnaireFieldRole = QuestionnaireFieldRole.ORDINARY
+    deleted_at: datetime | None = None
 
     def __post_init__(self) -> None:
+        if self.deleted_at is not None:
+            self.deleted_at = require_utc(
+                self.deleted_at, "Questionnaire field deletion time"
+            )
         if self.sort_order < 0:
             msg = "Questionnaire field sort order cannot be negative"
             raise InvalidFieldVersion(msg)
+        # TODO: maybe refactor
         if self.role is QuestionnaireFieldRole.DAY_STATE and (
-            not self.is_enabled or not self.is_required
+            not self.is_enabled or not self.is_required or self.deleted_at is not None
         ):
             msg = "Day state field must remain enabled and required"
             raise CoreFieldViolation(msg)
-        if (
-            self.role is QuestionnaireFieldRole.EVENT_DESCRIPTION
-            and not self.is_enabled
+        if self.role is QuestionnaireFieldRole.EVENT_DESCRIPTION and (
+            not self.is_enabled or self.deleted_at is not None
         ):
             msg = "Event description field must remain enabled"
             raise CoreFieldViolation(msg)
@@ -55,6 +62,21 @@ class QuestionnaireField:
             msg = "System questionnaire field must remain enabled"
             raise CoreFieldViolation(msg)
         self.is_enabled = is_enabled
+
+    def delete(self, deleted_at: datetime) -> None:
+        """Hide an ordinary placement while preserving its history and order."""
+        if self.role is not QuestionnaireFieldRole.ORDINARY:
+            msg = "System questionnaire field cannot be deleted"
+            raise CoreFieldViolation(msg)
+        self.deleted_at = require_utc(deleted_at, "Questionnaire field deletion time")
+
+    def restore(self) -> None:
+        """Restore a previously removed placement as an enabled question."""
+        if self.deleted_at is None:
+            msg = "Questionnaire field is not deleted"
+            raise QuestionnaireViolation(msg)
+        self.deleted_at = None
+        self.is_enabled = True
 
     def set_required(self, is_required: bool) -> None:
         """Change whether a questionnaire step must be completed."""
@@ -92,7 +114,7 @@ class Questionnaire:
         return tuple(
             placement.field_id
             for placement in self.ordered_fields()
-            if placement.is_enabled
+            if placement.is_enabled and placement.deleted_at is None
         )
 
     def required_enabled_field_ids(self) -> tuple[UUID, ...]:
@@ -100,7 +122,11 @@ class Questionnaire:
         return tuple(
             placement.field_id
             for placement in self.ordered_fields()
-            if placement.is_enabled and placement.is_required
+            if (
+                placement.is_enabled
+                and placement.deleted_at is None
+                and placement.is_required
+            )
         )
 
     def system_field_id(self, role: QuestionnaireFieldRole) -> UUID:
@@ -126,7 +152,11 @@ class Questionnaire:
         role: QuestionnaireFieldRole = QuestionnaireFieldRole.ORDINARY,
     ) -> QuestionnaireField:
         """Append a new field placement to this questionnaire."""
-        if field_id in self.fields:
+        existing = self.fields.get(field_id)
+        if existing is not None:
+            if existing.deleted_at is not None:
+                existing.restore()
+                return existing
             msg = "Field is already attached to this questionnaire"
             raise QuestionnaireViolation(msg)
         self._validate_role(role)
@@ -139,14 +169,10 @@ class Questionnaire:
         self.fields[field_id] = placement
         return placement
 
-    def detach(self, field_id: UUID) -> QuestionnaireField:
-        """Remove one ordinary field and close the resulting order gap."""
+    def delete(self, field_id: UUID, deleted_at: datetime) -> QuestionnaireField:
+        """Soft-delete one ordinary placement without changing its absolute order."""
         placement = self._placement(field_id)
-        if placement.role is not QuestionnaireFieldRole.ORDINARY:
-            msg = "System questionnaire field cannot be detached"
-            raise CoreFieldViolation(msg)
-        del self.fields[field_id]
-        self._normalize_order()
+        placement.delete(deleted_at)
         return placement
 
     def set_enabled(self, field_id: UUID, is_enabled: bool) -> None:
@@ -159,7 +185,11 @@ class Questionnaire:
 
     def move(self, field_id: UUID, direction: MoveDirection) -> None:
         """Move a placement by one position without creating order gaps."""
-        placements = list(self.ordered_fields())
+        placements = [
+            placement
+            for placement in self.ordered_fields()
+            if placement.deleted_at is None
+        ]
         current_index = next(
             (
                 index
@@ -177,8 +207,9 @@ class Questionnaire:
                 placements[target_index],
                 placements[current_index],
             )
-        for index, placement in enumerate(placements):
-            placement.sort_order = index
+            original_orders = sorted(placement.sort_order for placement in placements)
+            for placement, sort_order in zip(placements, original_orders, strict=True):
+                placement.sort_order = sort_order
 
     def _placement(self, field_id: UUID) -> QuestionnaireField:
         placement = self.fields.get(field_id)
@@ -186,10 +217,6 @@ class Questionnaire:
             msg = "Field is not attached to this questionnaire"
             raise QuestionnaireViolation(msg)
         return placement
-
-    def _normalize_order(self) -> None:
-        for index, placement in enumerate(self.ordered_fields()):
-            placement.sort_order = index
 
     def _validate_role(self, role: QuestionnaireFieldRole) -> None:
         if (

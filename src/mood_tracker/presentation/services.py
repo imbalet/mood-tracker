@@ -14,8 +14,7 @@ from mood_tracker.application.use_cases import (
     CreateFieldUseCase,
     CreateQuickEventUseCase,
     DeleteEventUseCase,
-    DeleteFieldUseCase,
-    DetachFieldFromQuestionnaireUseCase,
+    DeleteQuestionnaireFieldUseCase,
     GetDayUseCase,
     GetEventsForDateUseCase,
     GetEventUseCase,
@@ -98,8 +97,8 @@ class ApplicationServices:
     def attach_field_to_questionnaire(self) -> AttachFieldToQuestionnaireUseCase:
         return AttachFieldToQuestionnaireUseCase(self._uow())
 
-    def detach_field_from_questionnaire(self) -> DetachFieldFromQuestionnaireUseCase:
-        return DetachFieldFromQuestionnaireUseCase(self._uow())
+    def delete_questionnaire_field(self) -> DeleteQuestionnaireFieldUseCase:
+        return DeleteQuestionnaireFieldUseCase(self._uow(), SystemClock())
 
     def set_questionnaire_field_enabled(self) -> SetQuestionnaireFieldEnabledUseCase:
         return SetQuestionnaireFieldEnabledUseCase(self._uow())
@@ -109,9 +108,6 @@ class ApplicationServices:
 
     def move_questionnaire_field(self) -> MoveQuestionnaireFieldUseCase:
         return MoveQuestionnaireFieldUseCase(self._uow())
-
-    def delete_field(self) -> DeleteFieldUseCase:
-        return DeleteFieldUseCase(self._uow(), SystemClock())
 
     def create_field(self) -> CreateFieldUseCase:
         return CreateFieldUseCase(self._uow(), SystemClock(), Uuid7IdGenerator())

@@ -30,7 +30,6 @@ class SqlAlchemyFieldRepository:
             select(FieldOrm).where(
                 FieldOrm.id == field_id,
                 FieldOrm.user_id == user_id,
-                FieldOrm.deleted_at.is_(None),
             )
         )
         return await self._to_domain(row) if row else None
@@ -39,7 +38,7 @@ class SqlAlchemyFieldRepository:
         rows = (
             await self._session.scalars(
                 select(FieldOrm)
-                .where(FieldOrm.user_id == user_id, FieldOrm.deleted_at.is_(None))
+                .where(FieldOrm.user_id == user_id)
                 .order_by(FieldOrm.name)
             )
         ).all()
@@ -68,12 +67,10 @@ class SqlAlchemyFieldRepository:
             row.name,
             row.current_version_id,
             row.display_config,
-            row.deleted_at,
         ) = (
             field.name,
             field.current_version_id,
             display_to_json(field.display_config),
-            field.deleted_at,
         )
         known_version_ids = set(
             (
@@ -107,7 +104,6 @@ class SqlAlchemyFieldRepository:
             display_from_json(row.display_config),
             current_version,
             versions,
-            row.deleted_at,
         )
 
 

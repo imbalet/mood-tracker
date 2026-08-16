@@ -73,8 +73,8 @@ class AttachFieldToQuestionnaire:
 
 
 @dataclass(frozen=True, slots=True)
-class DetachFieldFromQuestionnaire:
-    """Remove a non-system field from one questionnaire only."""
+class DeleteQuestionnaireField:
+    """Soft-delete a non-system field from one questionnaire only."""
 
     user_id: UUID
     field_id: UUID
@@ -109,11 +109,3 @@ class MoveQuestionnaireField:
     field_id: UUID
     kind: QuestionnaireKind
     direction: MoveDirection
-
-
-@dataclass(frozen=True, slots=True)
-class DeleteField:
-    """Soft-delete a semantic field globally."""
-
-    user_id: UUID
-    field_id: UUID

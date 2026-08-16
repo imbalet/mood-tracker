@@ -94,7 +94,6 @@ class QuestionnaireFieldAction(StrEnum):
     ENABLE = "enable"
     DISABLE = "disable"
     TOGGLE_REQUIRED = "toggle_required"
-    DETACH = "detach"
 
 
 class QuestionnaireFieldCallback(CallbackData, prefix="questionnaire_field"):
