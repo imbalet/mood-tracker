@@ -46,7 +46,7 @@ async def open_dates(
     """Open the current user-local month in the status-aware date picker."""
     profile = await get_user_profile(telegram_id, services)
     if profile is None:
-        await update_main_message(presentation_data, event, "Сначала используй /start.")
+        await update_main_message("Сначала используй /start.")
         return
     await state.set_state(None)
     await presentation_data.clear_flow()
@@ -94,7 +94,7 @@ async def browse_dates(
         await query.answer()
         return
     if callback_data.act is SimpleCalAct.cancel:
-        await update_main_message(presentation_data, query, main_menu_screen())
+        await update_main_message(main_menu_screen())
         return
     if callback_data.act is SimpleCalAct.day:
         if target > today:
@@ -134,9 +134,7 @@ async def open_month_image(
         if not isinstance(event, Message):
             await event.answer("Сначала используй /start.", show_alert=True)
         else:
-            await update_main_message(
-                presentation_data, event, "Сначала используй /start."
-            )
+            await update_main_message("Сначала используй /start.")
         return
     await state.set_state(None)
     month = _today(profile.timezone.name).replace(day=1)
@@ -201,8 +199,6 @@ async def _render_dates(
     calendar = MoodDateCalendar(today, statuses)
     markup = await calendar.start_calendar(month.year, month.month)
     await update_main_message(
-        presentation_data,
-        event,
         Screen("<b>Выбери дату</b>\n✅ — завершён, 📝 — черновик.", markup),
     )
 
@@ -229,8 +225,6 @@ async def _render_month(
 ) -> None:
     image = await _month_image(user_id, month, services, calendar_images)
     await update_main_message(
-        presentation_data,
-        event,
         month_calendar_screen(image, _image_keyboard(month, can_go_next)),
     )
 

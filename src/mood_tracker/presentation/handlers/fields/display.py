@@ -65,7 +65,7 @@ async def prompt_emoji(
     await state.set_state(FieldDisplayChange.waiting_emoji)
     await presentation_data.write(FieldDisplayData(callback_data.field_id))
     await query.answer()
-    await update_main_message(presentation_data, query, TEXTS[TextKey.EMOJI_PROMPT])
+    await update_main_message(TEXTS[TextKey.EMOJI_PROMPT])
 
 
 @router.callback_query(FieldCallback.filter(F.action == FieldAction.CLEAR_EMOJI))
@@ -165,9 +165,7 @@ async def save_palette_preset(
         await state.set_state(FieldDisplayChange.waiting_palette)
         await presentation_data.write(FieldDisplayData(callback_data.field_id))
         await query.answer()
-        await update_main_message(
-            presentation_data, query, TEXTS[TextKey.PALETTE_PROMPT]
-        )
+        await update_main_message(TEXTS[TextKey.PALETTE_PROMPT])
         return
     await _update_display(
         query,
@@ -212,8 +210,6 @@ async def delete_confirmation(
         )
     )
     await update_main_message(
-        presentation_data,
-        query,
         Screen(TEXTS[TextKey.FIELD_DELETE_PROMPT], builder.as_markup()),
     )
 

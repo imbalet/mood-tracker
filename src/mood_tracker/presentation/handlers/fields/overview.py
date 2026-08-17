@@ -68,9 +68,7 @@ async def open_fields(
             ),
         ),
     )
-    await update_main_message(
-        presentation_data, query, Screen("<b>Анкеты</b>", builder.as_markup())
-    )
+    await update_main_message(Screen("<b>Анкеты</b>", builder.as_markup()))
 
 
 @router.callback_query(FieldsListCallback.filter(F.action == FieldsListAction.SELECT))
@@ -110,8 +108,6 @@ async def choose_field_type(
     await presentation_data.clear_flow()
     await query.answer()
     await update_main_message(
-        presentation_data,
-        query,
         TEXTS[TextKey.CREATE_FIELD_TYPE],
         reply_markup=field_type_keyboard(callback_data.kind),
     )
@@ -165,8 +161,6 @@ async def choose_field_to_attach(
     await presentation_data.clear_flow()
     await query.answer()
     await update_main_message(
-        presentation_data,
-        query,
         Screen("<b>Добавить поле из другой анкеты</b>", builder.as_markup()),
     )
 

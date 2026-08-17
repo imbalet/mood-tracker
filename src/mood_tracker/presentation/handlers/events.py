@@ -56,9 +56,7 @@ async def capture_event(
     """Create a quick draft or start today's complete questionnaire."""
     profile = await get_user_profile(telegram_id, services)
     if profile is None:
-        await update_main_message(
-            presentation_data, message, TEXTS[TextKey.START_FIRST]
-        )
+        await update_main_message(TEXTS[TextKey.START_FIRST])
         return
     text = (command.args or "").strip()
     if text:
@@ -67,9 +65,7 @@ async def capture_event(
                 CreateQuickEvent(profile.id, text)
             )
         except InvalidFieldValue:
-            await update_main_message(
-                presentation_data, message, TEXTS[TextKey.EVENT_NOT_SAVED]
-            )
+            await update_main_message(TEXTS[TextKey.EVENT_NOT_SAVED])
             return
         await _render_event(
             message,
@@ -92,9 +88,7 @@ async def capture_event(
     builder.row_buttons_text_tuple(
         ("Быстрый текст", EventCallback(action=EventAction.QUICK_TEXT))
     )
-    await update_main_message(
-        presentation_data, message, Screen("Как записать событие?", builder.as_markup())
-    )
+    await update_main_message(Screen("Как записать событие?", builder.as_markup()))
 
 
 @router.callback_query(EventCallback.filter(F.action == EventAction.START))
@@ -136,7 +130,7 @@ async def quick_text_prompt(
         return
     await state.set_state(EventFlow.waiting_text)
     await presentation_data.write(EventInputData(None, _today(profile)))
-    await update_main_message(presentation_data, query, "Отправь текст события.")
+    await update_main_message("Отправь текст события.")
 
 
 @router.callback_query(EventCallback.filter(F.action == EventAction.CONTINUE))
@@ -208,9 +202,7 @@ async def change_time_prompt(
     ).date()
     await state.set_state(EventFlow.waiting_time)
     await presentation_data.write(EventInputData(current.id, day_date))
-    await update_main_message(
-        presentation_data, query, "Отправь новое время в формате <code>ЧЧ:ММ</code>."
-    )
+    await update_main_message("Отправь новое время в формате <code>ЧЧ:ММ</code>.")
 
 
 @router.callback_query(EventCallback.filter(F.action == EventAction.DELETE))
@@ -231,9 +223,7 @@ async def delete_confirmation(
             ),
         )
     )
-    await update_main_message(
-        presentation_data, query, Screen("Удалить событие?", builder.as_markup())
-    )
+    await update_main_message(Screen("Удалить событие?", builder.as_markup()))
 
 
 @router.callback_query(EventCallback.filter(F.action == EventAction.CONFIRM_DELETE))
@@ -251,7 +241,7 @@ async def delete_event(
     await services.delete_event().execute(
         DeleteEvent(profile.id, callback_data.event_id)
     )
-    await update_main_message(presentation_data, query, Screen("Событие удалено."))
+    await update_main_message(Screen("Событие удалено."))
 
 
 async def _ask_time(
@@ -280,8 +270,6 @@ async def _ask_time(
     await state.set_state(None)
     await presentation_data.clear_flow()
     await update_main_message(
-        presentation_data,
-        event,
         Screen("<b>Когда произошло событие?</b>", builder.as_markup()),
     )
 
@@ -304,9 +292,7 @@ async def choose_time(
     if not callback_data.now:
         await state.set_state(EventFlow.waiting_time)
         await presentation_data.write(EventInputData(None, day_date))
-        await update_main_message(
-            presentation_data, query, "Отправь время в формате <code>ЧЧ:ММ</code>."
-        )
+        await update_main_message("Отправь время в формате <code>ЧЧ:ММ</code>.")
         return
     current_time = datetime.now(UTC).astimezone(ZoneInfo(profile.timezone.name)).time()
     await _create_and_prompt(
@@ -337,9 +323,7 @@ async def enter_time(
         if profile is None or selected.second or selected.tzinfo is not None:
             raise ValueError
     except ValueError:
-        await update_main_message(
-            presentation_data, message, "Нужно время в формате <code>ЧЧ:ММ</code>."
-        )
+        await update_main_message("Нужно время в формате <code>ЧЧ:ММ</code>.")
         return
     if data.event_id is not None:
         current = await services.get_event().execute(
@@ -439,8 +423,6 @@ async def _prompt_next(
             return
         if completed.deleted_at is not None:
             await update_main_message(
-                presentation_data,
-                event,
                 Screen("Событие не создано: ничего не заполнено."),
             )
             return
@@ -468,8 +450,6 @@ async def _prompt_next(
                 )
             )
         await update_main_message(
-            presentation_data,
-            event,
             Screen(f"<b>{item.field.name}</b>\nОтправь текст.", builder.as_markup()),
         )
         return
@@ -497,8 +477,6 @@ async def _prompt_next(
             )
         )
     await update_main_message(
-        presentation_data,
-        event,
         Screen(f"<b>{item.field.name}</b>\nВыбери значение.", builder.as_markup()),
     )
 
@@ -585,9 +563,7 @@ async def save_text(
                 CreateQuickEvent(profile.id, message.text or "")
             )
         except InvalidFieldValue:
-            await update_main_message(
-                presentation_data, message, "Отправь непустой текст."
-            )
+            await update_main_message("Отправь непустой текст.")
             return
         await _render_event(
             message,
@@ -605,7 +581,7 @@ async def save_text(
             SaveEventValue(profile.id, data.event_id, data.field_id, message.text or "")
         )
     except InvalidFieldValue:
-        await update_main_message(presentation_data, message, "Отправь непустой текст.")
+        await update_main_message("Отправь непустой текст.")
         return
     await _prompt_next(
         message,
@@ -672,8 +648,6 @@ async def _render_event(
         ),
     )
     await update_main_message(
-        presentation_data,
-        event,
         Screen(
             "\n".join(lines),
             builder.as_markup(),

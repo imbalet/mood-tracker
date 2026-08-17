@@ -68,7 +68,7 @@ async def open_today_from_menu(
 ) -> None:
     profile = await get_user_profile(telegram_id, services)
     if profile is None:
-        await update_main_message(presentation_data, event, TEXTS[TextKey.START_FIRST])
+        await update_main_message(TEXTS[TextKey.START_FIRST])
         return
     await state.set_state(None)
     await presentation_data.clear_flow()
@@ -108,8 +108,6 @@ async def save_value(
     await query.answer()
     if review is not None:
         await update_main_message(
-            presentation_data,
-            query,
             reference_review_screen(make_reference_review_view(review)),
         )
     else:
@@ -281,7 +279,7 @@ async def _reset_text_flow(
     """Discard an unrecoverable Text-input flow and explain how to restart it."""
     await state.set_state(None)
     await presentation_data.clear_flow()
-    await update_main_message(presentation_data, message, TEXTS[text_key])
+    await update_main_message(TEXTS[text_key])
 
 
 async def _get_day_context(
@@ -311,9 +309,7 @@ async def render_day(
             GetEventsForDate(profile.id, day_date)
         )
     )
-    await update_main_message(
-        presentation_data, event, day_card_screen(make_day_card_view(form, events))
-    )
+    await update_main_message(day_card_screen(make_day_card_view(form, events)))
 
 
 def _today(profile: UserProfile) -> date:
@@ -342,7 +338,5 @@ async def _prompt_field(
         await state.set_state(Diary.waiting_text)
         await presentation_data.write(DiaryTextData(form.day_date, field.id))
     await update_main_message(
-        presentation_data,
-        event,
         day_value_prompt_screen(view, error=error),
     )

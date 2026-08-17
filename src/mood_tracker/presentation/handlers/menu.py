@@ -31,9 +31,7 @@ async def open_menu(
         return
     await state.set_state(None)
     await presentation_data.clear_flow()
-    await update_main_message(
-        presentation_data, message, main_menu_screen(), create_new=True
-    )
+    await update_main_message(main_menu_screen(), create_new=True)
 
 
 @router.callback_query(MenuCallback.filter(F.section == MenuSection.HOME))
@@ -48,7 +46,5 @@ async def return_to_menu(
     await presentation_data.clear_flow()
     await query.answer()
     await update_main_message(
-        presentation_data,
-        query,
         main_menu_screen(),
     )

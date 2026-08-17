@@ -41,8 +41,6 @@ async def render_fields(
         ListQuestionnaireFields(profile.id, kind)
     )
     await update_main_message(
-        presentation_data,
-        event,
         fields_list_screen(
             make_fields_list_view(tuple(item.field for item in items), kind)
         ),
@@ -59,8 +57,6 @@ async def render_field(
 ) -> None:
     """Render one field's settings card."""
     await update_main_message(
-        presentation_data,
-        event,
         field_card_screen(make_field_card_view(field, placement, kind)),
     )
 
@@ -75,8 +71,6 @@ async def render_order(
 ) -> None:
     """Render the selected-field order editor."""
     await update_main_message(
-        presentation_data,
-        event,
         field_order_screen(make_field_order_view(fields, selected_id, kind)),
     )
 
@@ -88,7 +82,7 @@ async def render_palette(
     update_main_message: UpdateMainMessage,
 ) -> None:
     """Render the rich state-palette selector."""
-    await update_main_message(presentation_data, event, palette_screen(view))
+    await update_main_message(palette_screen(view))
 
 
 async def show_input_error(
@@ -99,7 +93,7 @@ async def show_input_error(
     prompt: str,
 ) -> None:
     """Keep an input flow open while explaining a validation failure."""
-    await update_main_message(presentation_data, event, f"{error}\n\n{prompt}")
+    await update_main_message(f"{error}\n\n{prompt}")
 
 
 async def invalidate_form(
@@ -111,6 +105,4 @@ async def invalidate_form(
     """Clear corrupt FSM data and show a recoverable error."""
     await state.set_state(None)
     await presentation_data.clear_flow()
-    await update_main_message(
-        presentation_data, event, TEXTS[TextKey.INVALID_FIELD_INPUT]
-    )
+    await update_main_message(TEXTS[TextKey.INVALID_FIELD_INPUT])

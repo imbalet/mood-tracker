@@ -46,8 +46,15 @@ class ApplicationMiddleware(BaseMiddleware):
         data["telegram_id"] = telegram_id
         data["services"] = self._services
         data["calendar_images"] = self._calendar_images
-        data["presentation_data"] = PresentationData(data["state"])
-        data["update_main_message"] = partial(update_main_message, self._sender)
+        presentation_data = PresentationData(data["state"])
+        data["presentation_data"] = presentation_data
+        data["update_main_message"] = partial(
+            update_main_message,
+            self._sender,
+            presentation_data,
+            event,  # type: ignore[arg-type]
+            # TODO: check
+        )
         return await handler(event, data)
 
 

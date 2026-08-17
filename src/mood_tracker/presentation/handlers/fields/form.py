@@ -78,9 +78,7 @@ async def start_create_field(
         CreateFieldNameData(callback_data.type, callback_data.kind)
     )
     await query.answer()
-    await update_main_message(
-        presentation_data, query, TEXTS[TextKey.FIELD_NAME_PROMPT]
-    )
+    await update_main_message(TEXTS[TextKey.FIELD_NAME_PROMPT])
 
 
 @router.callback_query(FieldCallback.filter(F.action == FieldAction.RENAME))
@@ -95,9 +93,7 @@ async def prompt_rename(
     await state.set_state(FieldRename.waiting_name)
     await presentation_data.write(RenameFieldData(callback_data.field_id))
     await query.answer()
-    await update_main_message(
-        presentation_data, query, TEXTS[TextKey.FIELD_NAME_PROMPT]
-    )
+    await update_main_message(TEXTS[TextKey.FIELD_NAME_PROMPT])
 
 
 @router.callback_query(FieldCallback.filter(F.action == FieldAction.VERSION))
@@ -124,12 +120,10 @@ async def prompt_new_version(
     await query.answer()
     if field.current_version.type is FieldType.SCALE:
         await state.set_state(FieldVersionChange.waiting_scale)
-        await update_main_message(presentation_data, query, TEXTS[TextKey.SCALE_PROMPT])
+        await update_main_message(TEXTS[TextKey.SCALE_PROMPT])
         return
     await state.set_state(FieldVersionChange.waiting_ordinal_base)
     await update_main_message(
-        presentation_data,
-        query,
         TEXTS[TextKey.ORDINAL_BASE_PROMPT],
         reply_markup=ordinal_base_keyboard(),
     )
@@ -151,17 +145,13 @@ async def save_new_field_name(
         await invalidate_form(state, presentation_data, message, update_main_message)
         return
     if not (name := (message.text or "").strip()):
-        await update_main_message(
-            presentation_data, message, TEXTS[TextKey.INVALID_FIELD_INPUT]
-        )
+        await update_main_message(TEXTS[TextKey.INVALID_FIELD_INPUT])
         return
     profile = await get_user_profile(telegram_id, services)
     if profile is None:
         await state.set_state(None)
         await presentation_data.clear_flow()
-        await update_main_message(
-            presentation_data, message, TEXTS[TextKey.START_FIRST]
-        )
+        await update_main_message(TEXTS[TextKey.START_FIRST])
         return
     if form.field_type is FieldType.TEXT:
         await _create_field(profile, name, TextConfig(), form.kind_value, services)
@@ -181,14 +171,10 @@ async def save_new_field_name(
     )
     if form.field_type is FieldType.SCALE:
         await state.set_state(FieldCreation.waiting_scale)
-        await update_main_message(
-            presentation_data, message, TEXTS[TextKey.SCALE_PROMPT]
-        )
+        await update_main_message(TEXTS[TextKey.SCALE_PROMPT])
         return
     await state.set_state(FieldCreation.waiting_ordinal_base)
     await update_main_message(
-        presentation_data,
-        message,
         TEXTS[TextKey.ORDINAL_BASE_PROMPT],
         reply_markup=ordinal_base_keyboard(),
     )
@@ -210,9 +196,7 @@ async def save_renamed_field(
         await invalidate_form(state, presentation_data, message, update_main_message)
         return
     if not (name := (message.text or "").strip()):
-        await update_main_message(
-            presentation_data, message, TEXTS[TextKey.INVALID_FIELD_INPUT]
-        )
+        await update_main_message(TEXTS[TextKey.INVALID_FIELD_INPUT])
         return
     profile = await get_user_profile(telegram_id, services)
     if profile is None:
@@ -525,8 +509,6 @@ async def _render_ordinal_draft(
         if part
     )
     await update_main_message(
-        presentation_data,
-        event,
         text,
         reply_markup=ordinal_draft_keyboard(len(draft.labels)),
     )

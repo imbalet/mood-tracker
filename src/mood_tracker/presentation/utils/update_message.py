@@ -15,8 +15,6 @@ class UpdateMainMessage(Protocol):
 
     async def __call__(
         self,
-        presentation_data: PresentationData,
-        event: Message | CallbackQueryWithMessage,
         content: Screen | ScreenContent,
         reply_markup: InlineKeyboardMarkup | None = None,
         *,
