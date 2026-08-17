@@ -5,13 +5,13 @@ from aiogram.filters import Command
 from aiogram.fsm.context import FSMContext
 from aiogram.types import Message
 
-from mood_tracker.presentation.callback_query import CallbackQueryWithMessage
-from mood_tracker.presentation.callbacks import MenuCallback, MenuSection
+from mood_tracker.presentation.callbacks.callbacks import MenuCallback, MenuSection
 from mood_tracker.presentation.queries import get_user_profile
 from mood_tracker.presentation.screens import main_menu_screen
 from mood_tracker.presentation.services import ApplicationServices
 from mood_tracker.presentation.state import PresentationData
 from mood_tracker.presentation.utils import UpdateMainMessage
+from mood_tracker.presentation.utils.callback_query import CallbackQueryWithMessage
 
 router = Router(name="menu")
 

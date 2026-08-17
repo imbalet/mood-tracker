@@ -4,7 +4,7 @@ from html import escape
 
 from aiogram.types import InlineKeyboardMarkup
 
-from mood_tracker.presentation.callbacks import (
+from mood_tracker.presentation.callbacks.callbacks import (
     DayValueCallback,
     EditDayValueCallback,
     EventAction,

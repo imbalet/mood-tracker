@@ -19,8 +19,7 @@ from mood_tracker.application.contracts.events import GetEventsForDate
 from mood_tracker.application.errors import DayNotFound, FieldNotFound
 from mood_tracker.domain.entities import Field, UserProfile
 from mood_tracker.domain.errors import InvalidFieldValue
-from mood_tracker.presentation.callback_query import CallbackQueryWithMessage
-from mood_tracker.presentation.callbacks import (
+from mood_tracker.presentation.callbacks.callbacks import (
     DayValueCallback,
     EditDayValueCallback,
     MenuCallback,
@@ -45,6 +44,7 @@ from mood_tracker.presentation.state import (
     PresentationData,
 )
 from mood_tracker.presentation.utils import UpdateMainMessage
+from mood_tracker.presentation.utils.callback_query import CallbackQueryWithMessage
 from mood_tracker.presentation.view_models import (
     DayPromptKind,
     make_day_card_view,

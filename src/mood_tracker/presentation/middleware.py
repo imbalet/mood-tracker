@@ -7,12 +7,12 @@ from typing import Any, cast, override
 from aiogram import BaseMiddleware
 from aiogram.types import CallbackQuery, InaccessibleMessage, TelegramObject, Update
 
-from mood_tracker.presentation.callback_query import CallbackQueryWithMessage
 from mood_tracker.presentation.rendering.calendar import MonthCalendarImageService
-from mood_tracker.presentation.sender import Sender
 from mood_tracker.presentation.services import ApplicationServices
 from mood_tracker.presentation.state import PresentationData
 from mood_tracker.presentation.utils import update_main_message
+from mood_tracker.presentation.utils.callback_query import CallbackQueryWithMessage
+from mood_tracker.presentation.utils.sender import Sender
 
 
 class ApplicationMiddleware(BaseMiddleware):

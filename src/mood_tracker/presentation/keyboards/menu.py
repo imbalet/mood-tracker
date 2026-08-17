@@ -2,7 +2,7 @@
 
 from aiogram.types import InlineKeyboardMarkup
 
-from mood_tracker.presentation.callbacks import MenuCallback, MenuSection
+from mood_tracker.presentation.callbacks.callbacks import MenuCallback, MenuSection
 from mood_tracker.presentation.constants import TextKey
 from mood_tracker.presentation.utils import KeyboardBuilder
 

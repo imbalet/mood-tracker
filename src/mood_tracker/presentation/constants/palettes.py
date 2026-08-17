@@ -1,7 +1,7 @@
 """Built-in visual palettes for the core state field."""
 
 from mood_tracker.domain.entities import StatePalette
-from mood_tracker.presentation.callbacks import PalettePreset
+from mood_tracker.presentation.callbacks.callbacks import PalettePreset
 
 PALETTES: dict[PalettePreset, StatePalette] = {
     PalettePreset.WARM: StatePalette("#D9534F", "#F0E68C", "#5CB85C"),

@@ -24,8 +24,7 @@ from mood_tracker.domain.entities import (
 )
 from mood_tracker.domain.enums import FieldType, QuestionnaireKind
 from mood_tracker.domain.errors import InvalidFieldVersion
-from mood_tracker.presentation.callback_query import CallbackQueryWithMessage
-from mood_tracker.presentation.callbacks import (
+from mood_tracker.presentation.callbacks.callbacks import (
     FieldAction,
     FieldCallback,
     FieldCreateCallback,
@@ -60,6 +59,7 @@ from mood_tracker.presentation.state import (
     VersionOrdinalData,
 )
 from mood_tracker.presentation.utils import UpdateMainMessage
+from mood_tracker.presentation.utils.callback_query import CallbackQueryWithMessage
 
 router = Router(name="fields_form")
 

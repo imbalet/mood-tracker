@@ -4,10 +4,10 @@ from typing import Protocol, cast
 
 from aiogram.types import InlineKeyboardMarkup, InputRichMessage, Message
 
-from mood_tracker.presentation.callback_query import CallbackQueryWithMessage
 from mood_tracker.presentation.screens.screen import Screen, ScreenContent
-from mood_tracker.presentation.sender import Sender
 from mood_tracker.presentation.state import PresentationData
+from mood_tracker.presentation.utils.callback_query import CallbackQueryWithMessage
+from mood_tracker.presentation.utils.sender import Sender
 
 
 class UpdateMainMessage(Protocol):

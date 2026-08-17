@@ -9,8 +9,7 @@ from mood_tracker.application.contracts.questionnaires import (
 )
 from mood_tracker.application.errors import FieldNotFound
 from mood_tracker.domain.errors import QuestionnaireViolation
-from mood_tracker.presentation.callback_query import CallbackQueryWithMessage
-from mood_tracker.presentation.callbacks import (
+from mood_tracker.presentation.callbacks.callbacks import (
     FieldAction,
     FieldCallback,
     FieldMoveCallback,
@@ -21,6 +20,7 @@ from mood_tracker.presentation.queries import get_user_profile
 from mood_tracker.presentation.services import ApplicationServices
 from mood_tracker.presentation.state import PresentationData
 from mood_tracker.presentation.utils import UpdateMainMessage
+from mood_tracker.presentation.utils.callback_query import CallbackQueryWithMessage
 
 router = Router(name="fields_ordering")
 

@@ -3,7 +3,7 @@ from io import BytesIO
 from PIL import Image
 
 from mood_tracker.domain.entities import ScaleConfig, StatePalette
-from mood_tracker.presentation.palette_preview import render_palette_preview
+from mood_tracker.presentation.rendering.palette_preview import render_palette_preview
 
 
 def test_palette_preview_uses_exact_anchor_colors() -> None:

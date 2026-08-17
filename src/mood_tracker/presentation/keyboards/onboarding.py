@@ -2,7 +2,7 @@
 
 from aiogram.types import InlineKeyboardMarkup
 
-from mood_tracker.presentation.callbacks import TimezoneCallback
+from mood_tracker.presentation.callbacks.callbacks import TimezoneCallback
 from mood_tracker.presentation.utils import KeyboardBuilder
 
 TIMEZONES = (

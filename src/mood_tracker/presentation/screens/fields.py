@@ -11,7 +11,7 @@ from aiogram.types import (
 
 from mood_tracker.domain.entities import ScaleConfig, StatePalette
 from mood_tracker.domain.enums import FieldType, MoveDirection
-from mood_tracker.presentation.callbacks import (
+from mood_tracker.presentation.callbacks.callbacks import (
     FieldAction,
     FieldCallback,
     FieldMoveCallback,
@@ -25,7 +25,7 @@ from mood_tracker.presentation.callbacks import (
     QuestionnaireFieldCallback,
 )
 from mood_tracker.presentation.constants import TEXTS, TextKey
-from mood_tracker.presentation.palette_preview import render_palette_preview
+from mood_tracker.presentation.rendering.palette_preview import render_palette_preview
 from mood_tracker.presentation.screens.screen import Screen
 from mood_tracker.presentation.utils.keyboard_builder import KeyboardBuilder
 from mood_tracker.presentation.view_models.fields import (

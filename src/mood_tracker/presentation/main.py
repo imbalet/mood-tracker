@@ -34,8 +34,8 @@ from mood_tracker.presentation.middleware import (
     CallbackMessageMiddleware,
 )
 from mood_tracker.presentation.rendering.calendar import MonthCalendarImageService
-from mood_tracker.presentation.sender import Sender
 from mood_tracker.presentation.services import ApplicationServices
+from mood_tracker.presentation.utils.sender import Sender
 
 
 async def run() -> None:

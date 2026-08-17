@@ -1,7 +1,7 @@
 from aiogram.exceptions import TelegramBadRequest
 from aiogram.methods import EditMessageText
 
-from mood_tracker.presentation.sender import _is_not_modified
+from mood_tracker.presentation.utils.sender import _is_not_modified
 
 
 def test_not_modified_error_is_a_successful_noop() -> None:

@@ -12,15 +12,14 @@ from aiogram.types import BufferedInputFile, InlineKeyboardMarkup, Message
 from aiogram_calendar.schemas import SimpleCalAct, SimpleCalendarCallback
 
 from mood_tracker.application.contracts.calendar import GetMonthCalendar
-from mood_tracker.presentation.callback_query import CallbackQueryWithMessage
-from mood_tracker.presentation.callbacks import (
+from mood_tracker.presentation.callbacks.callbacks import (
     CalendarImageAction,
     CalendarImageCallback,
     MenuCallback,
     MenuSection,
 )
-from mood_tracker.presentation.date_calendar import MoodDateCalendar
 from mood_tracker.presentation.handlers.today import render_day
+from mood_tracker.presentation.keyboards.date_calendar import MoodDateCalendar
 from mood_tracker.presentation.queries import get_user_profile
 from mood_tracker.presentation.rendering.calendar import MonthCalendarImageService
 from mood_tracker.presentation.screens import main_menu_screen, month_calendar_screen
@@ -28,6 +27,7 @@ from mood_tracker.presentation.screens.screen import Screen
 from mood_tracker.presentation.services import ApplicationServices
 from mood_tracker.presentation.state import PresentationData
 from mood_tracker.presentation.utils import KeyboardBuilder, UpdateMainMessage
+from mood_tracker.presentation.utils.callback_query import CallbackQueryWithMessage
 
 router = Router(name="calendar")
 

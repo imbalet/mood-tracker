@@ -20,8 +20,7 @@ from mood_tracker.domain.errors import (
     InvalidFieldVersion,
     QuestionnaireViolation,
 )
-from mood_tracker.presentation.callback_query import CallbackQueryWithMessage
-from mood_tracker.presentation.callbacks import (
+from mood_tracker.presentation.callbacks.callbacks import (
     FieldAction,
     FieldCallback,
     PaletteCallback,
@@ -30,6 +29,7 @@ from mood_tracker.presentation.callbacks import (
     QuestionnaireFieldCallback,
 )
 from mood_tracker.presentation.constants import TEXTS, TextKey
+from mood_tracker.presentation.constants.palettes import PALETTES
 from mood_tracker.presentation.handlers.fields.common import (
     invalidate_form,
     render_field,
@@ -37,7 +37,6 @@ from mood_tracker.presentation.handlers.fields.common import (
     render_palette,
     show_input_error,
 )
-from mood_tracker.presentation.palettes import PALETTES
 from mood_tracker.presentation.queries import get_owned_field, get_user_profile
 from mood_tracker.presentation.screens.screen import Screen
 from mood_tracker.presentation.services import ApplicationServices
@@ -48,6 +47,7 @@ from mood_tracker.presentation.state import (
     PresentationData,
 )
 from mood_tracker.presentation.utils import KeyboardBuilder, UpdateMainMessage
+from mood_tracker.presentation.utils.callback_query import CallbackQueryWithMessage
 from mood_tracker.presentation.view_models import make_palette_view
 
 router = Router(name="fields_display")

@@ -9,7 +9,6 @@ from mood_tracker.application.contracts.questionnaires import ListQuestionnaireF
 from mood_tracker.domain.entities import Field, UserProfile
 from mood_tracker.domain.entities.questionnaire import QuestionnaireField
 from mood_tracker.domain.enums import QuestionnaireKind
-from mood_tracker.presentation.callback_query import CallbackQueryWithMessage
 from mood_tracker.presentation.constants import TEXTS, TextKey
 from mood_tracker.presentation.screens import (
     field_card_screen,
@@ -20,6 +19,7 @@ from mood_tracker.presentation.screens import (
 from mood_tracker.presentation.services import ApplicationServices
 from mood_tracker.presentation.state import PresentationData
 from mood_tracker.presentation.utils import UpdateMainMessage
+from mood_tracker.presentation.utils.callback_query import CallbackQueryWithMessage
 from mood_tracker.presentation.view_models import (
     PaletteView,
     make_field_card_view,

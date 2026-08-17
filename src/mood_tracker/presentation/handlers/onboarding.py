@@ -10,8 +10,7 @@ from aiogram.types import CallbackQuery, Message
 from mood_tracker.application.contracts.users import RegisterUser
 from mood_tracker.domain.errors import InvalidTimezone
 from mood_tracker.domain.value_objects import UserTimezone
-from mood_tracker.presentation.callback_query import CallbackQueryWithMessage
-from mood_tracker.presentation.callbacks import TimezoneCallback
+from mood_tracker.presentation.callbacks.callbacks import TimezoneCallback
 from mood_tracker.presentation.constants import TEXTS, TextKey
 from mood_tracker.presentation.keyboards import timezone_keyboard
 from mood_tracker.presentation.queries import get_user_profile
@@ -19,6 +18,7 @@ from mood_tracker.presentation.screens import main_menu_screen
 from mood_tracker.presentation.services import ApplicationServices
 from mood_tracker.presentation.state import Onboarding, PresentationData
 from mood_tracker.presentation.utils import UpdateMainMessage
+from mood_tracker.presentation.utils.callback_query import CallbackQueryWithMessage
 
 router = Router(name="onboarding")
 

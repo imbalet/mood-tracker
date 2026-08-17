@@ -2,7 +2,7 @@ from datetime import date
 
 from aiogram.types import BufferedInputFile, InputRichMessage
 
-from mood_tracker.presentation.callbacks import MenuCallback, MenuSection
+from mood_tracker.presentation.callbacks.callbacks import MenuCallback, MenuSection
 from mood_tracker.presentation.handlers.calendar import _image_keyboard
 from mood_tracker.presentation.screens import month_calendar_screen
 

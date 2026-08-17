@@ -3,7 +3,7 @@ from datetime import date
 from aiogram_calendar.schemas import SimpleCalendarCallback
 
 from mood_tracker.domain.enums import DayStatus
-from mood_tracker.presentation.date_calendar import MoodDateCalendar
+from mood_tracker.presentation.keyboards.date_calendar import MoodDateCalendar
 
 
 async def test_date_calendar_marks_complete_and_draft_days() -> None:
