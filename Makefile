@@ -9,7 +9,8 @@ lint:
 	uv run ruff check src tests alembic
 
 format:
-	uv run ruff format src tests alembic
+	uv run ruff format src tests alembic && \
+	uv run ruff check src tests alembic --fix
 
 typecheck:
 	uv run mypy
