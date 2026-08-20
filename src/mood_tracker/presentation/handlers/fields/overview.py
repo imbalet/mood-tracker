@@ -25,12 +25,15 @@ from mood_tracker.presentation.handlers.fields.common import (
     render_fields,
     render_order,
 )
-from mood_tracker.presentation.keyboards import field_type_keyboard
 from mood_tracker.presentation.queries import get_user_profile
-from mood_tracker.presentation.screens import Screen
+from mood_tracker.presentation.screens.fields import (
+    AddFieldFromAnotherScreen,
+    ChooseFieldTypeScreen,
+    FieldSettingsQuestionnaireSelectScreen,
+)
 from mood_tracker.presentation.services import ApplicationServices
 from mood_tracker.presentation.state import PresentationData
-from mood_tracker.presentation.utils import KeyboardBuilder, UpdateMainMessage
+from mood_tracker.presentation.utils import UpdateMainMessage
 from mood_tracker.presentation.utils.callback_query import CallbackQueryWithMessage
 
 router = Router(name="fields_overview")
@@ -53,22 +56,7 @@ async def open_fields(
     await state.set_state(None)
     await presentation_data.clear_flow()
     await query.answer()
-    builder = KeyboardBuilder()
-    builder.row_buttons_text_tuple(
-        (
-            "Дневник",
-            FieldsListCallback(
-                action=FieldsListAction.SELECT, kind=QuestionnaireKind.DAY
-            ),
-        ),
-        (
-            "События",
-            FieldsListCallback(
-                action=FieldsListAction.SELECT, kind=QuestionnaireKind.EVENT
-            ),
-        ),
-    )
-    await update_main_message(Screen("<b>Анкеты</b>", builder.as_markup()))
+    await update_main_message(FieldSettingsQuestionnaireSelectScreen())
 
 
 @router.callback_query(FieldsListCallback.filter(F.action == FieldsListAction.SELECT))
@@ -107,10 +95,7 @@ async def choose_field_type(
     await state.set_state(None)
     await presentation_data.clear_flow()
     await query.answer()
-    await update_main_message(
-        TEXTS[TextKey.CREATE_FIELD_TYPE],
-        reply_markup=field_type_keyboard(callback_data.kind),
-    )
+    await update_main_message(ChooseFieldTypeScreen(kind=callback_data.kind))
 
 
 @router.callback_query(FieldsListCallback.filter(F.action == FieldsListAction.ATTACH))
@@ -140,28 +125,13 @@ async def choose_field_to_attach(
     candidates = await services.list_questionnaire_fields().execute(
         ListQuestionnaireFields(profile.id, other_kind)
     )
-    builder = KeyboardBuilder()
-    for item in candidates:
-        if item.field.id not in current_ids:
-            builder.row_buttons_text_tuple(
-                (
-                    item.field.name,
-                    AttachFieldCallback(
-                        field_id=item.field.id, kind=callback_data.kind
-                    ),
-                )
-            )
-    builder.row_buttons_text_tuple(
-        (
-            "Назад",
-            FieldsListCallback(action=FieldsListAction.SELECT, kind=callback_data.kind),
-        )
-    )
     await state.set_state(None)
     await presentation_data.clear_flow()
     await query.answer()
     await update_main_message(
-        Screen("<b>Добавить поле из другой анкеты</b>", builder.as_markup()),
+        AddFieldFromAnotherScreen(
+            candidates=candidates, current=current_ids, kind=callback_data.kind
+        )
     )
 
 

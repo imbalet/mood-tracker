@@ -31,10 +31,13 @@ from mood_tracker.presentation.callbacks.callbacks import (
 from mood_tracker.presentation.constants import TEXTS, TextKey
 from mood_tracker.presentation.errors import StaleCallback
 from mood_tracker.presentation.queries import get_user_profile
-from mood_tracker.presentation.screens import (
-    day_card_screen,
-    day_value_prompt_screen,
-    reference_review_screen,
+from mood_tracker.presentation.screens.day import (
+    DayCardScreen,
+    DayPromptKind,
+    DayValuePromptScreen,
+    ReferenceReviewScreen,
+    make_day_value_prompt_view,
+    make_reference_review_view,
 )
 from mood_tracker.presentation.services import ApplicationServices
 from mood_tracker.presentation.state import (
@@ -45,12 +48,6 @@ from mood_tracker.presentation.state import (
 )
 from mood_tracker.presentation.utils import UpdateMainMessage
 from mood_tracker.presentation.utils.callback_query import CallbackQueryWithMessage
-from mood_tracker.presentation.view_models import (
-    DayPromptKind,
-    make_day_card_view,
-    make_day_value_prompt_view,
-    make_reference_review_view,
-)
 
 router = Router(name="today")
 
@@ -66,6 +63,7 @@ async def open_today_from_menu(
     services: ApplicationServices,
     update_main_message: UpdateMainMessage,
 ) -> None:
+    # TODO: maybe move user profile check to middleware
     profile = await get_user_profile(telegram_id, services)
     if profile is None:
         await update_main_message(TEXTS[TextKey.START_FIRST])
@@ -100,15 +98,15 @@ async def save_value(
                 profile.id, day_date, callback_data.field_id, callback_data.value
             )
         )
+    # TODO: move to exception handler
     except FieldNotFound, InvalidFieldValue:
         await query.answer(TEXTS[TextKey.FIELD_VALUE_UNAVAILABLE], show_alert=True)
         return
     await state.set_state(None)
     await presentation_data.clear_flow()
-    await query.answer()
     if review is not None:
         await update_main_message(
-            reference_review_screen(make_reference_review_view(review)),
+            ReferenceReviewScreen(make_reference_review_view(review)),
         )
     else:
         await render_day(
@@ -130,7 +128,6 @@ async def open_day_card(
     profile, day_date = await _get_day_context(callback_data.day, telegram_id, services)
     await state.set_state(None)
     await presentation_data.clear_flow()
-    await query.answer()
     await render_day(
         query, presentation_data, profile, day_date, services, update_main_message
     )
@@ -153,7 +150,6 @@ async def skip_text(
     )
     await state.set_state(None)
     await presentation_data.clear_flow()
-    await query.answer()
     await render_day(
         query, presentation_data, profile, day_date, services, update_main_message
     )
@@ -309,7 +305,7 @@ async def render_day(
             GetEventsForDate(profile.id, day_date)
         )
     )
-    await update_main_message(day_card_screen(make_day_card_view(form, events)))
+    await update_main_message(DayCardScreen(form=form, events=events))
 
 
 def _today(profile: UserProfile) -> date:
@@ -338,5 +334,5 @@ async def _prompt_field(
         await state.set_state(Diary.waiting_text)
         await presentation_data.write(DiaryTextData(form.day_date, field.id))
     await update_main_message(
-        day_value_prompt_screen(view, error=error),
+        DayValuePromptScreen(view=view, error=error),
     )

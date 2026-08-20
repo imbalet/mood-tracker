@@ -9,23 +9,21 @@ from mood_tracker.application.contracts.questionnaires import ListQuestionnaireF
 from mood_tracker.domain.entities import Field, UserProfile
 from mood_tracker.domain.entities.questionnaire import QuestionnaireField
 from mood_tracker.domain.enums import QuestionnaireKind
-from mood_tracker.presentation.constants import TEXTS, TextKey
-from mood_tracker.presentation.screens import (
-    field_card_screen,
-    field_order_screen,
-    fields_list_screen,
-    palette_screen,
+from mood_tracker.presentation.screens.fields import (
+    FieldCardScreen,
+    FieldListScreen,
+    FieldOrderScreen,
+    InputErrorScreen,
+    InvalidateScreen,
+    PaletteScreen,
+    PaletteView,
+    make_field_card_view,
+    make_field_order_view,
 )
 from mood_tracker.presentation.services import ApplicationServices
 from mood_tracker.presentation.state import PresentationData
 from mood_tracker.presentation.utils import UpdateMainMessage
 from mood_tracker.presentation.utils.callback_query import CallbackQueryWithMessage
-from mood_tracker.presentation.view_models import (
-    PaletteView,
-    make_field_card_view,
-    make_field_order_view,
-    make_fields_list_view,
-)
 
 
 async def render_fields(
@@ -40,11 +38,7 @@ async def render_fields(
     items = await services.list_questionnaire_fields().execute(
         ListQuestionnaireFields(profile.id, kind)
     )
-    await update_main_message(
-        fields_list_screen(
-            make_fields_list_view(tuple(item.field for item in items), kind)
-        ),
-    )
+    await update_main_message(FieldListScreen(items=items, kind=kind))
 
 
 async def render_field(
@@ -57,7 +51,7 @@ async def render_field(
 ) -> None:
     """Render one field's settings card."""
     await update_main_message(
-        field_card_screen(make_field_card_view(field, placement, kind)),
+        FieldCardScreen(make_field_card_view(field, placement, kind)),
     )
 
 
@@ -71,7 +65,7 @@ async def render_order(
 ) -> None:
     """Render the selected-field order editor."""
     await update_main_message(
-        field_order_screen(make_field_order_view(fields, selected_id, kind)),
+        FieldOrderScreen(make_field_order_view(fields, selected_id, kind)),
     )
 
 
@@ -82,7 +76,8 @@ async def render_palette(
     update_main_message: UpdateMainMessage,
 ) -> None:
     """Render the rich state-palette selector."""
-    await update_main_message(palette_screen(view))
+    # TODO: разобраться с прокидыванием view
+    await update_main_message(PaletteScreen(view))
 
 
 async def show_input_error(
@@ -93,7 +88,8 @@ async def show_input_error(
     prompt: str,
 ) -> None:
     """Keep an input flow open while explaining a validation failure."""
-    await update_main_message(f"{error}\n\n{prompt}")
+    # TODO: убрать, вынести в хендлеры
+    await update_main_message(InputErrorScreen(error=error, prompt=prompt))
 
 
 async def invalidate_form(
@@ -105,4 +101,4 @@ async def invalidate_form(
     """Clear corrupt FSM data and show a recoverable error."""
     await state.set_state(None)
     await presentation_data.clear_flow()
-    await update_main_message(TEXTS[TextKey.INVALID_FIELD_INPUT])
+    await update_main_message(InvalidateScreen())

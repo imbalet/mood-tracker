@@ -35,7 +35,7 @@ class MoodDateCalendar(SimpleCalendar):  # type: ignore[misc]
         self._statuses = statuses
         self.set_dates_range(date.min, today)
 
-    async def start_calendar(self, year: int, month: int) -> InlineKeyboardMarkup:
+    def start_calendar(self, year: int, month: int) -> InlineKeyboardMarkup:
         """Build a Russian month keyboard while preserving package callback data."""
         keyboard: list[list[InlineKeyboardButton]] = [
             [

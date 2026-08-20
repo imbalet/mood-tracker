@@ -33,7 +33,7 @@ async def update_main_message(
 ) -> None:
     """Edit the current screen when possible, otherwise create a replacement."""
     if isinstance(content, Screen):
-        screen = content
+        screen = content.render()
         content = screen.content
         reply_markup = screen.reply_markup
     source = event if isinstance(event, Message) else event.message

@@ -38,7 +38,11 @@ from mood_tracker.presentation.handlers.fields.common import (
     show_input_error,
 )
 from mood_tracker.presentation.queries import get_owned_field, get_user_profile
-from mood_tracker.presentation.screens.screen import Screen
+from mood_tracker.presentation.screens.fields import (
+    DeleteConfirmationScreen,
+    PromptEmojiScreen,
+    make_palette_view,
+)
 from mood_tracker.presentation.services import ApplicationServices
 from mood_tracker.presentation.state import (
     FieldDisplayChange,
@@ -46,9 +50,8 @@ from mood_tracker.presentation.state import (
     InvalidPresentationData,
     PresentationData,
 )
-from mood_tracker.presentation.utils import KeyboardBuilder, UpdateMainMessage
+from mood_tracker.presentation.utils import UpdateMainMessage
 from mood_tracker.presentation.utils.callback_query import CallbackQueryWithMessage
-from mood_tracker.presentation.view_models import make_palette_view
 
 router = Router(name="fields_display")
 
@@ -65,7 +68,7 @@ async def prompt_emoji(
     await state.set_state(FieldDisplayChange.waiting_emoji)
     await presentation_data.write(FieldDisplayData(callback_data.field_id))
     await query.answer()
-    await update_main_message(TEXTS[TextKey.EMOJI_PROMPT])
+    await update_main_message(PromptEmojiScreen())
 
 
 @router.callback_query(FieldCallback.filter(F.action == FieldAction.CLEAR_EMOJI))
@@ -110,6 +113,7 @@ async def toggle_calendar(
         else None
     )
     if field is None:
+        # TODO: add query answer to update_main_message
         await query.answer(TEXTS[TextKey.FIELD_UNAVAILABLE], show_alert=True)
         return
     await _update_display(
@@ -188,29 +192,10 @@ async def delete_confirmation(
     update_main_message: UpdateMainMessage,
 ) -> None:
     """Ask the user to confirm removal from the selected questionnaire."""
-    builder = KeyboardBuilder()
-    builder.row_buttons_tuple(
-        (
-            TextKey.FIELD_DELETE_CONFIRM,
-            FieldCallback(
-                action=FieldAction.CONFIRM_DELETE,
-                field_id=callback_data.field_id,
-                kind=callback_data.kind,
-            ),
-        )
-    )
-    builder.row_buttons_tuple(
-        (
-            TextKey.BACK,
-            FieldCallback(
-                action=FieldAction.OPEN,
-                field_id=callback_data.field_id,
-                kind=callback_data.kind,
-            ),
-        )
-    )
     await update_main_message(
-        Screen(TEXTS[TextKey.FIELD_DELETE_PROMPT], builder.as_markup()),
+        DeleteConfirmationScreen(
+            field_id=callback_data.field_id, kind=callback_data.kind
+        )
     )
 
 

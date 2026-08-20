@@ -22,7 +22,7 @@ from mood_tracker.application.contracts.events import (
 from mood_tracker.application.contracts.questionnaires import ListQuestionnaireFields
 from mood_tracker.application.errors import FieldNotFound
 from mood_tracker.domain.entities import Field, OrdinalConfig, ScaleConfig, UserProfile
-from mood_tracker.domain.enums import EventStatus, QuestionnaireKind
+from mood_tracker.domain.enums import QuestionnaireKind
 from mood_tracker.domain.errors import IncompleteDay, InvalidFieldValue
 from mood_tracker.presentation.callbacks.callbacks import (
     EventAction,
@@ -33,10 +33,23 @@ from mood_tracker.presentation.callbacks.callbacks import (
 )
 from mood_tracker.presentation.constants import TEXTS, TextKey
 from mood_tracker.presentation.queries import get_user_profile
-from mood_tracker.presentation.screens import Screen
+from mood_tracker.presentation.screens.events import (
+    AskTimeScreen,
+    ChangeTimeScreen,
+    ChooseEventCompleteScreen,
+    DeleteEventConfirmScreen,
+    EventEmptyScreen,
+    EventScreen,
+    InvalidTimeScreen,
+    NonEmptyTextRequiredScreen,
+    PromptTextScreen,
+    PromptValueScreen,
+    SendTextScreen,
+    SetTimeScreen,
+)
 from mood_tracker.presentation.services import ApplicationServices
 from mood_tracker.presentation.state import EventFlow, EventInputData, PresentationData
-from mood_tracker.presentation.utils import KeyboardBuilder, UpdateMainMessage
+from mood_tracker.presentation.utils import UpdateMainMessage
 from mood_tracker.presentation.utils.callback_query import CallbackQueryWithMessage
 
 router = Router(name="events")
@@ -56,6 +69,7 @@ async def capture_event(
     """Create a quick draft or start today's complete questionnaire."""
     profile = await get_user_profile(telegram_id, services)
     if profile is None:
+        # TODO: move to middleware
         await update_main_message(TEXTS[TextKey.START_FIRST])
         return
     text = (command.args or "").strip()
@@ -76,19 +90,7 @@ async def capture_event(
             update_main_message,
         )
         return
-    builder = KeyboardBuilder()
-    builder.row_buttons_text_tuple(
-        (
-            "Заполнить анкету",
-            EventCallback(
-                action=EventAction.START, day=_today(profile).strftime("%Y%m%d")
-            ),
-        )
-    )
-    builder.row_buttons_text_tuple(
-        ("Быстрый текст", EventCallback(action=EventAction.QUICK_TEXT))
-    )
-    await update_main_message(Screen("Как записать событие?", builder.as_markup()))
+    await update_main_message(ChooseEventCompleteScreen(date=_today(profile)))
 
 
 @router.callback_query(EventCallback.filter(F.action == EventAction.START))
@@ -105,14 +107,9 @@ async def start_event_from_day(
     if profile is None or callback_data.day is None:
         await query.answer(TEXTS[TextKey.START_FIRST], show_alert=True)
         return
-    await _ask_time(
-        query,
-        state,
-        presentation_data,
-        _parse_day(callback_data.day),
-        _parse_day(callback_data.day) == _today(profile),
-        services,
-        update_main_message,
+    day = _parse_day(callback_data.day)
+    await update_main_message(
+        AskTimeScreen(allow_now=day == _today(profile), day_date=day)
     )
 
 
@@ -130,7 +127,7 @@ async def quick_text_prompt(
         return
     await state.set_state(EventFlow.waiting_text)
     await presentation_data.write(EventInputData(None, _today(profile)))
-    await update_main_message("Отправь текст события.")
+    await update_main_message(SendTextScreen())
 
 
 @router.callback_query(EventCallback.filter(F.action == EventAction.CONTINUE))
@@ -202,7 +199,7 @@ async def change_time_prompt(
     ).date()
     await state.set_state(EventFlow.waiting_time)
     await presentation_data.write(EventInputData(current.id, day_date))
-    await update_main_message("Отправь новое время в формате <code>ЧЧ:ММ</code>.")
+    await update_main_message(ChangeTimeScreen())
 
 
 @router.callback_query(EventCallback.filter(F.action == EventAction.DELETE))
@@ -214,16 +211,7 @@ async def delete_confirmation(
 ) -> None:
     if callback_data.event_id is None:
         return
-    builder = KeyboardBuilder()
-    builder.row_buttons_text_tuple(
-        (
-            "Удалить",
-            EventCallback(
-                action=EventAction.CONFIRM_DELETE, event_id=callback_data.event_id
-            ),
-        )
-    )
-    await update_main_message(Screen("Удалить событие?", builder.as_markup()))
+    await update_main_message(DeleteEventConfirmScreen(event_id=callback_data.event_id))
 
 
 @router.callback_query(EventCallback.filter(F.action == EventAction.CONFIRM_DELETE))
@@ -241,37 +229,8 @@ async def delete_event(
     await services.delete_event().execute(
         DeleteEvent(profile.id, callback_data.event_id)
     )
-    await update_main_message(Screen("Событие удалено."))
-
-
-async def _ask_time(
-    event: EventSource,
-    state: FSMContext,
-    presentation_data: PresentationData,
-    day_date: date,
-    allow_now: bool,
-    services: ApplicationServices,
-    update_main_message: UpdateMainMessage,
-) -> None:
-    builder = KeyboardBuilder()
-    if allow_now:
-        builder.row_buttons_text_tuple(
-            (
-                "Сейчас",
-                EventTimeCallback(day=day_date.strftime("%Y%m%d"), now=True),
-            )
-        )
-    builder.row_buttons_text_tuple(
-        (
-            "Указать время",
-            EventTimeCallback(day=day_date.strftime("%Y%m%d"), now=False),
-        )
-    )
-    await state.set_state(None)
-    await presentation_data.clear_flow()
-    await update_main_message(
-        Screen("<b>Когда произошло событие?</b>", builder.as_markup()),
-    )
+    # TODO: make day screen with notice
+    await update_main_message("Событие удалено.")
 
 
 @router.callback_query(EventTimeCallback.filter())
@@ -292,7 +251,7 @@ async def choose_time(
     if not callback_data.now:
         await state.set_state(EventFlow.waiting_time)
         await presentation_data.write(EventInputData(None, day_date))
-        await update_main_message("Отправь время в формате <code>ЧЧ:ММ</code>.")
+        await update_main_message(SetTimeScreen())
         return
     current_time = datetime.now(UTC).astimezone(ZoneInfo(profile.timezone.name)).time()
     await _create_and_prompt(
@@ -323,7 +282,7 @@ async def enter_time(
         if profile is None or selected.second or selected.tzinfo is not None:
             raise ValueError
     except ValueError:
-        await update_main_message("Нужно время в формате <code>ЧЧ:ММ</code>.")
+        await update_main_message(InvalidTimeScreen())
         return
     if data.event_id is not None:
         current = await services.get_event().execute(
@@ -422,9 +381,7 @@ async def _prompt_next(
             )
             return
         if completed.deleted_at is not None:
-            await update_main_message(
-                Screen("Событие не создано: ничего не заполнено."),
-            )
+            await update_main_message(EventEmptyScreen())
             return
         await _render_event(
             event,
@@ -437,48 +394,14 @@ async def _prompt_next(
         return
     config = item.field.current_version.config
     if not isinstance(config, (ScaleConfig, OrdinalConfig)):
+        # TODO сделать нормально условие на текст
         await state.set_state(EventFlow.waiting_text)
         await presentation_data.write(
             EventInputData(event_id, current.occurred_at.date(), item.field.id)
         )
-        builder = KeyboardBuilder()
-        if not item.placement.is_required:
-            builder.row_buttons_text_tuple(
-                (
-                    "Пропустить",
-                    SkipEventFieldCallback(event_id=event_id, field_id=item.field.id),
-                )
-            )
-        await update_main_message(
-            Screen(f"<b>{item.field.name}</b>\nОтправь текст.", builder.as_markup()),
-        )
+        await update_main_message(PromptTextScreen(item=item, event_id=event_id))
         return
-    builder = KeyboardBuilder()
-    if isinstance(config, ScaleConfig):
-        choices = (
-            (value, str(value)) for value in range(config.minimum, config.maximum + 1)
-        )
-    else:
-        choices = ((option.value, option.label) for option in config.options)
-    for value, label in choices:
-        builder.row_buttons_text_tuple(
-            (
-                label,
-                EventValueCallback(
-                    event_id=event_id, field_id=item.field.id, value=value
-                ),
-            )
-        )
-    if not item.placement.is_required:
-        builder.row_buttons_text_tuple(
-            (
-                "Пропустить",
-                SkipEventFieldCallback(event_id=event_id, field_id=item.field.id),
-            )
-        )
-    await update_main_message(
-        Screen(f"<b>{item.field.name}</b>\nВыбери значение.", builder.as_markup()),
-    )
+    await update_main_message(PromptValueScreen(item=item, event_id=event_id))
 
 
 @router.callback_query(EventValueCallback.filter())
@@ -563,7 +486,7 @@ async def save_text(
                 CreateQuickEvent(profile.id, message.text or "")
             )
         except InvalidFieldValue:
-            await update_main_message("Отправь непустой текст.")
+            await update_main_message(NonEmptyTextRequiredScreen())
             return
         await _render_event(
             message,
@@ -581,7 +504,7 @@ async def save_text(
             SaveEventValue(profile.id, data.event_id, data.field_id, message.text or "")
         )
     except InvalidFieldValue:
-        await update_main_message("Отправь непустой текст.")
+        await update_main_message(NonEmptyTextRequiredScreen())
         return
     await _prompt_next(
         message,
@@ -607,51 +530,9 @@ async def _render_event(
     items = await services.list_questionnaire_fields().execute(
         ListQuestionnaireFields(profile.id, QuestionnaireKind.EVENT)
     )
-    lines = [
-        "<b>Событие</b>",
-        (
-            f"{local:%d.%m.%Y %H:%M}"
-            + (
-                f" ({current.occurred_timezone.name})"
-                if current.occurred_timezone != profile.timezone
-                else ""
-            )
-        ),
-        f"Статус: {'черновик' if current.status is EventStatus.DRAFT else 'завершено'}",
-    ]
-    for item in items:
-        value = current.response.answers.get(item.field.id)
-        progress = current.response.progress.get(item.field.id)
-        if value is not None:
-            rendered_value = _render_value(
-                item.field, value.value, value.field_version_id
-            )
-            lines.append(f"<b>{item.field.name}</b>: {rendered_value}")
-        elif progress is not None and progress.skipped:
-            lines.append(f"<b>{item.field.name}</b>: пропущено")
-    builder = KeyboardBuilder()
-    if current.status is EventStatus.DRAFT:
-        builder.row_buttons_text_tuple(
-            (
-                "Продолжить",
-                EventCallback(action=EventAction.CONTINUE, event_id=event_id),
-            )
-        )
-    builder.row_buttons_text_tuple(
-        (
-            "Изменить время",
-            EventCallback(action=EventAction.CHANGE_TIME, event_id=event_id),
-        ),
-        (
-            "Удалить",
-            EventCallback(action=EventAction.DELETE, event_id=event_id),
-        ),
-    )
+    # TODO: rename
     await update_main_message(
-        Screen(
-            "\n".join(lines),
-            builder.as_markup(),
-        ),
+        EventScreen(local=local, current=current, items=items, profile=profile)
     )
 
 

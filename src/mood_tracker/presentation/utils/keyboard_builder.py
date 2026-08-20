@@ -1,5 +1,6 @@
 """Composable typed factory for Telegram inline keyboards."""
 
+from collections.abc import Iterable
 from typing import Any, Self
 
 from aiogram.filters.callback_data import CallbackData
@@ -26,19 +27,21 @@ class InlineKeyboardFactory:
             self._current_row = []
         return self
 
-    def buttons_tuple(self, *buttons: tuple[TextKey, CallbackData]) -> Self:
+    def buttons(self, *buttons: tuple[TextKey | str, CallbackData]) -> Self:
         """Append translated callback buttons to the current rows."""
         for text, callback_data in buttons:
             self.button(text, callback_data)
         return self
 
-    def buttons_text_tuple(self, *buttons: tuple[str, CallbackData]) -> Self:
-        """Append literal-text callback buttons to the current rows."""
+    def buttons_iterable(
+        self, buttons: Iterable[tuple[TextKey | str, CallbackData]]
+    ) -> Self:
+        """Append translated callback buttons to the current rows."""
         for text, callback_data in buttons:
-            self.button_text(text, callback_data)
+            self.button(text, callback_data)
         return self
 
-    def buttons(self, *buttons: InlineKeyboardButton) -> Self:
+    def _buttons(self, *buttons: InlineKeyboardButton) -> Self:
         """Append already-constructed buttons using the configured row width."""
         for button in buttons:
             self._current_row.append(button)
@@ -46,43 +49,33 @@ class InlineKeyboardFactory:
                 self._flush_row()
         return self
 
-    def button(self, text: TextKey, callback_data: CallbackData, **kwargs: Any) -> Self:
-        """Append a callback button using a translated static text key."""
-        return self.button_text(TEXTS[text], callback_data, **kwargs)
-
-    def button_text(
-        self, text: str, callback_data: CallbackData, **kwargs: Any
+    def button(
+        self, text: TextKey | str, callback_data: CallbackData, **kwargs: Any
     ) -> Self:
-        """Append one literal-text callback button to the current row."""
-        return self.buttons(
+        """Append a callback button using a translated static text key."""
+        return self._buttons(
             InlineKeyboardButton(
-                text=text,
+                text=TEXTS[text] if isinstance(text, TextKey) else text,
                 callback_data=callback_data.pack(),
                 **kwargs,
             )
         )
 
-    def row_buttons(self, *buttons: InlineKeyboardButton) -> Self:
+    def _row_buttons(self, *buttons: InlineKeyboardButton) -> Self:
         """Finish the current row and append one explicit row of buttons."""
         self._flush_row()
         if buttons:
             self._keyboard.append(list(buttons))
         return self
 
-    def row_buttons_tuple(self, *buttons: tuple[TextKey, CallbackData]) -> Self:
+    def row(self, *buttons: tuple[TextKey | str, CallbackData]) -> Self:
         """Finish the current row and append translated callback buttons."""
-        return self.row_buttons(
+        return self._row_buttons(
             *(
-                InlineKeyboardButton(text=TEXTS[text], callback_data=callback.pack())
-                for text, callback in buttons
-            )
-        )
-
-    def row_buttons_text_tuple(self, *buttons: tuple[str, CallbackData]) -> Self:
-        """Finish the current row and append literal-text callback buttons."""
-        return self.row_buttons(
-            *(
-                InlineKeyboardButton(text=text, callback_data=callback.pack())
+                InlineKeyboardButton(
+                    text=TEXTS[text] if isinstance(text, TextKey) else text,
+                    callback_data=callback.pack(),
+                )
                 for text, callback in buttons
             )
         )

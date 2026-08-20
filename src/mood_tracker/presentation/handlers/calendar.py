@@ -8,7 +8,7 @@ from zoneinfo import ZoneInfo
 from aiogram import F, Router
 from aiogram.filters import Command
 from aiogram.fsm.context import FSMContext
-from aiogram.types import BufferedInputFile, InlineKeyboardMarkup, Message
+from aiogram.types import BufferedInputFile, Message
 from aiogram_calendar.schemas import SimpleCalAct, SimpleCalendarCallback
 
 from mood_tracker.application.contracts.calendar import GetMonthCalendar
@@ -19,14 +19,16 @@ from mood_tracker.presentation.callbacks.callbacks import (
     MenuSection,
 )
 from mood_tracker.presentation.handlers.today import render_day
-from mood_tracker.presentation.keyboards.date_calendar import MoodDateCalendar
 from mood_tracker.presentation.queries import get_user_profile
 from mood_tracker.presentation.rendering.calendar import MonthCalendarImageService
-from mood_tracker.presentation.screens import main_menu_screen, month_calendar_screen
-from mood_tracker.presentation.screens.screen import Screen
+from mood_tracker.presentation.screens.calendar import (
+    CalendarImageScreen,
+    CalendarScreen,
+)
+from mood_tracker.presentation.screens.menu import MainMenuScreen
 from mood_tracker.presentation.services import ApplicationServices
 from mood_tracker.presentation.state import PresentationData
-from mood_tracker.presentation.utils import KeyboardBuilder, UpdateMainMessage
+from mood_tracker.presentation.utils import UpdateMainMessage
 from mood_tracker.presentation.utils.callback_query import CallbackQueryWithMessage
 
 router = Router(name="calendar")
@@ -52,8 +54,6 @@ async def open_dates(
     await presentation_data.clear_flow()
     today = _today(profile.timezone.name)
     await _render_dates(
-        event,
-        presentation_data,
         profile.id,
         today.replace(day=1),
         today,
@@ -94,7 +94,7 @@ async def browse_dates(
         await query.answer()
         return
     if callback_data.act is SimpleCalAct.cancel:
-        await update_main_message(main_menu_screen())
+        await update_main_message(MainMenuScreen())
         return
     if callback_data.act is SimpleCalAct.day:
         if target > today:
@@ -106,8 +106,6 @@ async def browse_dates(
         return
     month = _navigation_month(callback_data.act, target, today)
     await _render_dates(
-        query,
-        presentation_data,
         profile.id,
         month,
         today,
@@ -139,8 +137,6 @@ async def open_month_image(
     await state.set_state(None)
     month = _today(profile.timezone.name).replace(day=1)
     await _render_month(
-        event,
-        presentation_data,
         profile.id,
         month,
         False,
@@ -174,8 +170,6 @@ async def browse_month_image(
         await query.answer("Будущего календаря ещё нет.", show_alert=True)
         return
     await _render_month(
-        query,
-        presentation_data,
         profile.id,
         month,
         month < today_month,
@@ -186,8 +180,6 @@ async def browse_month_image(
 
 
 async def _render_dates(
-    event: Message | CallbackQueryWithMessage,
-    presentation_data: PresentationData,
     user_id: UUID,
     month: date,
     today: date,
@@ -195,12 +187,7 @@ async def _render_dates(
     update_main_message: UpdateMainMessage,
 ) -> None:
     data = await services.get_month_calendar().execute(GetMonthCalendar(user_id, month))
-    statuses = {day.date: day.status for day in data.days}
-    calendar = MoodDateCalendar(today, statuses)
-    markup = await calendar.start_calendar(month.year, month.month)
-    await update_main_message(
-        Screen("<b>Выбери дату</b>\n✅ — завершён, 📝 — черновик.", markup),
-    )
+    await update_main_message(CalendarScreen(data=data, today=today, month=month))
 
 
 async def _month_image(
@@ -214,8 +201,6 @@ async def _month_image(
 
 
 async def _render_month(
-    event: Message | CallbackQueryWithMessage,
-    presentation_data: PresentationData,
     user_id: UUID,
     month: date,
     can_go_next: bool,
@@ -225,34 +210,8 @@ async def _render_month(
 ) -> None:
     image = await _month_image(user_id, month, services, calendar_images)
     await update_main_message(
-        month_calendar_screen(image, _image_keyboard(month, can_go_next)),
+        CalendarImageScreen(image=image, can_go_next=can_go_next, month=month)
     )
-
-
-def _image_keyboard(month: date, can_go_next: bool) -> InlineKeyboardMarkup:
-    builder = KeyboardBuilder()
-    builder.row_buttons_text_tuple(
-        (
-            "←",
-            CalendarImageCallback(
-                action=CalendarImageAction.PREVIOUS, year=month.year, month=month.month
-            ),
-        ),
-        *(
-            (
-                "→",
-                CalendarImageCallback(
-                    action=CalendarImageAction.NEXT,
-                    year=month.year,
-                    month=month.month,
-                ),
-            ),
-        )
-        if can_go_next
-        else (),
-    )
-    builder.row_buttons_text_tuple(("В меню", MenuCallback(section=MenuSection.HOME)))
-    return builder.as_markup()
 
 
 def _navigation_month(action: SimpleCalAct, target: date, today: date) -> date:

@@ -3,17 +3,25 @@
 from typing import cast
 
 from aiogram import F, Router
-from aiogram.filters import CommandStart
+from aiogram.filters import Command, CommandStart
 from aiogram.fsm.context import FSMContext
 from aiogram.types import CallbackQuery, Message
 
 from mood_tracker.application.contracts.users import GetUserByTelegramId, RegisterUser
 from mood_tracker.domain.errors import InvalidTimezone
 from mood_tracker.domain.value_objects import UserTimezone
-from mood_tracker.presentation.callbacks.callbacks import TimezoneCallback
+from mood_tracker.presentation.callbacks.callbacks import (
+    MenuCallback,
+    MenuSection,
+    TimezoneCallback,
+)
 from mood_tracker.presentation.constants import TEXTS, TextKey
-from mood_tracker.presentation.keyboards import timezone_keyboard
-from mood_tracker.presentation.screens import main_menu_screen
+from mood_tracker.presentation.screens.menu import MainMenuScreen
+from mood_tracker.presentation.screens.timezone import (
+    EnterTimezoneTextScreen,
+    InvalidTimezoneScreen,
+    SelectTimezoneScreen,
+)
 from mood_tracker.presentation.services import ApplicationServices
 from mood_tracker.presentation.state import Onboarding, PresentationData
 from mood_tracker.presentation.utils import UpdateMainMessage
@@ -22,9 +30,11 @@ from mood_tracker.presentation.utils.callback_query import CallbackQueryWithMess
 router = Router(name="onboarding")
 
 
+@router.callback_query(MenuCallback.filter(F.section == MenuSection.HOME))
+@router.message(Command("menu"))
 @router.message(CommandStart())
 async def start(
-    message: Message,
+    event: Message | CallbackQueryWithMessage,
     state: FSMContext,
     presentation_data: PresentationData,
     telegram_id: int,
@@ -37,12 +47,11 @@ async def start(
     if profile is not None:
         await state.set_state(None)
         await presentation_data.clear_flow()
-        await update_main_message(main_menu_screen(), create_new=True)
+        await update_main_message(MainMenuScreen(), create_new=True)
         return
     await state.set_state(Onboarding.waiting_timezone)
     await update_main_message(
-        TEXTS[TextKey.ONBOARDING_GREETING],
-        reply_markup=timezone_keyboard(),
+        content=SelectTimezoneScreen(notice=TextKey.ONBOARDING_GREETING),
         create_new=True,
     )
 
@@ -62,7 +71,7 @@ async def choose_timezone(
     if isinstance(event, CallbackQuery) and callback_data:
         if callback_data.timezone == "other":
             await state.set_state(Onboarding.waiting_timezone)
-            await update_main_message(TEXTS[TextKey.ENTER_TIMEZONE])
+            await update_main_message(EnterTimezoneTextScreen())
             return
         timezone_name = callback_data.timezone
     else:
@@ -72,17 +81,19 @@ async def choose_timezone(
     try:
         timezone = UserTimezone(timezone_name)
     except InvalidTimezone:
+        # TODO: move to exception handlers
         await update_main_message(
-            TEXTS[TextKey.INVALID_TIMEZONE],
+            InvalidTimezoneScreen(),
         )
         return
+
     profile = await services.register_user().execute(
         RegisterUser(telegram_id, timezone)
     )
     await state.set_state(None)
     await presentation_data.clear_flow()
     await update_main_message(
-        main_menu_screen(
+        MainMenuScreen(
             notice=TEXTS[TextKey.TIMEZONE_SAVED].format(timezone=profile.timezone.name)
         ),
     )

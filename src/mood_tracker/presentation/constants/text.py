@@ -24,6 +24,7 @@ class TextKey(StrEnum):
     ALREADY_REGISTERED = "already_registered"
     START_FIRST = "start_first"
     ONBOARDING_GREETING = "onboarding_greeting"
+    SELECT_TIMEZONE = "select_timezone"
     ENTER_TIMEZONE = "enter_timezone"
     INVALID_TIMEZONE = "invalid_timezone"
     TIMEZONE_SAVED = "timezone_saved"
@@ -104,6 +105,8 @@ class TextKey(StrEnum):
     EVENT_SAVED = "event_saved"
     EVENT_NOT_SAVED = "event_not_saved"
 
+    ANOTHER_TIMEZONE = "another_timezone"
+
 
 _TEXTS: dict[TextKey, str] = {
     TextKey.MENU_TITLE: "<b>Дневник состояния</b>\nВыбери, что хочешь сделать.",
@@ -121,10 +124,8 @@ _TEXTS: dict[TextKey, str] = {
     TextKey.START_DIARY: "Открыть дневник",
     TextKey.ALREADY_REGISTERED: "Ты уже зарегистрирован.",
     TextKey.START_FIRST: "Сначала создай дневник командой /start.",
-    TextKey.ONBOARDING_GREETING: (
-        "Привет! Выбери свой часовой пояс — по нему бот определяет дату записи "
-        "и время напоминаний."
-    ),
+    TextKey.ONBOARDING_GREETING: ("Привет!"),
+    TextKey.SELECT_TIMEZONE: "Выбери свой часовой пояс — по нему бот определяет дату записи и время напоминаний.",  # noqa: E501
     TextKey.ENTER_TIMEZONE: "Отправь IANA-имя, например <code>Asia/Tokyo</code>.",
     TextKey.INVALID_TIMEZONE: (
         "Не удалось распознать часовой пояс. Например: <code>Europe/Moscow</code>."
@@ -231,6 +232,7 @@ _TEXTS: dict[TextKey, str] = {
         "⏳ Событие сохранено как черновик. Позже его можно будет дополнить."
     ),
     TextKey.EVENT_NOT_SAVED: "Не удалось сохранить событие. Попробуй ещё раз.",
+    TextKey.ANOTHER_TIMEZONE: "Другой часовой пояс",
 }
 
 
