@@ -7,13 +7,11 @@ TEST_COMPOSE := docker compose --project-name mood-tracker-integration -f docker
 
 lint:
 	uv run ruff check src tests alembic
+	uv run mypy
 
 format:
 	uv run ruff format src tests alembic && \
 	uv run ruff check src tests alembic --fix
-
-typecheck:
-	uv run mypy
 
 test-unit:
 	uv run pytest tests/unit
