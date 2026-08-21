@@ -13,15 +13,12 @@ class TextKey(StrEnum):
     MENU_DATES = "menu_dates"
     MENU_CALENDAR = "menu_calendar"
     MENU_FIELDS = "menu_fields"
-    MENU_RECORDS = "menu_records"
-    MENU_SETTINGS = "menu_settings"
+    MENU_SETTINGS = "menu_settings"  # not presented
     BACK_TO_MENU = "back_to_menu"
     BACK = "back"
     SKIP = "skip"
     YES = "yes"
     NO = "no"
-    START_DIARY = "start_diary"
-    ALREADY_REGISTERED = "already_registered"
     START_FIRST = "start_first"
     ONBOARDING_GREETING = "onboarding_greeting"
     SELECT_TIMEZONE = "select_timezone"
@@ -101,7 +98,6 @@ class TextKey(StrEnum):
     INVALID_FIELD_INPUT = "invalid_field_input"
     INVALID_SCALE_INPUT = "invalid_scale_input"
     INVALID_PALETTE_INPUT = "invalid_palette_input"
-    EVENT_COMMAND_HINT = "event_command_hint"
     EVENT_SAVED = "event_saved"
     EVENT_NOT_SAVED = "event_not_saved"
 
@@ -114,15 +110,12 @@ _TEXTS: dict[TextKey, str] = {
     TextKey.MENU_DATES: "📆 Даты",
     TextKey.MENU_CALENDAR: "🗓 Календарь",
     TextKey.MENU_FIELDS: "⚙️ Поля",
-    TextKey.MENU_RECORDS: "🏔️ Личные ориентиры",
     TextKey.MENU_SETTINGS: "Настройки",
     TextKey.BACK_TO_MENU: "🏠 В меню",
     TextKey.BACK: "← Назад",
     TextKey.SKIP: "Пропустить",
     TextKey.YES: "Да",
     TextKey.NO: "Нет",
-    TextKey.START_DIARY: "Открыть дневник",
-    TextKey.ALREADY_REGISTERED: "Ты уже зарегистрирован.",
     TextKey.START_FIRST: "Сначала создай дневник командой /start.",
     TextKey.ONBOARDING_GREETING: ("Привет!"),
     TextKey.SELECT_TIMEZONE: "Выбери свой часовой пояс — по нему бот определяет дату записи и время напоминаний.",  # noqa: E501
@@ -224,9 +217,6 @@ _TEXTS: dict[TextKey, str] = {
     TextKey.INVALID_PALETTE_INPUT: (
         "⚠️ Нужны три HEX-цвета через пробел. Например "
         "<code>#D9534F #F0E68C #5CB85C</code>."
-    ),
-    TextKey.EVENT_COMMAND_HINT: (
-        "Напиши событие после команды, например: <code>/event важный разговор</code>."
     ),
     TextKey.EVENT_SAVED: (
         "⏳ Событие сохранено как черновик. Позже его можно будет дополнить."
