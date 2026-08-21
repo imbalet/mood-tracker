@@ -11,7 +11,7 @@ from mood_tracker.domain.entities import (
 )
 from mood_tracker.domain.entities.questionnaire import QuestionnaireField
 from mood_tracker.domain.enums import DayStatus
-from mood_tracker.presentation.screens import day_card_screen, day_value_prompt_screen
+from mood_tracker.presentation.screens.day import DayCardScreen, DayValuePromptScreen
 from mood_tracker.presentation.view_models import (
     make_day_card_view,
     make_day_value_prompt_view,
@@ -28,7 +28,7 @@ def test_day_card_shows_saved_values_skips_and_current_prompt(
     day.skip_text(comment.current_version)
     form = DayForm(day.date, day, (state, comment), next_field=None)
 
-    screen = day_value_prompt_screen(make_day_value_prompt_view(form, state))
+    screen = DayValuePromptScreen(make_day_value_prompt_view(form, state)).render()
 
     assert isinstance(screen.content, str)
     assert "черновик" in screen.content
@@ -65,7 +65,7 @@ def test_day_card_keyboard_allows_editing_and_adding_current_active_fields(
         },
     )
 
-    screen = day_card_screen(make_day_card_view(form))
+    screen = DayCardScreen(form=form).render()
 
     assert screen.reply_markup is not None
     assert [

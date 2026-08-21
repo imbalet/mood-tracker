@@ -1,6 +1,6 @@
 from aiogram.types import InputRichMessage
 
-from mood_tracker.presentation.screens import ScreenResult
+from mood_tracker.presentation.screens.screen import ScreenResult
 
 
 def test_screen_accepts_rich_content() -> None:

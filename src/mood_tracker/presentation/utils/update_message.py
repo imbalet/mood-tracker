@@ -1,13 +1,15 @@
 """Maintain one editable bot screen for an interactive flow."""
 
-from typing import Protocol, cast
+from typing import TYPE_CHECKING, Protocol, cast
 
 from aiogram.types import InlineKeyboardMarkup, InputRichMessage, Message
 
-from mood_tracker.presentation.screens.screen import Screen, ScreenContent
 from mood_tracker.presentation.state import PresentationData
 from mood_tracker.presentation.utils.callback_query import CallbackQueryWithMessage
 from mood_tracker.presentation.utils.sender import Sender
+
+if TYPE_CHECKING:
+    from mood_tracker.presentation.screens.screen import Screen, ScreenContent
 
 
 class UpdateMainMessage(Protocol):

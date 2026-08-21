@@ -3,24 +3,29 @@ from datetime import date
 from aiogram.types import BufferedInputFile, InputRichMessage
 
 from mood_tracker.presentation.callbacks.callbacks import MenuCallback, MenuSection
-from mood_tracker.presentation.handlers.calendar import _image_keyboard
-from mood_tracker.presentation.screens import month_calendar_screen
+from mood_tracker.presentation.screens.calendar import CalendarImageScreen
+
+
+def _calendar_screen():
+    return CalendarImageScreen(
+        image=BufferedInputFile(b"png", filename="calendar.png"),
+        can_go_next=False,
+        month=date(2025, 2, 1),
+    ).render()
 
 
 def test_calendar_image_keyboard_has_menu_button() -> None:
-    keyboard = _image_keyboard(date(2025, 2, 1), can_go_next=False)
+    screen = _calendar_screen()
+    assert screen.reply_markup is not None
 
-    button = keyboard.inline_keyboard[-1][0]
+    button = screen.reply_markup.inline_keyboard[-1][0]
 
     assert button.text == "В меню"
     assert MenuCallback.unpack(button.callback_data).section is MenuSection.HOME
 
 
 def test_calendar_screen_embeds_the_png_as_editable_rich_media() -> None:
-    screen = month_calendar_screen(
-        BufferedInputFile(b"png", filename="calendar.png"),
-        _image_keyboard(date(2025, 2, 1), can_go_next=False),
-    )
+    screen = _calendar_screen()
 
     assert isinstance(screen.content, InputRichMessage)
     assert screen.content.media is not None

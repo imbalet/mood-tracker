@@ -19,8 +19,8 @@ from mood_tracker.presentation.handlers.fields.common import render_order
 from mood_tracker.presentation.queries import get_user_profile
 from mood_tracker.presentation.services import ApplicationServices
 from mood_tracker.presentation.state import PresentationData
-from mood_tracker.presentation.utils import UpdateMainMessage
 from mood_tracker.presentation.utils.callback_query import CallbackQueryWithMessage
+from mood_tracker.presentation.utils.update_message import UpdateMainMessage
 
 router = Router(name="fields_ordering")
 

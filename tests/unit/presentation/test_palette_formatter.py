@@ -1,5 +1,5 @@
 from mood_tracker.domain.entities import FieldDisplayConfig, StatePalette
-from mood_tracker.presentation.screens import palette_screen
+from mood_tracker.presentation.screens.fields import PaletteScreen
 from mood_tracker.presentation.view_models import make_palette_view
 
 
@@ -12,7 +12,7 @@ def test_palette_screen_embeds_numbered_preview(field_factory) -> None:
 
     view = make_palette_view(field)
     assert view is not None
-    screen = palette_screen(view)
+    screen = PaletteScreen(view).render()
 
     assert screen.content.html and screen.content.media
     assert 'src="tg://photo?id=scale"' in screen.content.html

@@ -24,8 +24,8 @@ from mood_tracker.presentation.screens.timezone import (
 )
 from mood_tracker.presentation.services import ApplicationServices
 from mood_tracker.presentation.state import Onboarding, PresentationData
-from mood_tracker.presentation.utils import UpdateMainMessage
 from mood_tracker.presentation.utils.callback_query import CallbackQueryWithMessage
+from mood_tracker.presentation.utils.update_message import UpdateMainMessage
 
 router = Router(name="onboarding")
 

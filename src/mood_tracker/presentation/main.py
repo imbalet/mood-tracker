@@ -25,7 +25,6 @@ from mood_tracker.presentation.handlers import (
     calendar_router,
     events_router,
     fields_router,
-    menu_router,
     onboarding_router,
     today_router,
 )
@@ -63,7 +62,6 @@ async def run() -> None:
     services = ApplicationServices(session_factory)
     calendar_images = MonthCalendarImageService()
     dispatcher.include_routers(
-        menu_router,
         onboarding_router,
         today_router,
         events_router,

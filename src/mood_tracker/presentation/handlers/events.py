@@ -49,8 +49,8 @@ from mood_tracker.presentation.screens.events import (
 )
 from mood_tracker.presentation.services import ApplicationServices
 from mood_tracker.presentation.state import EventFlow, EventInputData, PresentationData
-from mood_tracker.presentation.utils import UpdateMainMessage
 from mood_tracker.presentation.utils.callback_query import CallbackQueryWithMessage
+from mood_tracker.presentation.utils.update_message import UpdateMainMessage
 
 router = Router(name="events")
 EventSource = Message | CallbackQueryWithMessage

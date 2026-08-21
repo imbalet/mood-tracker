@@ -10,9 +10,9 @@ from aiogram.types import CallbackQuery, InaccessibleMessage, TelegramObject, Up
 from mood_tracker.presentation.rendering.calendar import MonthCalendarImageService
 from mood_tracker.presentation.services import ApplicationServices
 from mood_tracker.presentation.state import PresentationData
-from mood_tracker.presentation.utils import update_main_message
 from mood_tracker.presentation.utils.callback_query import CallbackQueryWithMessage
 from mood_tracker.presentation.utils.sender import Sender
+from mood_tracker.presentation.utils.update_message import update_main_message
 
 
 class ApplicationMiddleware(BaseMiddleware):

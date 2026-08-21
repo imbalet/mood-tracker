@@ -50,8 +50,8 @@ from mood_tracker.presentation.state import (
     InvalidPresentationData,
     PresentationData,
 )
-from mood_tracker.presentation.utils import UpdateMainMessage
 from mood_tracker.presentation.utils.callback_query import CallbackQueryWithMessage
+from mood_tracker.presentation.utils.update_message import UpdateMainMessage
 
 router = Router(name="fields_display")
 
