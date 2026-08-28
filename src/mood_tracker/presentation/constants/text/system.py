@@ -20,8 +20,12 @@ _TEXTS: dict[TextKey, str] = {
     # Navigatione
     TextKey.BACK_TO_MENU: "🏠 В меню",
     TextKey.BACK: "← Назад",
+    TextKey.BACK_ARROW: "←",
+    TextKey.FORWARD_ARROW: "→",
     # Questionnaire navigation
     TextKey.SKIP: "Пропустить",
     TextKey.YES: "Да",
     TextKey.NO: "Нет",
+    # other
+    TextKey.DELETE: "Удалить",
 }

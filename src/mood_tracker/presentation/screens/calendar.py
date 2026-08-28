@@ -19,13 +19,15 @@ from mood_tracker.presentation.callbacks.callbacks import (
     MenuCallback,
     MenuSection,
 )
+from mood_tracker.presentation.constants.text import TEXTS, TextKey
 from mood_tracker.presentation.keyboards.date_calendar import MoodDateCalendar
 from mood_tracker.presentation.screens.screen import Screen, ScreenContent
 
 
 @dataclass
 class CalendarScreen(Screen):
-    text: ClassVar[str | None] = "<b>Выбери дату</b>\n✅ — завершён, 📝 — черновик."
+    text: ClassVar[str | None] = TEXTS[TextKey.MENU_CALENDAR_TITLE]
+
     data: MonthCalendar
     today: date
     month: date
@@ -58,7 +60,7 @@ class CalendarImageScreen(Screen):
     def _reply_markup(self) -> InlineKeyboardMarkup | None:
         self._kbuilder.row(
             (
-                "←",
+                TextKey.BACK_ARROW,
                 CalendarImageCallback(
                     action=CalendarImageAction.PREVIOUS,
                     year=self.month.year,
@@ -69,7 +71,7 @@ class CalendarImageScreen(Screen):
         if self.can_go_next:
             self._kbuilder.row(
                 (
-                    "→",
+                    TextKey.FORWARD_ARROW,
                     CalendarImageCallback(
                         action=CalendarImageAction.NEXT,
                         year=self.month.year,
@@ -78,5 +80,7 @@ class CalendarImageScreen(Screen):
                 )
             )
 
-        self._kbuilder.row(("В меню", MenuCallback(section=MenuSection.HOME)))
+        self._kbuilder.row(
+            (TextKey.BACK_TO_MENU, MenuCallback(section=MenuSection.HOME))
+        )
         return self._kbuilder.as_markup()

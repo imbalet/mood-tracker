@@ -23,12 +23,13 @@ from mood_tracker.presentation.callbacks.callbacks import (
     EventValueCallback,
     SkipEventFieldCallback,
 )
+from mood_tracker.presentation.constants.text import TEXTS, TextKey
 from mood_tracker.presentation.screens.screen import Screen, ScreenContent
 
 
 @dataclass
 class ChooseEventCompleteScreen(Screen):
-    text: ClassVar[str | None] = "Как записать событие?"
+    text: ClassVar[str | None] = TEXTS[TextKey.HOW_TO_CREATE_EVENT]
     date: date
 
     @override
@@ -36,45 +37,45 @@ class ChooseEventCompleteScreen(Screen):
         return (
             self._kbuilder.row(
                 (
-                    "Заполнить анкету",
+                    TextKey.FILL_QUESTIONNAIRE,
                     EventCallback(
                         action=EventAction.START, day=self.date.strftime("%Y%m%d")
                     ),
                 )
             )
-            .row(("Быстрый текст", EventCallback(action=EventAction.QUICK_TEXT)))
+            .row((TextKey.QUICK_TEXT, EventCallback(action=EventAction.QUICK_TEXT)))
             .as_markup()
         )
 
 
 @dataclass
 class SendTextScreen(Screen):
-    text: ClassVar[str | None] = "Отправь текст события."
+    text: ClassVar[str | None] = TEXTS[TextKey.SEND_EVENT_TEXT]
 
 
 @dataclass
 class ChangeTimeScreen(Screen):
-    text: ClassVar[str | None] = "Отправь новое время в формате <code>ЧЧ:ММ</code>."
+    text: ClassVar[str | None] = TEXTS[TextKey.SEND_NEW_TIME]
 
 
 @dataclass
 class SetTimeScreen(Screen):
-    text: ClassVar[str | None] = "Отправь новое время в формате <code>ЧЧ:ММ</code>."
+    text: ClassVar[str | None] = TEXTS[TextKey.SEND_NEW_TIME]
 
 
 @dataclass
 class InvalidTimeScreen(Screen):
-    text: ClassVar[str | None] = "Нужно время в формате <code>ЧЧ:ММ</code>."
+    text: ClassVar[str | None] = TEXTS[TextKey.INVALID_TIME_FORMAT]
 
 
 @dataclass
 class NonEmptyTextRequiredScreen(Screen):
-    text: ClassVar[str | None] = "Отправь непустой текст."
+    text: ClassVar[str | None] = TEXTS[TextKey.EMPTY_TEXT_ENTERED]
 
 
 @dataclass
 class EventEmptyScreen(Screen):
-    text: ClassVar[str | None] = "Событие не создано: ничего не заполнено."
+    text: ClassVar[str | None] = TEXTS[TextKey.EVENT_NOT_CREATED]
 
 
 @dataclass
@@ -84,14 +85,14 @@ class PromptTextScreen(Screen):
 
     @override
     def _text(self) -> ScreenContent:
-        return f"<b>{self.item.field.name}</b>\nОтправь текст."
+        return f"<b>{self.item.field.name}</b>\n{TEXTS[TextKey.SEND_EVENT_TEXT_FIELD]}"
 
     @override
     def _reply_markup(self) -> InlineKeyboardMarkup | None:
         if not self.item.placement.is_required:
             self._kbuilder.row(
                 (
-                    "Пропустить",
+                    TextKey.SKIP,
                     SkipEventFieldCallback(
                         event_id=self.event_id, field_id=self.item.field.id
                     ),
@@ -108,7 +109,9 @@ class PromptValueScreen(Screen):
 
     @override
     def _text(self) -> ScreenContent:
-        return f"<b>{self.item.field.name}</b>\nВыбери значение."
+        return (
+            f"<b>{self.item.field.name}</b>\n{TEXTS[TextKey.CHOOSE_EVENT_VALUE_FIELD]}"
+        )
 
     @override
     def _reply_markup(self) -> InlineKeyboardMarkup | None:
@@ -135,7 +138,7 @@ class PromptValueScreen(Screen):
         if not self.item.placement.is_required:
             self._kbuilder.row(
                 (
-                    "Пропустить",
+                    TextKey.SKIP,
                     SkipEventFieldCallback(
                         event_id=self.event_id, field_id=self.item.field.id
                     ),
@@ -147,14 +150,14 @@ class PromptValueScreen(Screen):
 
 @dataclass
 class DeleteEventConfirmScreen(Screen):
-    text: ClassVar[str | None] = "Удалить событие?"
+    text: ClassVar[str | None] = TEXTS[TextKey.DELETE_EVENT_CONFIRMATION]
     event_id: UUID
 
     @override
     def _reply_markup(self) -> InlineKeyboardMarkup | None:
         return self._kbuilder.row(
             (
-                "Удалить",
+                TextKey.DELETE,
                 EventCallback(
                     action=EventAction.CONFIRM_DELETE, event_id=self.event_id
                 ),
@@ -164,7 +167,7 @@ class DeleteEventConfirmScreen(Screen):
 
 @dataclass
 class AskTimeScreen(Screen):
-    text: ClassVar[str | None] = "<b>Когда произошло событие?</b>"
+    text: ClassVar[str | None] = TEXTS[TextKey.WHEN_EVENT_OCCURRED]
     allow_now: bool
     day_date: date
 
@@ -174,13 +177,13 @@ class AskTimeScreen(Screen):
             # TODO: отрефакторить этот колбек, убрать там day_date для сегодня
             self._kbuilder.row(
                 (
-                    "Сейчас",
+                    TextKey.EVENT_NOW_TIME,
                     EventTimeCallback(day=self.day_date.strftime("%Y%m%d"), now=True),
                 )
             )
         self._kbuilder.row(
             (
-                "Указать время",
+                TextKey.EVENT_SET_TIME,
                 EventTimeCallback(day=self.day_date.strftime("%Y%m%d"), now=False),
             )
         )
@@ -229,7 +232,7 @@ class EventScreen(Screen):
         if self.current.status is EventStatus.DRAFT:
             self._kbuilder.row(
                 (
-                    "Продолжить",
+                    TextKey.EVENT_CONTINUE,
                     EventCallback(
                         action=EventAction.CONTINUE, event_id=self.current.id
                     ),
@@ -237,11 +240,11 @@ class EventScreen(Screen):
             )
         self._kbuilder.row(
             (
-                "Изменить время",
+                TextKey.EVENT_CHANGE_TIME,
                 EventCallback(action=EventAction.CHANGE_TIME, event_id=self.current.id),
             ),
             (
-                "Удалить",
+                TextKey.DELETE,
                 EventCallback(action=EventAction.DELETE, event_id=self.current.id),
             ),
         )

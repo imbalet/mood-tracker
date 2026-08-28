@@ -84,7 +84,7 @@ class FieldListScreen(Screen):
             )
         ).row(
             (
-                "Добавить из другой анкеты",
+                TextKey.ADD_FROM_QUESTIONNAIRE,
                 FieldsListCallback(action=FieldsListAction.ATTACH, kind=self.kind),
             )
         ).row(
@@ -125,13 +125,13 @@ def make_field_card_view(
     """Map current field semantics and display settings into one card."""
     config = field.current_version.config
     if isinstance(config, ScaleConfig):
-        semantic_text = f"Шкала: {config.minimum}–{config.maximum}"
+        semantic_text = f"{TEXTS[TextKey.FIELD_TYPE_SCALE_SHORT]}: {config.minimum}–{config.maximum}"  # noqa: E501
     elif isinstance(config, OrdinalConfig):
-        semantic_text = "Варианты: " + ", ".join(
+        semantic_text = f"{TEXTS[TextKey.FIELD_TYPE_ORDINAL_SHORT]}: " + ", ".join(
             option.label for option in config.options
         )
     else:
-        semantic_text = "Свободный текст"
+        semantic_text = TEXTS[TextKey.FIELD_TYPE_TEXT]
     palette = field.display_config.state_palette
     is_core = (
         placement is not None and placement.role is QuestionnaireFieldRole.DAY_STATE
@@ -622,19 +622,19 @@ class OrdinalDraftScreen(Screen):
 
 @dataclass
 class FieldSettingsQuestionnaireSelectScreen(Screen):
-    text: ClassVar[str | None] = "<b>Анкеты</b>"
+    text: ClassVar[str | None] = TEXTS[TextKey.QUESTIONNAIRES_TITLE]
 
     @override
     def _reply_markup(self) -> InlineKeyboardMarkup | None:
         self._kbuilder.row(
             (
-                "Дневник",
+                TextKey.DIARY,
                 FieldsListCallback(
                     action=FieldsListAction.SELECT, kind=QuestionnaireKind.DAY
                 ),
             ),
             (
-                "События",
+                TextKey.EVENTS,
                 FieldsListCallback(
                     action=FieldsListAction.SELECT, kind=QuestionnaireKind.EVENT
                 ),
@@ -672,7 +672,7 @@ class ChooseFieldTypeScreen(Screen):
 
 @dataclass
 class AddFieldFromAnotherScreen(Screen):
-    text: ClassVar[str | None] = "<b>Добавить поле из другой анкеты</b>"
+    text: ClassVar[str | None] = TEXTS[TextKey.ADD_FROM_QUESTIONNAIRE]
 
     candidates: Sequence[QuestionnaireFieldItem]
     current: set[UUID]
@@ -690,7 +690,7 @@ class AddFieldFromAnotherScreen(Screen):
                 )
         self._kbuilder.row(
             (
-                "Назад",
+                TextKey.BACK,
                 FieldsListCallback(action=FieldsListAction.SELECT, kind=self.kind),
             )
         )
