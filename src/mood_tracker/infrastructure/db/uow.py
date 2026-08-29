@@ -11,6 +11,8 @@ from mood_tracker.application.ports.repositories import (
     DayRepository,
     EventRepository,
     FieldRepository,
+    NotificationDeliveryRepository,
+    NotificationSettingsRepository,
     QuestionnaireRepository,
     ReferenceDaysRepository,
     UserRepository,
@@ -19,6 +21,8 @@ from mood_tracker.infrastructure.db.repositories import (
     SqlAlchemyDayRepository,
     SqlAlchemyEventRepository,
     SqlAlchemyFieldRepository,
+    SqlAlchemyNotificationDeliveryRepository,
+    SqlAlchemyNotificationSettingsRepository,
     SqlAlchemyQuestionnaireRepository,
     SqlAlchemyReferenceDaysRepository,
     SqlAlchemyUserRepository,
@@ -32,6 +36,8 @@ class SqlAlchemyUnitOfWork:
     days: DayRepository
     events: EventRepository
     reference_days: ReferenceDaysRepository
+    notification_settings: NotificationSettingsRepository
+    notification_deliveries: NotificationDeliveryRepository
 
     def __init__(self, session_factory: async_sessionmaker[AsyncSession]) -> None:
         self._factory = session_factory
@@ -45,6 +51,12 @@ class SqlAlchemyUnitOfWork:
         self.days = SqlAlchemyDayRepository(self._session)
         self.events = SqlAlchemyEventRepository(self._session)
         self.reference_days = SqlAlchemyReferenceDaysRepository(self._session)
+        self.notification_settings = SqlAlchemyNotificationSettingsRepository(
+            self._session
+        )
+        self.notification_deliveries = SqlAlchemyNotificationDeliveryRepository(
+            self._session
+        )
         return self
 
     async def __aexit__(

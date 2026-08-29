@@ -7,6 +7,8 @@ from mood_tracker.application.ports.repositories import (
     DayRepository,
     EventRepository,
     FieldRepository,
+    NotificationDeliveryRepository,
+    NotificationSettingsRepository,
     QuestionnaireRepository,
     ReferenceDaysRepository,
     UserRepository,
@@ -22,6 +24,8 @@ class UnitOfWork(Protocol):
     days: DayRepository
     events: EventRepository
     reference_days: ReferenceDaysRepository
+    notification_settings: NotificationSettingsRepository
+    notification_deliveries: NotificationDeliveryRepository
 
     async def __aenter__(self) -> Self: ...
 

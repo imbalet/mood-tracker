@@ -1,5 +1,7 @@
 """Aiogram application entry point and dependency composition root."""
 
+# TODO: посмотреть слоп
+
 import asyncio
 import contextlib
 
@@ -26,12 +28,14 @@ from mood_tracker.presentation.handlers import (
     events_router,
     fields_router,
     onboarding_router,
+    reminders_router,
     today_router,
 )
 from mood_tracker.presentation.middleware import (
     ApplicationMiddleware,
     CallbackMessageMiddleware,
 )
+from mood_tracker.presentation.reminders import ReminderWorker, stop_reminder_worker
 from mood_tracker.presentation.rendering.calendar import MonthCalendarImageService
 from mood_tracker.presentation.services import ApplicationServices
 from mood_tracker.presentation.utils.sender import Sender
@@ -60,20 +64,25 @@ async def run() -> None:
     )
     engine, session_factory = create_session_factory(settings.DB_URL)
     services = ApplicationServices(session_factory)
+    sender = Sender(bot)
     calendar_images = MonthCalendarImageService()
     dispatcher.include_routers(
         onboarding_router,
+        reminders_router,
         today_router,
         events_router,
         calendar_router,
         fields_router,
     )
     dispatcher.update.middleware(
-        ApplicationMiddleware(services, Sender(bot), calendar_images)
+        ApplicationMiddleware(services, sender, calendar_images)
     )
     dispatcher.callback_query.middleware(CallbackMessageMiddleware())
     health_task = asyncio.create_task(
         start_healthcheck_server(settings.HEALTHCHECK_PORT)
+    )
+    reminder_task = asyncio.create_task(
+        ReminderWorker(services, sender, settings.REMINDER_POLL_INTERVAL_SECONDS).run()
     )
 
     try:
@@ -93,6 +102,7 @@ async def run() -> None:
         health_task.cancel()
         with contextlib.suppress(asyncio.CancelledError):
             await health_task
+        await stop_reminder_worker(reminder_task)
         await bot.session.close()
         await engine.dispose()
 

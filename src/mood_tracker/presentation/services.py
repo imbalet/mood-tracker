@@ -1,6 +1,8 @@
 """Factories that bind application use cases to production adapters."""
 
 from dataclasses import dataclass
+from datetime import timedelta
+from uuid import UUID
 
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 
@@ -22,6 +24,7 @@ from mood_tracker.application.use_cases import (
     GetUserByTelegramIdUseCase,
     ListQuestionnaireFieldsUseCase,
     MoveQuestionnaireFieldUseCase,
+    ProcessReminderUseCase,
     RegisterUserUseCase,
     RenameFieldUseCase,
     SaveDayValueUseCase,
@@ -29,12 +32,15 @@ from mood_tracker.application.use_cases import (
     SetFieldDisplayUseCase,
     SetQuestionnaireFieldEnabledUseCase,
     SetQuestionnaireFieldRequiredUseCase,
+    SetReminderSettingsUseCase,
     SkipDayTextUseCase,
     SkipEventFieldUseCase,
 )
+from mood_tracker.domain.reminder_policy import ReminderPolicy
 from mood_tracker.infrastructure.clock import SystemClock
 from mood_tracker.infrastructure.db.uow import SqlAlchemyUnitOfWork
 from mood_tracker.infrastructure.ids.uuid7 import Uuid7IdGenerator
+from mood_tracker.presentation.utils.sender import Sender
 
 
 @dataclass(frozen=True, slots=True)
@@ -48,6 +54,19 @@ class ApplicationServices:
 
     def register_user(self) -> RegisterUserUseCase:
         return RegisterUserUseCase(self._uow(), SystemClock(), Uuid7IdGenerator())
+
+    def process_reminder(self, sender: Sender) -> ProcessReminderUseCase:
+        return ProcessReminderUseCase(
+            self._uow(), sender, ReminderPolicy(timedelta(minutes=30)), SystemClock()
+        )
+
+    def set_reminder_settings(self) -> SetReminderSettingsUseCase:
+        return SetReminderSettingsUseCase(self._uow())
+
+    # TODO: посмотреть слоп
+    async def list_user_ids(self) -> list[UUID]:
+        async with self._uow() as uow:
+            return [user.id for user in await uow.users.list_all()]
 
     def get_day(self) -> GetDayUseCase:
         return GetDayUseCase(self._uow(), SystemClock())

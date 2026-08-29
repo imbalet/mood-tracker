@@ -4,6 +4,7 @@ from mood_tracker.presentation.handlers.calendar import router as calendar_route
 from mood_tracker.presentation.handlers.events import router as events_router
 from mood_tracker.presentation.handlers.fields import router as fields_router
 from mood_tracker.presentation.handlers.onboarding import router as onboarding_router
+from mood_tracker.presentation.handlers.reminders import router as reminders_router
 from mood_tracker.presentation.handlers.today import router as today_router
 
 __all__ = [
@@ -11,5 +12,6 @@ __all__ = [
     "events_router",
     "fields_router",
     "onboarding_router",
+    "reminders_router",
     "today_router",
 ]

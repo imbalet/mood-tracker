@@ -1,7 +1,11 @@
 """Persistence protocols expressed in domain aggregates."""
 
+# TODO: посмотреть слоп
+
 from collections.abc import Sequence
-from datetime import date
+from dataclasses import dataclass
+from datetime import date, datetime, timedelta
+from enum import StrEnum
 from typing import Protocol
 from uuid import UUID
 
@@ -9,11 +13,53 @@ from mood_tracker.domain.entities import (
     Day,
     Event,
     Field,
+    NotificationSettings,
     Questionnaire,
     ReferenceDays,
     UserProfile,
 )
 from mood_tracker.domain.enums import QuestionnaireKind
+
+
+class NotificationDeliveryStatus(StrEnum):
+    claimed = "claimed"
+    sent = "sent"
+
+
+@dataclass(frozen=True)
+class NotificationDelivery:
+    reminder_number: int
+    status: NotificationDeliveryStatus
+
+
+class NotificationSettingsRepository(Protocol):
+    async def get(self, user_id: UUID) -> NotificationSettings | None: ...
+
+    async def add(self, settings: NotificationSettings) -> None: ...
+
+    async def save(self, settings: NotificationSettings) -> None: ...
+
+
+class NotificationDeliveryRepository(Protocol):
+    async def get_deliveries(
+        self, user_id: UUID, local_date: date
+    ) -> list[NotificationDelivery]: ...
+
+    async def try_claim(
+        self,
+        user_id: UUID,
+        local_date: date,
+        reminder_number: int,
+        claim_timeout: timedelta,
+    ) -> bool: ...
+
+    async def mark_sent(
+        self,
+        user_id: UUID,
+        local_date: date,
+        reminder_number: int,
+        sent_at: datetime,
+    ) -> None: ...
 
 
 class UserRepository(Protocol):
@@ -22,6 +68,8 @@ class UserRepository(Protocol):
     async def get(self, user_id: UUID) -> UserProfile | None: ...
 
     async def get_by_telegram_id(self, telegram_id: int) -> UserProfile | None: ...
+
+    async def list_all(self) -> Sequence[UserProfile]: ...
 
     async def add(self, user: UserProfile) -> None: ...
 

@@ -29,6 +29,7 @@ from mood_tracker.application.use_cases.fields import (
     SetQuestionnaireFieldEnabledUseCase,
     SetQuestionnaireFieldRequiredUseCase,
 )
+from mood_tracker.application.use_cases.process_reminder import ProcessReminderUseCase
 from mood_tracker.application.use_cases.references import (
     ConfirmReferenceUseCase,
     GetReferenceHistoryUseCase,
@@ -36,6 +37,7 @@ from mood_tracker.application.use_cases.references import (
 from mood_tracker.application.use_cases.registration import (
     GetUserByTelegramIdUseCase,
     RegisterUserUseCase,
+    SetReminderSettingsUseCase,
     SetTimezoneUseCase,
 )
 
@@ -66,6 +68,8 @@ __all__ = [
     "SetQuestionnaireFieldEnabledUseCase",
     "SetQuestionnaireFieldRequiredUseCase",
     "SetTimezoneUseCase",
+    "SetReminderSettingsUseCase",
+    "ProcessReminderUseCase",
     "SkipDayTextUseCase",
     "SkipEventFieldUseCase",
 ]

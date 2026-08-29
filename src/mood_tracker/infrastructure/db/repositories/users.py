@@ -24,6 +24,11 @@ class SqlAlchemyUserRepository:
         )
         return _to_domain(row) if row else None
 
+    # TODO: посмотреть слоп
+    async def list_all(self) -> list[UserProfile]:
+        rows = (await self._session.scalars(select(UserOrm).order_by(UserOrm.id))).all()
+        return [_to_domain(row) for row in rows]
+
     async def add(self, user: UserProfile) -> None:
         self._session.add(
             UserOrm(

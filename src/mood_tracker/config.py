@@ -15,6 +15,7 @@ class Settings(BaseSettings):
     DB_PASS: str
     LOG_LEVEL: Literal["DEBUG", "INFO", "WARNING", "ERROR", "CRITICAL"] = "INFO"
     HEALTHCHECK_PORT: int = 8000
+    REMINDER_POLL_INTERVAL_SECONDS: float = 60.0
 
     @property
     def DB_URL(self) -> str:  # noqa: N802

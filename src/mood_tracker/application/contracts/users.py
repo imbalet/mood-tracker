@@ -1,6 +1,7 @@
 """User-related application contracts."""
 
 from dataclasses import dataclass
+from datetime import time, timedelta
 from uuid import UUID
 
 from mood_tracker.domain.value_objects import UserTimezone
@@ -27,3 +28,14 @@ class SetTimezone:
 
     user_id: UUID
     timezone: UserTimezone
+
+
+@dataclass(frozen=True, slots=True)
+class SetReminderSettings:
+    """Change reminder delivery preferences for one user."""
+
+    user_id: UUID
+    is_enabled: bool
+    reminder_time: time
+    repeat_interval: timedelta
+    max_reminders_per_day: int

@@ -13,6 +13,7 @@ from mood_tracker.domain.entities.field import (
     StatePalette,
     TextConfig,
 )
+from mood_tracker.domain.entities.notifications import NotificationSettings
 from mood_tracker.domain.entities.questionnaire import (
     Answer,
     Questionnaire,
@@ -43,4 +44,5 @@ __all__ = [
     "Answer",
     "QuestionProgress",
     "QuestionnaireResponse",
+    "NotificationSettings",
 ]

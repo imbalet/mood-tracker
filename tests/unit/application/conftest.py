@@ -11,6 +11,8 @@ from mood_tracker.application.ports import (
     EventRepository,
     FieldRepository,
     IdGenerator,
+    NotificationDeliveryRepository,
+    NotificationSettingsRepository,
     QuestionnaireRepository,
     ReferenceDaysRepository,
     UnitOfWork,
@@ -94,5 +96,11 @@ def uow() -> UnitOfWork:
     unit_of_work.events = create_autospec(EventRepository, instance=True)
     unit_of_work.reference_days = create_autospec(
         ReferenceDaysRepository, instance=True
+    )
+    unit_of_work.notification_settings = create_autospec(
+        NotificationSettingsRepository, instance=True
+    )
+    unit_of_work.notification_deliveries = create_autospec(
+        NotificationDeliveryRepository, instance=True
     )
     return unit_of_work

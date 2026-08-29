@@ -10,6 +10,8 @@ from aiogram.exceptions import (
 )
 from aiogram.types import InlineKeyboardMarkup, InputRichMessage, Message
 
+from mood_tracker.domain.entities import UserProfile
+
 logger = logging.getLogger(__name__)
 
 
@@ -46,6 +48,19 @@ class Sender:
                 "Telegram rejected rich message for chat %s", message.chat.id
             )
             return None
+
+    # TODO: посмотреть слоп
+    async def send_daily_reminder(self, user: UserProfile) -> None:
+        """Send a reminder directly to a registered Telegram chat."""
+        try:
+            await self._bot.send_message(
+                chat_id=user.telegram_id,
+                text="📝 Напоминание: запись о сегодняшнем состоянии ещё не завершена.",
+            )
+        except TelegramForbiddenError:
+            logger.info("Bot is blocked by chat %s", user.telegram_id)
+        except TelegramBadRequest:
+            logger.exception("Telegram rejected reminder for chat %s", user.telegram_id)
 
     async def edit(
         self,

@@ -3,6 +3,10 @@
 from mood_tracker.infrastructure.db.repositories.days import SqlAlchemyDayRepository
 from mood_tracker.infrastructure.db.repositories.events import SqlAlchemyEventRepository
 from mood_tracker.infrastructure.db.repositories.fields import SqlAlchemyFieldRepository
+from mood_tracker.infrastructure.db.repositories.notifications import (
+    SqlAlchemyNotificationDeliveryRepository,
+    SqlAlchemyNotificationSettingsRepository,
+)
 from mood_tracker.infrastructure.db.repositories.questionnaires import (
     SqlAlchemyQuestionnaireRepository,
 )
@@ -18,4 +22,6 @@ __all__ = [
     "SqlAlchemyQuestionnaireRepository",
     "SqlAlchemyReferenceDaysRepository",
     "SqlAlchemyUserRepository",
+    "SqlAlchemyNotificationDeliveryRepository",
+    "SqlAlchemyNotificationSettingsRepository",
 ]

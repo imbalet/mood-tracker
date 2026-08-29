@@ -1,6 +1,6 @@
 """SQLAlchemy mappings for the durable diary model."""
 
-from datetime import date, datetime, time
+from datetime import date, datetime, time, timedelta
 from decimal import Decimal
 from typing import Any
 from uuid import UUID
@@ -13,7 +13,9 @@ from sqlalchemy import (
     DateTime,
     ForeignKey,
     Integer,
+    Interval,
     Numeric,
+    SmallInteger,
     String,
     Time,
     UniqueConstraint,
@@ -46,10 +48,42 @@ class UserOrm(Timestamped, Base):
     id: Mapped[UUID] = mapped_column(postgresql.UUID(as_uuid=True), primary_key=True)
     telegram_id: Mapped[int] = mapped_column(BigInteger, unique=True, nullable=False)
     timezone: Mapped[str] = mapped_column(String(64), nullable=False)
-    reminder_enabled: Mapped[bool] = mapped_column(
-        Boolean, default=False, nullable=False
+
+
+class NotificationSettingsOrm(Timestamped, Base):
+    __tablename__ = "notification_settings"
+    user_id: Mapped[UUID] = mapped_column(
+        ForeignKey("users.id"), primary_key=True, nullable=False
     )
-    reminder_time: Mapped[time | None] = mapped_column(Time, nullable=True)
+    is_enabled: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
+    reminder_time: Mapped[time] = mapped_column(Time, nullable=False)
+    repeat_interval: Mapped[timedelta] = mapped_column(Interval, nullable=False)
+    max_reminders_per_day: Mapped[int] = mapped_column(SmallInteger, nullable=False)
+
+
+class NotificationDeliveriesOrm(Base):
+    __tablename__ = "notification_deliveries"
+    __table_args__ = (
+        UniqueConstraint(
+            "user_id",
+            "local_date",
+            "reminder_number",
+            name="notification_delivery_user_date_reminder_key",
+        ),
+        CheckConstraint(
+            "status IN ('claimed', 'sent')", name="notification_delivery_status_check"
+        ),
+    )
+    user_id: Mapped[UUID] = mapped_column(
+        ForeignKey("users.id"), primary_key=True, nullable=False
+    )
+    local_date: Mapped[date] = mapped_column(Date, primary_key=True, nullable=False)
+    reminder_number: Mapped[int] = mapped_column(
+        SmallInteger, primary_key=True, nullable=False
+    )
+    status: Mapped[str] = mapped_column(String(16), nullable=False)
+    claimed_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=True)
+    sent_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=True)
 
 
 class FieldOrm(Timestamped, Base):
