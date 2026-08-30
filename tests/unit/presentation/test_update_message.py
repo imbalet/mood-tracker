@@ -1,7 +1,7 @@
 from datetime import datetime
 from unittest.mock import AsyncMock
 
-from aiogram.types import Chat, Message, User
+from aiogram.types import Chat, Message, Update, User
 
 from mood_tracker.presentation.screens.menu import MainMenuScreen
 from mood_tracker.presentation.utils.sender import Sender
@@ -22,7 +22,11 @@ async def test_update_main_message_renders_screen_before_sending(mocker) -> None
     )
 
     await update_main_message(
-        sender, presentation_data, event, MainMenuScreen(), create_new=True
+        sender,
+        presentation_data,
+        Update(update_id=1, message=event),
+        MainMenuScreen(),
+        create_new=True,
     )
 
     sender.answer.assert_awaited_once()

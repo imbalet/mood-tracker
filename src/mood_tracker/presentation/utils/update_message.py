@@ -1,10 +1,8 @@
 """Maintain one editable bot screen for an interactive flow."""
 
-# TODO: посмотреть слоп
-
 from typing import TYPE_CHECKING, Protocol, cast
 
-from aiogram.types import InlineKeyboardMarkup, InputRichMessage, Message
+from aiogram.types import InlineKeyboardMarkup, InputRichMessage, Message, Update
 
 from mood_tracker.presentation.screens.screen import Screen
 from mood_tracker.presentation.state import PresentationData
@@ -30,13 +28,21 @@ class UpdateMainMessage(Protocol):
 async def update_main_message(
     sender: Sender,
     presentation_data: PresentationData,
-    event: Message | CallbackQueryWithMessage,
+    event: Message | CallbackQueryWithMessage | Update,
     content: Screen | ScreenContent,
     reply_markup: InlineKeyboardMarkup | None = None,
     *,
     create_new: bool = False,
 ) -> None:
     """Edit the current screen when possible, otherwise create a replacement."""
+    if isinstance(event, Update):
+        # TODO: посмотреть слоп
+        if event.callback_query is not None:
+            event = cast(CallbackQueryWithMessage, event.callback_query)
+        elif event.message is not None:
+            event = event.message
+        else:
+            return
     if isinstance(content, Screen):
         screen = content.render()
         content = screen.content

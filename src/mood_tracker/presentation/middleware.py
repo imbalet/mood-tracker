@@ -52,7 +52,7 @@ class ApplicationMiddleware(BaseMiddleware):
             update_main_message,
             self._sender,
             presentation_data,
-            event,  # type: ignore[arg-type]
+            event,
             # TODO: check
         )
         return await handler(event, data)
