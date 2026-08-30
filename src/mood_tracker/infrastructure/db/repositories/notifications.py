@@ -117,7 +117,11 @@ class SqlAlchemyNotificationDeliveryRepository:
                 sent_at=None,
             )
             .on_conflict_do_nothing(
-                constraint="notification_delivery_user_date_reminder_key",
+                index_elements=[
+                    NotificationDeliveriesOrm.user_id,
+                    NotificationDeliveriesOrm.local_date,
+                    NotificationDeliveriesOrm.reminder_number,
+                ],
             )
         )
 

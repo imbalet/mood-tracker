@@ -121,7 +121,7 @@ class PromptValueScreen(Screen):
                 (value, str(value))
                 for value in range(config.minimum, config.maximum + 1)
             )
-        if isinstance(config, OrdinalConfig):
+        elif isinstance(config, OrdinalConfig):
             choices = ((option.value, option.label) for option in config.options)
         else:
             raise TypeError  # TODO: fix
@@ -144,8 +144,7 @@ class PromptValueScreen(Screen):
                     ),
                 )
             )
-            return self._kbuilder.as_markup()
-        return None
+        return self._kbuilder.as_markup()
 
 
 @dataclass
