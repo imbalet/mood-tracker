@@ -1,10 +1,12 @@
 """Questionnaire aggregate repository."""
 
+from typing import override
 from uuid import UUID, uuid7
 
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from mood_tracker.application.ports import QuestionnaireRepository
 from mood_tracker.domain.entities import Questionnaire, QuestionnaireField
 from mood_tracker.domain.enums import QuestionnaireFieldRole, QuestionnaireKind
 from mood_tracker.infrastructure.db.models import (
@@ -13,12 +15,13 @@ from mood_tracker.infrastructure.db.models import (
 )
 
 
-class SqlAlchemyQuestionnaireRepository:
+class SqlAlchemyQuestionnaireRepository(QuestionnaireRepository):
     """Persist independent field placements for each built-in questionnaire."""
 
     def __init__(self, session: AsyncSession) -> None:
         self._session = session
 
+    @override
     async def get(self, user_id: UUID, kind: QuestionnaireKind) -> Questionnaire | None:
         row = await self._session.scalar(
             select(QuestionnaireOrm).where(
@@ -27,6 +30,7 @@ class SqlAlchemyQuestionnaireRepository:
         )
         return await self._to_domain(row) if row is not None else None
 
+    @override
     async def add(self, questionnaire: Questionnaire) -> None:
         self._session.add(
             QuestionnaireOrm(
@@ -38,6 +42,7 @@ class SqlAlchemyQuestionnaireRepository:
         await self._session.flush()
         await self._save_fields(questionnaire)
 
+    @override
     async def save(self, questionnaire: Questionnaire) -> None:
         row = await self._session.get(QuestionnaireOrm, questionnaire.id)
         if row is None or row.user_id != questionnaire.user_id:
@@ -103,6 +108,3 @@ class SqlAlchemyQuestionnaireRepository:
                 for field in field_rows
             },
         )
-
-
-__all__ = ["SqlAlchemyQuestionnaireRepository"]

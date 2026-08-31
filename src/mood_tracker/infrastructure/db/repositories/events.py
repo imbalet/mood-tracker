@@ -3,12 +3,14 @@
 from collections.abc import Sequence
 from datetime import date
 from decimal import Decimal
+from typing import override
 from uuid import UUID, uuid7
 from zoneinfo import ZoneInfo
 
 from sqlalchemy import delete, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from mood_tracker.application.ports import EventRepository
 from mood_tracker.domain.entities import (
     Answer,
     Event,
@@ -24,12 +26,13 @@ from mood_tracker.infrastructure.db.models import (
 )
 
 
-class SqlAlchemyEventRepository:
+class SqlAlchemyEventRepository(EventRepository):
     """Persist standalone contextual events for exactly one owner."""
 
     def __init__(self, session: AsyncSession) -> None:
         self._session = session
 
+    @override
     async def get(self, user_id: UUID, event_id: UUID) -> Event | None:
         row = await self._session.scalar(
             select(EventOrm).where(
@@ -40,6 +43,7 @@ class SqlAlchemyEventRepository:
         )
         return await self._to_domain(row) if row else None
 
+    @override
     async def list_for_date(self, user_id: UUID, event_date: date) -> Sequence[Event]:
         rows = (
             await self._session.scalars(
@@ -55,6 +59,7 @@ class SqlAlchemyEventRepository:
             == event_date
         ]
 
+    @override
     async def add(self, event: Event) -> None:
         self._session.add(
             EventOrm(
@@ -69,6 +74,7 @@ class SqlAlchemyEventRepository:
         )
         await self._replace_children(event)
 
+    @override
     async def save(self, event: Event) -> None:
         row = await self._session.get(EventOrm, event.id)
         if row is not None:
@@ -165,6 +171,3 @@ class SqlAlchemyEventRepository:
                 },
             ),
         )
-
-
-__all__ = ["SqlAlchemyEventRepository"]

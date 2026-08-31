@@ -1,21 +1,24 @@
 """Current reference-state and immutable history repository."""
 
+from typing import override
 from uuid import UUID
 
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from mood_tracker.application.ports import ReferenceDaysRepository
 from mood_tracker.domain.entities import ReferenceDay, ReferenceDays
 from mood_tracker.domain.enums import ReferenceType
 from mood_tracker.infrastructure.db.models import DayReferenceOrm, ReferenceStateOrm
 
 
-class SqlAlchemyReferenceDaysRepository:
+class SqlAlchemyReferenceDaysRepository(ReferenceDaysRepository):
     """Persist current best/worst pointers and append-only reference history."""
 
     def __init__(self, session: AsyncSession) -> None:
         self._session = session
 
+    @override
     async def get(self, user_id: UUID) -> ReferenceDays | None:
         state = await self._session.get(ReferenceStateOrm, user_id)
         if state is None:
@@ -44,6 +47,7 @@ class SqlAlchemyReferenceDaysRepository:
             ],
         )
 
+    @override
     async def save(self, reference_days: ReferenceDays) -> None:
         state = await self._session.get(ReferenceStateOrm, reference_days.user_id)
         if state is None:
@@ -80,6 +84,3 @@ class SqlAlchemyReferenceDaysRepository:
                         created_at=reference.created_at,
                     )
                 )
-
-
-__all__ = ["SqlAlchemyReferenceDaysRepository"]

@@ -1,11 +1,13 @@
 """Field and field-version repository."""
 
 from collections.abc import Sequence
+from typing import override
 from uuid import UUID
 
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from mood_tracker.application.ports import FieldRepository
 from mood_tracker.domain.entities import Field
 from mood_tracker.infrastructure.db.models import (
     FieldOrm,
@@ -19,12 +21,13 @@ from mood_tracker.infrastructure.db.repositories._mapping import (
 )
 
 
-class SqlAlchemyFieldRepository:
+class SqlAlchemyFieldRepository(FieldRepository):
     """Persist fields together with their immutable versions."""
 
     def __init__(self, session: AsyncSession) -> None:
         self._session = session
 
+    @override
     async def get(self, user_id: UUID, field_id: UUID) -> Field | None:
         row = await self._session.scalar(
             select(FieldOrm).where(
@@ -34,6 +37,7 @@ class SqlAlchemyFieldRepository:
         )
         return await self._to_domain(row) if row else None
 
+    @override
     async def list_for_user(self, user_id: UUID) -> Sequence[Field]:
         rows = (
             await self._session.scalars(
@@ -44,6 +48,7 @@ class SqlAlchemyFieldRepository:
         ).all()
         return [await self._to_domain(row) for row in rows]
 
+    @override
     async def add(self, field: Field) -> None:
         # Flush a newly registered user before inserting its fields.
         await self._session.flush()
@@ -59,6 +64,7 @@ class SqlAlchemyFieldRepository:
         for version in field.versions:
             self._session.add(version_to_orm(version))
 
+    @override
     async def save(self, field: Field) -> None:
         row = await self._session.get(FieldOrm, field.id)
         if row is None:
@@ -105,6 +111,3 @@ class SqlAlchemyFieldRepository:
             current_version,
             versions,
         )
-
-
-__all__ = ["SqlAlchemyFieldRepository"]

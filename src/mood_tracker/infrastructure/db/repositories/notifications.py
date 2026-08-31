@@ -3,7 +3,7 @@
 # TODO: посмотреть слоп
 
 from datetime import UTC, date, datetime, timedelta
-from typing import Any, cast
+from typing import Any, cast, override
 from uuid import UUID
 
 from sqlalchemy import select, update
@@ -11,6 +11,10 @@ from sqlalchemy.dialects.postgresql import insert
 from sqlalchemy.engine import CursorResult
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from mood_tracker.application.ports import (
+    NotificationDeliveryRepository,
+    NotificationSettingsRepository,
+)
 from mood_tracker.application.ports.repositories import (
     NotificationDelivery as NotificationDeliveryDTO,
 )
@@ -26,14 +30,16 @@ from mood_tracker.infrastructure.db.models import (
 # TODO: посмотреть слоп
 
 
-class SqlAlchemyNotificationSettingsRepository:
+class SqlAlchemyNotificationSettingsRepository(NotificationSettingsRepository):
     def __init__(self, session: AsyncSession) -> None:
         self._session = session
 
+    @override
     async def get(self, user_id: UUID) -> NotificationSettings | None:
         row = await self._session.get(NotificationSettingsOrm, user_id)
         return _to_domain(row) if row else None
 
+    @override
     async def add(self, settings: NotificationSettings) -> None:
         self._session.add(
             NotificationSettingsOrm(
@@ -45,6 +51,7 @@ class SqlAlchemyNotificationSettingsRepository:
             )
         )
 
+    @override
     async def save(self, settings: NotificationSettings) -> None:
         row = await self._session.get(NotificationSettingsOrm, settings.user_id)
         if row:
@@ -64,10 +71,11 @@ def _to_domain(row: NotificationSettingsOrm) -> NotificationSettings:
     )
 
 
-class SqlAlchemyNotificationDeliveryRepository:
+class SqlAlchemyNotificationDeliveryRepository(NotificationDeliveryRepository):
     def __init__(self, session: AsyncSession) -> None:
         self._session = session
 
+    @override
     async def get_deliveries(
         self,
         user_id: UUID,
@@ -95,6 +103,7 @@ class SqlAlchemyNotificationDeliveryRepository:
             for reminder_number, status in result.all()
         ]
 
+    @override
     async def try_claim(
         self,
         user_id: UUID,
@@ -153,6 +162,7 @@ class SqlAlchemyNotificationDeliveryRepository:
 
         return result.rowcount == 1
 
+    @override
     async def mark_sent(
         self,
         user_id: UUID,

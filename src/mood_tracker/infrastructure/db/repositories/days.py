@@ -3,11 +3,13 @@
 from collections.abc import Sequence
 from datetime import date
 from decimal import Decimal
+from typing import override
 from uuid import UUID, uuid7
 
 from sqlalchemy import delete, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from mood_tracker.application.ports import DayRepository
 from mood_tracker.domain.entities import (
     Answer,
     Day,
@@ -22,24 +24,27 @@ from mood_tracker.infrastructure.db.models import (
 )
 
 
-class SqlAlchemyDayRepository:
+class SqlAlchemyDayRepository(DayRepository):
     """Persist daily entries and their current answers."""
 
     def __init__(self, session: AsyncSession) -> None:
         self._session = session
 
+    @override
     async def get(self, user_id: UUID, day_id: UUID) -> Day | None:
         row = await self._session.scalar(
             select(DayOrm).where(DayOrm.id == day_id, DayOrm.user_id == user_id)
         )
         return await self._to_domain(row) if row else None
 
+    @override
     async def get_by_date(self, user_id: UUID, day_date: date) -> Day | None:
         row = await self._session.scalar(
             select(DayOrm).where(DayOrm.user_id == user_id, DayOrm.date == day_date)
         )
         return await self._to_domain(row) if row else None
 
+    @override
     async def get_many(self, user_id: UUID, day_ids: Sequence[UUID]) -> Sequence[Day]:
         if not day_ids:
             return []
@@ -50,6 +55,7 @@ class SqlAlchemyDayRepository:
         ).all()
         return [await self._to_domain(row) for row in rows]
 
+    @override
     async def list_for_month(self, user_id: UUID, month: date) -> Sequence[Day]:
         """Load all owned days in the calendar month containing ``month``."""
         first_day = month.replace(day=1)
@@ -71,6 +77,7 @@ class SqlAlchemyDayRepository:
         ).all()
         return [await self._to_domain(row) for row in rows]
 
+    @override
     async def add(self, day: Day) -> None:
         self._session.add(
             DayOrm(
@@ -83,6 +90,7 @@ class SqlAlchemyDayRepository:
         )
         await self._replace_children(day)
 
+    @override
     async def save(self, day: Day) -> None:
         row = await self._session.get(DayOrm, day.id)
         if row is not None:
@@ -161,6 +169,3 @@ class SqlAlchemyDayRepository:
                 },
             ),
         )
-
-
-__all__ = ["SqlAlchemyDayRepository"]
