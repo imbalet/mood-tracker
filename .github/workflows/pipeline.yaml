@@ -161,13 +161,23 @@ jobs:
               echo "No existing deployment to backup"
             fi
 
-      - name: Copy deployment files via SCP
+      - name: Copy docker-compose.yml
         uses: appleboy/scp-action@v1.0.0
         with:
           host: ${{ secrets.SSH_HOST }}
           username: ${{ secrets.SSH_USER }}
           key: ${{ secrets.SSH_PRIVATE_KEY }}
-          source: "deploy/docker-compose.yml,.env"
+          source: "deploy/docker-compose.yml"
+          target: "~/app_mood_tracker"
+          strip_components: 1
+
+      - name: Copy .env
+        uses: appleboy/scp-action@v1.0.0
+        with:
+          host: ${{ secrets.SSH_HOST }}
+          username: ${{ secrets.SSH_USER }}
+          key: ${{ secrets.SSH_PRIVATE_KEY }}
+          source: ".env"
           target: "~/app_mood_tracker"
 
       - name: Deploy application
