@@ -1,13 +1,28 @@
 FROM ghcr.io/astral-sh/uv:python3.14-bookworm-slim AS builder
 
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    build-essential \
+    && rm -rf /var/lib/apt/lists/*
+
 WORKDIR /app
+
 COPY pyproject.toml uv.lock ./
-RUN uv sync --frozen --no-dev --no-install-project
+
+RUN uv sync \
+    --frozen \
+    --no-dev \
+    --no-install-project \
+    --no-binary-package numpy \
+    --config-settings-package numpy:setup-args=-Dcpu-baseline=none
 
 COPY alembic.ini ./
 COPY alembic ./alembic
 COPY src ./src
-RUN uv sync --frozen --no-dev
+
+RUN uv sync \
+    --frozen \
+    --no-dev \
+    --config-settings-package numpy:setup-args=-Dcpu-baseline=none
 
 FROM python:3.14-slim
 
