@@ -1,0 +1,36 @@
+services:
+  app:
+    image: ${IMAGE}
+    environment:
+      BOT_TOKEN: ${BOT_TOKEN}
+      DB_HOST: db
+      DB_PORT: 5432
+      DB_NAME: mood_tracker
+      DB_USER: mood_tracker
+      DB_PASS: ${DB_PASS}
+      LOG_LEVEL: ${LOG_LEVEL:-INFO}
+      HEALTHCHECK_PORT: 8000
+    depends_on:
+      db:
+        condition: service_healthy
+    command: >
+      sh -c "alembic upgrade head && python -m mood_tracker.presentation.main"
+    restart: unless-stopped
+
+  db:
+    image: postgres:18.3-alpine
+    environment:
+      POSTGRES_DB: mood_tracker
+      POSTGRES_USER: mood_tracker
+      POSTGRES_PASSWORD: ${DB_PASS}
+    volumes:
+      - postgres-data:/var/lib/postgresql
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U mood_tracker -d mood_tracker"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+    restart: unless-stopped
+
+volumes:
+  postgres-data:

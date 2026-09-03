@@ -14,7 +14,7 @@ format:
 	uv run ruff check src tests alembic --fix
 
 test-unit:
-	uv run pytest tests/unit
+	uv run pytest tests/unit -v --tb=short
 
 test-integration:
 	set -euo pipefail
@@ -22,7 +22,7 @@ test-integration:
 	$(TEST_COMPOSE) up --wait --detach
 	test_database_url='postgresql+asyncpg://mood_tracker_test:mood_tracker_test@localhost:54329/mood_tracker_test'
 	uv run alembic -x database_url="$$test_database_url" -x expected_database=mood_tracker_test upgrade head
-	TEST_DATABASE_URL="$$test_database_url" uv run pytest tests/integration
+	TEST_DATABASE_URL="$$test_database_url" uv run pytest tests/integration -v --tb=short
 
 test-all: test-unit test-integration
 
