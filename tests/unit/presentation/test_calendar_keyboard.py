@@ -20,7 +20,7 @@ def test_calendar_image_keyboard_has_menu_button() -> None:
 
     button = screen.reply_markup.inline_keyboard[-1][0]
 
-    assert button.text == "В меню"
+    assert button.text == "🏠 В меню"
     assert MenuCallback.unpack(button.callback_data).section is MenuSection.HOME
 
 
