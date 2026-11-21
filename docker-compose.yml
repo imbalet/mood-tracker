@@ -31,6 +31,12 @@ services:
       timeout: 3s
       retries: 10
     restart: unless-stopped
+    labels:
+      - "resq.enable=true"
+      - "resq.name=mood-tracker"
+      - "resq.db.type=postgres"
+      - "resq.db.user=mood_tracker"
+      - "resq.db.name=mood_tracker"
 
 volumes:
   postgres-data:
