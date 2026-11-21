@@ -162,22 +162,34 @@ jobs:
               echo "No existing deployment to backup"
             fi
 
-      - name: Setup SSH
-        run: |
-          mkdir -p ~/.ssh
-          echo "${{ secrets.SSH_PRIVATE_KEY }}" > ~/.ssh/deploy_key
-          chmod 600 ~/.ssh/deploy_key
-          ssh-keyscan -H ${{ secrets.SSH_HOST }} >> ~/.ssh/known_hosts 2>/dev/null || true
+      - name: Copy docker-compose.yml
+        uses: appleboy/scp-action@v1.0.0
+        with:
+          host: ${{ secrets.SSH_HOST }}
+          username: ${{ secrets.SSH_USER }}
+          key: ${{ secrets.SSH_PRIVATE_KEY }}
+          source: "deploy/docker-compose.yml"
+          target: "~/app_mood_tracker"
+          strip_components: 1
 
-      - name: Copy files (native scp)
-        run: |
-          scp -i ~/.ssh/deploy_key deploy/docker-compose.yml .env ${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }}:~/app_mood_tracker/
+      - name: Copy .env
+        uses: appleboy/scp-action@v1.0.0
+        with:
+          host: ${{ secrets.SSH_HOST }}
+          username: ${{ secrets.SSH_USER }}
+          key: ${{ secrets.SSH_PRIVATE_KEY }}
+          source: ".env"
+          target: "~/app_mood_tracker"
 
-      - name: Deploy (native ssh)
-        run: |
-          ssh -i ~/.ssh/deploy_key ${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }} << 'ENDSSH'
+      - name: Deploy application
+        uses: appleboy/ssh-action@v1.2.5
+        with:
+          host: ${{ secrets.SSH_HOST }}
+          username: ${{ secrets.SSH_USER }}
+          key: ${{ secrets.SSH_PRIVATE_KEY }}
+          script: |
+            echo "${{ needs.build.outputs.full_image }}"
+            export XDG_RUNTIME_DIR=/run/user/$(id -u)
+            export DOCKER_HOST=unix://$XDG_RUNTIME_DIR/docker.sock
             cd ~/app_mood_tracker
-            docker compose pull
-            docker compose up -d --force-recreate --remove-orphans
-            docker image prune -f --filter "until=168h"
-          ENDSSH
+            IMAGE=${{ needs.build.outputs.full_image }} docker compose --env-file .env up -d --force-recreate
