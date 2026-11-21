@@ -171,6 +171,7 @@ jobs:
           source: "deploy/docker-compose.yml"
           target: "~/app_mood_tracker"
           strip_components: 1
+          overwrite: true
 
       - name: Copy .env
         uses: appleboy/scp-action@v1.0.0
@@ -180,6 +181,7 @@ jobs:
           key: ${{ secrets.SSH_PRIVATE_KEY }}
           source: ".env"
           target: "~/app_mood_tracker"
+          overwrite: true
 
       - name: Deploy application
         uses: appleboy/ssh-action@v1.2.5
@@ -188,8 +190,27 @@ jobs:
           username: ${{ secrets.SSH_USER }}
           key: ${{ secrets.SSH_PRIVATE_KEY }}
           script: |
-            echo "${{ needs.build.outputs.full_image }}"
-            export XDG_RUNTIME_DIR=/run/user/$(id -u)
-            export DOCKER_HOST=unix://$XDG_RUNTIME_DIR/docker.sock
             cd ~/app_mood_tracker
-            IMAGE=${{ needs.build.outputs.full_image }} docker compose --env-file .env up -d --force-recreate
+
+            ROOTLESS_SOCK="/run/user/$(id -u)/docker.sock"
+            ROOTFUL_SOCK="/var/run/docker.sock"
+
+            if [ -S "$ROOTLESS_SOCK" ]; then
+              echo "Using rootless Docker"
+              export DOCKER_HOST="unix://$ROOTLESS_SOCK"
+            elif [ -S "$ROOTFUL_SOCK" ]; then
+              echo "Using rootful Docker"
+              export DOCKER_HOST="unix://$ROOTFUL_SOCK"
+            else
+              echo "ERROR: No Docker socket found"
+              exit 1
+            fi
+
+            export IMAGE="${{ needs.build.outputs.full_image }}"
+            echo "IMAGE=$IMAGE" >> .env
+            docker compose pull
+            docker compose up -d --force-recreate --remove-orphans
+            docker image prune -f --filter "until=168h"
+
+            docker compose ps
+            echo "Deployed $IMAGE"
