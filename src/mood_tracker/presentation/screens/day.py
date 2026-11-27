@@ -8,7 +8,13 @@ from zoneinfo import ZoneInfo
 from aiogram.types import InlineKeyboardMarkup
 
 from mood_tracker.application.contracts.diary import DayForm, ReferenceReview
-from mood_tracker.domain.entities import Event, Field, OrdinalConfig, ScaleConfig
+from mood_tracker.domain.entities import (
+    Event,
+    Field,
+    OrdinalConfig,
+    ScaleConfig,
+    TextConfig,
+)
 from mood_tracker.domain.enums import DayStatus, ReferenceType
 from mood_tracker.presentation.callbacks.callbacks import (
     DayValueCallback,
@@ -111,6 +117,9 @@ class DayCardScreen(Screen):
             )
         if isinstance(config, ScaleConfig):
             return f"{value}/{config.maximum}"
+        if isinstance(config, TextConfig):
+            # FIXME может не работать, мб надо после escape это делать
+            return f"<blockquote expandable>{str(value)}</blockquote>"
         return str(value)
 
     @staticmethod
@@ -192,7 +201,6 @@ class DayCardScreen(Screen):
 
     @override
     def _reply_markup(self) -> InlineKeyboardMarkup | None:
-        actions = self._action_views(self.form)
         day = self.form.day_date.strftime("%Y%m%d")
         actions = self._action_views(self.form)
         events = tuple(

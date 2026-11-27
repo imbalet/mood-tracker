@@ -261,6 +261,7 @@ async def save_text(
         form_data.day_date,
         services,
         update_main_message,
+        create_new=True,
     )
 
 
@@ -298,6 +299,8 @@ async def render_day(
     day_date: date,
     services: ApplicationServices,
     update_main_message: UpdateMainMessage,
+    *,
+    create_new: bool = False,
 ) -> None:
     form = await services.get_day().execute(GetDay(profile.id, day_date))
     events = tuple(
@@ -305,7 +308,9 @@ async def render_day(
             GetEventsForDate(profile.id, day_date)
         )
     )
-    await update_main_message(DayCardScreen(form=form, events=events))
+    await update_main_message(
+        DayCardScreen(form=form, events=events), create_new=create_new
+    )
 
 
 def _today(profile: UserProfile) -> date:

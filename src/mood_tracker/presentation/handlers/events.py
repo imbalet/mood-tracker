@@ -350,6 +350,8 @@ async def _prompt_next(
     event_id: UUID,
     services: ApplicationServices,
     update_main_message: UpdateMainMessage,
+    *,
+    create_new: bool = False,
 ) -> None:
     current = await services.get_event().execute(GetEvent(profile.id, event_id))
     items = await services.list_questionnaire_fields().execute(
@@ -378,6 +380,7 @@ async def _prompt_next(
                 event_id,
                 services,
                 update_main_message,
+                create_new=create_new,
             )
             return
         if completed.deleted_at is not None:
@@ -390,6 +393,7 @@ async def _prompt_next(
             event_id,
             services,
             update_main_message,
+            create_new=create_new,
         )
         return
     config = item.field.current_version.config
@@ -399,9 +403,15 @@ async def _prompt_next(
         await presentation_data.write(
             EventInputData(event_id, current.occurred_at.date(), item.field.id)
         )
-        await update_main_message(PromptTextScreen(item=item, event_id=event_id))
+        await update_main_message(
+            PromptTextScreen(item=item, event_id=event_id),
+            create_new=create_new,
+        )
         return
-    await update_main_message(PromptValueScreen(item=item, event_id=event_id))
+    await update_main_message(
+        PromptValueScreen(item=item, event_id=event_id),
+        create_new=create_new,
+    )
 
 
 @router.callback_query(EventValueCallback.filter())
@@ -514,6 +524,7 @@ async def save_text(
         data.event_id,
         services,
         update_main_message,
+        create_new=True,
     )
 
 
@@ -524,6 +535,8 @@ async def _render_event(
     event_id: UUID,
     services: ApplicationServices,
     update_main_message: UpdateMainMessage,
+    *,
+    create_new: bool = False,
 ) -> None:
     current = await services.get_event().execute(GetEvent(profile.id, event_id))
     local = current.occurred_at.astimezone(ZoneInfo(current.occurred_timezone.name))
@@ -532,7 +545,8 @@ async def _render_event(
     )
     # TODO: rename
     await update_main_message(
-        EventScreen(local=local, current=current, items=items, profile=profile)
+        EventScreen(local=local, current=current, items=items, profile=profile),
+        create_new=create_new,
     )
 
 
