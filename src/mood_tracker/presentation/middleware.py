@@ -70,6 +70,7 @@ class CallbackMessageMiddleware(BaseMiddleware):
     ) -> ResultT | None:
         if not isinstance(event, CallbackQuery):
             return await handler(event, data)
+        await event.answer()
         if event.message is None or isinstance(event.message, InaccessibleMessage):
             await event.answer("Сообщение недоступно.", show_alert=True)
             return None
