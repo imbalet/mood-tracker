@@ -21,6 +21,8 @@ from mood_tracker.presentation.callbacks.callbacks import (
     EventCallback,
     EventTimeCallback,
     EventValueCallback,
+    MenuCallback,
+    MenuSection,
     SkipEventFieldCallback,
 )
 from mood_tracker.presentation.constants.text import TEXTS, TextKey
@@ -246,7 +248,7 @@ class EventScreen(Screen):
                 TextKey.DELETE,
                 EventCallback(action=EventAction.DELETE, event_id=self.current.id),
             ),
-        )
+        ).row((TextKey.BACK_TO_MENU, MenuCallback(section=MenuSection.HOME)))
         return self._kbuilder.as_markup()
 
     @staticmethod
