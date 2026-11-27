@@ -8,9 +8,15 @@ from aiogram.exceptions import (
     TelegramForbiddenError,
     TelegramRetryAfter,
 )
-from aiogram.types import InlineKeyboardMarkup, InputRichMessage, Message
+from aiogram.types import (
+    InlineKeyboardButton,
+    InlineKeyboardMarkup,
+    InputRichMessage,
+    Message,
+)
 
 from mood_tracker.domain.entities import UserProfile
+from mood_tracker.presentation.callbacks.callbacks import MenuCallback, MenuSection
 
 logger = logging.getLogger(__name__)
 
@@ -56,6 +62,18 @@ class Sender:
             await self._bot.send_message(
                 chat_id=user.telegram_id,
                 text="📝 Напоминание: запись о сегодняшнем состоянии ещё не завершена.",
+                reply_markup=InlineKeyboardMarkup(
+                    inline_keyboard=[
+                        [
+                            InlineKeyboardButton(
+                                callback_data=MenuCallback(
+                                    section=MenuSection.TODAY
+                                ).pack(),
+                                text="Заполнить",
+                            )
+                        ]
+                    ]
+                ),
             )
         except TelegramForbiddenError:
             logger.info("Bot is blocked by chat %s", user.telegram_id)
