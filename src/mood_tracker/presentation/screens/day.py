@@ -113,14 +113,14 @@ class DayCardScreen(Screen):
         if isinstance(config, OrdinalConfig) and isinstance(value, int):
             return next(
                 (option.label for option in config.options if option.value == value),
-                str(value),
+                escape(str(value)),
             )
+        value = escape(str(value))
         if isinstance(config, ScaleConfig):
             return f"{value}/{config.maximum}"
         if isinstance(config, TextConfig):
-            # FIXME может не работать, мб надо после escape это делать
-            return f"<blockquote expandable>{str(value)}</blockquote>"
-        return str(value)
+            return f"<code>{str(value)}</code>"
+        return value
 
     @staticmethod
     def _entry_views(form: DayForm) -> list[DayEntryView]:
@@ -194,7 +194,7 @@ class DayCardScreen(Screen):
             value = (
                 TEXTS[TextKey.DAY_SKIPPED]
                 if entry.is_skipped
-                else escape(entry.rendered_value or "")
+                else entry.rendered_value or ""
             )
             lines.append(f"{emoji}<b>{escape(entry.name)}</b>: {value}")
         return "\n".join(lines)
@@ -248,6 +248,7 @@ class DayValuePromptScreen(Screen):
 
     @staticmethod
     def _card_text(view: DayCardView) -> str:
+        # TODO: maybe reuse from `text` method above
         status = TextKey.DAY_COMPLETE if view.is_complete else TextKey.DAY_DRAFT
         lines = [f"<b>{view.date_label}</b> · {TEXTS[status]}"]
         if not view.entries:
@@ -258,7 +259,7 @@ class DayValuePromptScreen(Screen):
             value = (
                 TEXTS[TextKey.DAY_SKIPPED]
                 if entry.is_skipped
-                else escape(entry.rendered_value or "")
+                else entry.rendered_value or ""
             )
             lines.append(f"{emoji}<b>{escape(entry.name)}</b>: {value}")
         return "\n".join(lines)
